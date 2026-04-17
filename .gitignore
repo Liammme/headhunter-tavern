@@ -4,5 +4,7 @@ backend/.venv/
 backend/.pytest_cache/
 frontend/.next/
 frontend/node_modules/
+**/__pycache__/
+*.pyc
 Thumbs.db
 .DS_Store
