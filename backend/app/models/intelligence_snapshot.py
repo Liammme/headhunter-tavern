@@ -11,4 +11,4 @@ class IntelligenceSnapshot(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     snapshot_payload: Mapped[dict] = mapped_column(JSON, default=dict)
-    generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

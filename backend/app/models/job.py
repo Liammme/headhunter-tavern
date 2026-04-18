@@ -17,7 +17,7 @@ class Job(Base):
     company_normalized: Mapped[str] = mapped_column(String(256), index=True)
     description: Mapped[str] = mapped_column(Text, default="")
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    collected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    collected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     job_category: Mapped[str] = mapped_column(String(64), default="其他")
     domain_tag: Mapped[str] = mapped_column(String(64), default="其他")
     bounty_grade: Mapped[str] = mapped_column(String(16), default="low")
