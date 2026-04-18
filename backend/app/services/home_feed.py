@@ -14,6 +14,6 @@ def build_home_payload(db: Session) -> dict:
     claims = db.execute(select(JobClaim).order_by(JobClaim.created_at.asc(), JobClaim.id.asc())).scalars().all()
     day_payloads = build_day_payloads(jobs, claims, today=datetime.now().date())
     return assemble_home_payload(
-        intelligence=build_intelligence_snapshot(),
+        intelligence=build_intelligence_snapshot(day_payloads),
         day_payloads=day_payloads,
     )
