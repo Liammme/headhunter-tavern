@@ -1,23 +1,53 @@
-def derive_job_grade(title: str, category: str, signals: dict) -> str:
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class JobScoreInput:
+    title: str
+    category: str
+    urgent: bool
+    critical: bool
+    bd_entry: bool
+
+
+@dataclass(frozen=True)
+class JobScoreResult:
+    score: int
+    grade: str
+
+
+def score_job(input_data: JobScoreInput) -> JobScoreResult:
     score = 0
-    lowered = (title or "").lower()
+    lowered = (input_data.title or "").lower()
 
     if any(keyword in lowered for keyword in ("senior", "lead", "staff", "head", "principal", "architect")):
         score += 2
-    if category in {"技术", "AI/算法", "数据", "产品"}:
+    if input_data.category in {"技术", "AI/算法", "数据", "产品"}:
         score += 2
-    if signals.get("urgent"):
+    if input_data.urgent:
         score += 2
-    if signals.get("critical"):
+    if input_data.critical:
         score += 2
-    if signals.get("bd_entry"):
+    if input_data.bd_entry:
         score += 1
 
     if score >= 6:
-        return "high"
+        return JobScoreResult(score=score, grade="high")
     if score >= 3:
-        return "medium"
-    return "low"
+        return JobScoreResult(score=score, grade="medium")
+    return JobScoreResult(score=score, grade="low")
+
+
+def derive_job_grade(title: str, category: str, signals: dict) -> str:
+    return score_job(
+        JobScoreInput(
+            title=title,
+            category=category,
+            urgent=bool(signals.get("urgent")),
+            critical=bool(signals.get("critical")),
+            bd_entry=bool(signals.get("bd_entry")),
+        )
+    ).grade
 
 
 def derive_company_grade(job_grades: list[str]) -> str:
