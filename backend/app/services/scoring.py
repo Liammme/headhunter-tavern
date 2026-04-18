@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+RULE_VERSION = "score-v1"
+
 
 @dataclass(frozen=True)
 class JobScoreInput:

@@ -26,10 +26,24 @@ class DayBucketOut(BaseModel):
 class IntelligenceOut(BaseModel):
     headline: str
     summary: str
+    analysis_version: str
+    rule_version: str
+    window_start: str
+    window_end: str
+    generated_at: str
     findings: list[str]
     actions: list[str]
 
 
+class HomeMetaOut(BaseModel):
+    analysis_version: str
+    rule_version: str
+    window_start: str
+    window_end: str
+    generated_at: str
+
+
 class HomePayload(BaseModel):
     intelligence: IntelligenceOut
+    meta: HomeMetaOut
     days: list[DayBucketOut]

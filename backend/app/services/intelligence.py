@@ -1,15 +1,20 @@
 from collections import Counter
 
-from app.services.feed_snapshot import DayBucketSnapshot
+from app.services.feed_snapshot import DayBucketSnapshot, FeedMetadata
 
 
-def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot]) -> dict:
+def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
     companies = [company for day in day_payloads for company in day.companies]
     jobs = [job for company in companies for job in company.jobs]
     if not jobs:
         return {
             "headline": "近 14 天岗位池暂无新增信号，建议先触发抓取更新。",
             "summary": "当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。",
+            "analysis_version": meta.analysis_version,
+            "rule_version": meta.rule_version,
+            "window_start": meta.window_start,
+            "window_end": meta.window_end,
+            "generated_at": meta.generated_at,
             "findings": [
                 "首页和情报当前共享同一聚合基线，因此这里为空时首页列表也应为空。",
             ],
@@ -44,6 +49,11 @@ def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot]) -> dict:
             f"基于近 14 天统一聚合结果生成：{len(companies)} 家公司，"
             f"{len(jobs)} 个岗位，{len(high_bounty_jobs)} 个高赏金岗位。"
         ),
+        "analysis_version": meta.analysis_version,
+        "rule_version": meta.rule_version,
+        "window_start": meta.window_start,
+        "window_end": meta.window_end,
+        "generated_at": meta.generated_at,
         "findings": findings,
         "actions": [
             "先看重点公司，再优先认领其中的高赏金岗位。",

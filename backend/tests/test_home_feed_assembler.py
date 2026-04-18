@@ -1,4 +1,4 @@
-from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
+from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, FeedMetadata, JobFeedSnapshot
 from app.services.home_feed_assembler import assemble_home_payload
 
 
@@ -30,10 +30,24 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
     payload = assemble_home_payload(
         intelligence={"headline": "test", "summary": "test", "findings": [], "actions": []},
         day_payloads=day_payloads,
+        meta=FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v1",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
     )
 
     assert payload == {
         "intelligence": {"headline": "test", "summary": "test", "findings": [], "actions": []},
+        "meta": {
+            "analysis_version": "feed-v1",
+            "rule_version": "score-v1",
+            "window_start": "2026-04-05",
+            "window_end": "2026-04-18",
+            "generated_at": "2026-04-18T09:00:00",
+        },
         "days": [
             {
                 "bucket": "today",
