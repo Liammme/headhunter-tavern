@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from app.models import Job, JobClaim
+from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
 from app.services.grouping import bucket_posted_date
 from app.services.scoring import derive_company_grade
 
@@ -19,7 +20,7 @@ def build_claim_map(claims: list[JobClaim]) -> dict[int, list[str]]:
     return claim_map
 
 
-def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) -> list[dict]:
+def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) -> list[DayBucketSnapshot]:
     claim_map = build_claim_map(claims)
     window_start = today - timedelta(days=WINDOW_DAYS - 1)
     day_groups: dict[str, dict[str, dict]] = defaultdict(dict)
@@ -49,9 +50,9 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
             }
         )
 
-    day_payloads = []
+    day_payloads: list[DayBucketSnapshot] = []
     for bucket in sorted(day_groups.keys(), key=lambda item: BUCKET_ORDER[item]):
-        companies = []
+        companies: list[CompanyFeedSnapshot] = []
         for company in day_groups[bucket].values():
             jobs_payload = sorted(
                 company["jobs"],
@@ -65,22 +66,22 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
 
             company_grade = derive_company_grade([job_item["bounty_grade"] for job_item in jobs_payload])
             companies.append(
-                {
-                    "company": company["company"],
-                    "company_grade": company_grade,
-                    "total_jobs": len(jobs_payload),
-                    "claimed_names": company_claims,
-                    "jobs": jobs_payload,
-                }
+                CompanyFeedSnapshot(
+                    company=company["company"],
+                    company_grade=company_grade,
+                    total_jobs=len(jobs_payload),
+                    claimed_names=company_claims,
+                    jobs=[JobFeedSnapshot(**job_item) for job_item in jobs_payload],
+                )
             )
 
         companies.sort(
             key=lambda item: (
-                COMPANY_GRADE_ORDER[item["company_grade"]],
-                JOB_GRADE_ORDER[item["jobs"][0]["bounty_grade"]],
-                item["company"].lower(),
+                COMPANY_GRADE_ORDER[item.company_grade],
+                JOB_GRADE_ORDER[item.jobs[0].bounty_grade],
+                item.company.lower(),
             )
         )
-        day_payloads.append({"bucket": bucket, "companies": companies})
+        day_payloads.append(DayBucketSnapshot(bucket=bucket, companies=companies))
 
     return day_payloads

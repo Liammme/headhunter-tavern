@@ -1,9 +1,11 @@
 from collections import Counter
 
+from app.services.feed_snapshot import DayBucketSnapshot
 
-def build_intelligence_snapshot(day_payloads: list[dict]) -> dict:
-    companies = [company for day in day_payloads for company in day["companies"]]
-    jobs = [job for company in companies for job in company["jobs"]]
+
+def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot]) -> dict:
+    companies = [company for day in day_payloads for company in day.companies]
+    jobs = [job for company in companies for job in company.jobs]
     if not jobs:
         return {
             "headline": "近 14 天岗位池暂无新增信号，建议先触发抓取更新。",
@@ -19,13 +21,13 @@ def build_intelligence_snapshot(day_payloads: list[dict]) -> dict:
     tag_counter = Counter(
         tag
         for job in jobs
-        for tag in job["tags"]
+        for tag in job.tags
         if tag not in {"Senior", "核心岗位", "关键扩张", "长期挂岗", "高 BD 切入口"}
     )
     leading_tag = tag_counter.most_common(1)[0][0] if tag_counter else "核心"
-    focus_companies = [company for company in companies if company["company_grade"] == "focus"]
-    high_bounty_jobs = [job for job in jobs if job["bounty_grade"] == "high"]
-    claimed_jobs = [job for job in jobs if job["claimed_names"]]
+    focus_companies = [company for company in companies if company.company_grade == "focus"]
+    high_bounty_jobs = [job for job in jobs if job.bounty_grade == "high"]
+    claimed_jobs = [job for job in jobs if job.claimed_names]
 
     findings = [
         f"重点公司 {len(focus_companies)} 家，优先顺着公司卡往下打。",

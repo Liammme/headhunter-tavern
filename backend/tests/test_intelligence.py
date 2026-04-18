@@ -1,53 +1,54 @@
+from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
 from app.services.intelligence import build_intelligence_snapshot
 
 
 def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline():
     day_payloads = [
-        {
-            "bucket": "today",
-            "companies": [
-                {
-                    "company": "OpenGradient",
-                    "company_grade": "focus",
-                    "total_jobs": 2,
-                    "claimed_names": ["Liam"],
-                    "jobs": [
-                        {
-                            "id": 1,
-                            "title": "Principal AI Engineer",
-                            "canonical_url": "https://example.com/1",
-                            "bounty_grade": "high",
-                            "tags": ["AI", "Senior", "核心岗位"],
-                            "claimed_names": ["Liam"],
-                        },
-                        {
-                            "id": 2,
-                            "title": "Senior Applied Scientist",
-                            "canonical_url": "https://example.com/2",
-                            "bounty_grade": "medium",
-                            "tags": ["AI", "Senior", "关键扩张"],
-                            "claimed_names": [],
-                        },
+        DayBucketSnapshot(
+            bucket="today",
+            companies=[
+                CompanyFeedSnapshot(
+                    company="OpenGradient",
+                    company_grade="focus",
+                    total_jobs=2,
+                    claimed_names=["Liam"],
+                    jobs=[
+                        JobFeedSnapshot(
+                            id=1,
+                            title="Principal AI Engineer",
+                            canonical_url="https://example.com/1",
+                            bounty_grade="high",
+                            tags=["AI", "Senior", "核心岗位"],
+                            claimed_names=["Liam"],
+                        ),
+                        JobFeedSnapshot(
+                            id=2,
+                            title="Senior Applied Scientist",
+                            canonical_url="https://example.com/2",
+                            bounty_grade="medium",
+                            tags=["AI", "Senior", "关键扩张"],
+                            claimed_names=[],
+                        ),
                     ],
-                },
-                {
-                    "company": "Beta Labs",
-                    "company_grade": "watch",
-                    "total_jobs": 1,
-                    "claimed_names": [],
-                    "jobs": [
-                        {
-                            "id": 3,
-                            "title": "Growth Manager",
-                            "canonical_url": "https://example.com/3",
-                            "bounty_grade": "medium",
-                            "tags": ["增长", "高 BD 切入口"],
-                            "claimed_names": [],
-                        }
+                ),
+                CompanyFeedSnapshot(
+                    company="Beta Labs",
+                    company_grade="watch",
+                    total_jobs=1,
+                    claimed_names=[],
+                    jobs=[
+                        JobFeedSnapshot(
+                            id=3,
+                            title="Growth Manager",
+                            canonical_url="https://example.com/3",
+                            bounty_grade="medium",
+                            tags=["增长", "高 BD 切入口"],
+                            claimed_names=[],
+                        )
                     ],
-                },
+                ),
             ],
-        }
+        )
     ]
 
     snapshot = build_intelligence_snapshot(day_payloads)

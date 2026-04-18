@@ -78,13 +78,13 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
 
     payloads = build_day_payloads(jobs, claims, today=datetime(2026, 4, 18).date())
 
-    assert [day["bucket"] for day in payloads] == ["today"]
-    companies = payloads[0]["companies"]
-    assert [company["company"] for company in companies] == ["OpenGradient", "Beta Labs"]
-    assert companies[0]["company_grade"] == "watch"
-    assert [job["id"] for job in companies[0]["jobs"]] == [1, 2]
-    assert companies[0]["claimed_names"] == ["Leo", "Mina"]
-    assert companies[0]["jobs"][0]["claimed_names"] == ["Leo", "Mina"]
+    assert [day.bucket for day in payloads] == ["today"]
+    companies = payloads[0].companies
+    assert [company.company for company in companies] == ["OpenGradient", "Beta Labs"]
+    assert companies[0].company_grade == "watch"
+    assert [job.id for job in companies[0].jobs] == [1, 2]
+    assert companies[0].claimed_names == ["Leo", "Mina"]
+    assert companies[0].jobs[0].claimed_names == ["Leo", "Mina"]
 
 
 def test_build_day_payloads_filters_jobs_outside_window():
@@ -110,5 +110,5 @@ def test_build_day_payloads_filters_jobs_outside_window():
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     assert len(payloads) == 1
-    assert payloads[0]["bucket"] == "today"
-    assert [company["company"] for company in payloads[0]["companies"]] == ["OpenGradient"]
+    assert payloads[0].bucket == "today"
+    assert [company.company for company in payloads[0].companies] == ["OpenGradient"]
