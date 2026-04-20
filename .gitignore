@@ -1,10 +1,13 @@
 .worktrees/
 .reference/
+.codex-runtime/
 backend/.venv/
 backend/.pytest_cache/
 frontend/.next/
 frontend/node_modules/
 **/__pycache__/
+*.egg-info/
+*.db
 *.pyc
 Thumbs.db
 .DS_Store
