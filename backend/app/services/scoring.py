@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 RULE_VERSION = "score-v1"
 RULE_VERSION_V2 = "score-v2"
+DEFAULT_BOUNTY_RULE_VERSION = RULE_VERSION_V2
 V2_HIGH_THRESHOLD = 75
 V2_MEDIUM_THRESHOLD = 45
 
@@ -79,6 +80,12 @@ def score_job_v2(input_data: JobScoreV2Input) -> JobScoreV2Result:
         reasons=reasons,
         rule_hits=tuple(rule_hits),
     )
+
+
+def select_primary_bounty_grade(v1_result: JobScoreResult, v2_result: JobScoreV2Result) -> str:
+    if DEFAULT_BOUNTY_RULE_VERSION == RULE_VERSION_V2:
+        return v2_result.grade
+    return v1_result.grade
 
 
 def score_job(input_data: JobScoreInput) -> JobScoreResult:

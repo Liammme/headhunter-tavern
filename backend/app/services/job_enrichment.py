@@ -11,7 +11,15 @@ from app.services.job_facts import (
     extract_job_facts,
     standardize_job_input,
 )
-from app.services.scoring import JobScoreInput, JobScoreResult, JobScoreV2Input, JobScoreV2Result, score_job, score_job_v2
+from app.services.scoring import (
+    JobScoreInput,
+    JobScoreResult,
+    JobScoreV2Input,
+    JobScoreV2Result,
+    score_job,
+    score_job_v2,
+    select_primary_bounty_grade,
+)
 
 
 @dataclass(frozen=True)
@@ -45,7 +53,7 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
         "collected_at": standardized.collected_at,
         "job_category": facts.category,
         "domain_tag": facts.domain_tag,
-        "bounty_grade": v1_result.grade,
+        "bounty_grade": select_primary_bounty_grade(v1_result, v2_result),
         "signal_tags": signal_tags,
     }
     return JobEnrichmentResult(
@@ -62,4 +70,3 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
 
 def build_job_payload(job: NormalizedJob) -> dict:
     return enrich_job(job).payload
-

@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timedelta
 
-from app.services.scoring import RULE_VERSION
+from app.services.scoring import DEFAULT_BOUNTY_RULE_VERSION
 
 ANALYSIS_VERSION = "feed-v1"
 WINDOW_DAYS = 14
@@ -46,7 +46,7 @@ def build_feed_metadata(now: datetime) -> FeedMetadata:
     window_start = window_end - timedelta(days=WINDOW_DAYS - 1)
     return FeedMetadata(
         analysis_version=ANALYSIS_VERSION,
-        rule_version=RULE_VERSION,
+        rule_version=DEFAULT_BOUNTY_RULE_VERSION,
         window_start=window_start.isoformat(),
         window_end=window_end.isoformat(),
         generated_at=now.replace(microsecond=0).isoformat(),

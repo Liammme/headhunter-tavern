@@ -1,4 +1,5 @@
 from app.services.scoring import (
+    DEFAULT_BOUNTY_RULE_VERSION,
     RULE_VERSION,
     RULE_VERSION_V2,
     JobScoreInput,
@@ -6,6 +7,7 @@ from app.services.scoring import (
     JobScoreV2Result,
     ScoreRuleHit,
     derive_company_grade,
+    select_primary_bounty_grade,
     score_job,
     score_job_v2,
 )
@@ -82,6 +84,38 @@ def test_v2_result_carries_version_reasons_and_rule_hits():
     assert RULE_VERSION == "score-v1"
     assert result.rule_version == "score-v2"
     assert result.rule_hits[0].dimension == "time_pressure"
+
+
+def test_default_bounty_rule_switches_to_v2_with_v1_fallback_kept():
+    v1_result = score_job(
+        JobScoreInput(
+            title="Principal AI Engineer",
+            category="AI/算法",
+            urgent=False,
+            critical=True,
+            bd_entry=False,
+        )
+    )
+    v2_result = score_job_v2(
+        JobScoreV2Input(
+            seniority="principal",
+            urgent=False,
+            critical=True,
+            bd_entry=False,
+            hard_to_fill=True,
+            role_complexity="high",
+            business_criticality="medium",
+            anomaly_signals=(),
+            category="AI/算法",
+            domain_tag="AI",
+            compensation_signal="unknown",
+            company_signal="hot",
+            time_pressure_signals=(),
+        )
+    )
+
+    assert DEFAULT_BOUNTY_RULE_VERSION == "score-v2"
+    assert select_primary_bounty_grade(v1_result, v2_result) == "medium"
 
 
 def test_score_job_v2_returns_high_for_urgent_hard_to_fill_core_role():

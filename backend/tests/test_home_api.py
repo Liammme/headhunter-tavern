@@ -38,7 +38,7 @@ def test_home_payload_has_intelligence_and_days(client):
     assert "meta" in body
     assert "days" in body
     assert body["meta"]["analysis_version"] == "feed-v1"
-    assert body["meta"]["rule_version"] == "score-v1"
+    assert body["meta"]["rule_version"] == "score-v2"
 
 
 def test_trigger_crawl_endpoint_exists(client):
