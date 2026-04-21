@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 RULE_VERSION = "score-v1"
+RULE_VERSION_V2 = "score-v2"
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,39 @@ class JobScoreInput:
 class JobScoreResult:
     score: int
     grade: str
+
+
+@dataclass(frozen=True)
+class ScoreRuleHit:
+    code: str
+    dimension: str
+    weight: int
+
+
+@dataclass(frozen=True)
+class JobScoreV2Input:
+    seniority: str
+    urgent: bool
+    critical: bool
+    bd_entry: bool
+    hard_to_fill: bool
+    role_complexity: str
+    business_criticality: str
+    anomaly_signals: tuple[str, ...]
+    category: str
+    domain_tag: str
+    compensation_signal: str
+    company_signal: str
+    time_pressure_signals: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class JobScoreV2Result:
+    score: int
+    grade: str
+    rule_version: str
+    reasons: tuple[str, ...]
+    rule_hits: tuple[ScoreRuleHit, ...]
 
 
 def score_job(input_data: JobScoreInput) -> JobScoreResult:
