@@ -7,6 +7,7 @@ from app.services.scoring import (
     ScoreRuleHit,
     derive_company_grade,
     score_job,
+    score_job_v2,
 )
 
 
@@ -81,3 +82,104 @@ def test_v2_result_carries_version_reasons_and_rule_hits():
     assert RULE_VERSION == "score-v1"
     assert result.rule_version == "score-v2"
     assert result.rule_hits[0].dimension == "time_pressure"
+
+
+def test_score_job_v2_returns_high_for_urgent_hard_to_fill_core_role():
+    result = score_job_v2(
+        JobScoreV2Input(
+            seniority="staff",
+            urgent=True,
+            critical=True,
+            bd_entry=False,
+            hard_to_fill=True,
+            role_complexity="high",
+            business_criticality="high",
+            anomaly_signals=("wish_list_jd",),
+            category="AI/算法",
+            domain_tag="AI",
+            compensation_signal="strong",
+            company_signal="hot",
+            time_pressure_signals=("urgent", "founder_hiring"),
+        )
+    )
+
+    assert result.rule_version == "score-v2"
+    assert result.grade == "high"
+    assert result.score >= 75
+    assert result.reasons
+    assert any(hit.dimension == "time_pressure" for hit in result.rule_hits)
+
+
+def test_score_job_v2_returns_medium_for_bd_entry_role_with_some_pressure():
+    result = score_job_v2(
+        JobScoreV2Input(
+            seniority="senior",
+            urgent=True,
+            critical=False,
+            bd_entry=True,
+            hard_to_fill=False,
+            role_complexity="medium",
+            business_criticality="high",
+            anomaly_signals=(),
+            category="产品",
+            domain_tag="工具/SaaS",
+            compensation_signal="unknown",
+            company_signal="neutral",
+            time_pressure_signals=("urgent",),
+        )
+    )
+
+    assert result.grade == "medium"
+    assert 45 <= result.score < 75
+    assert any(hit.dimension == "bd_entry" for hit in result.rule_hits)
+
+
+def test_score_job_v2_returns_low_for_low_pressure_general_role():
+    result = score_job_v2(
+        JobScoreV2Input(
+            seniority="none",
+            urgent=False,
+            critical=False,
+            bd_entry=False,
+            hard_to_fill=False,
+            role_complexity="low",
+            business_criticality="low",
+            anomaly_signals=(),
+            category="运营",
+            domain_tag="工具/SaaS",
+            compensation_signal="unknown",
+            company_signal="neutral",
+            time_pressure_signals=(),
+        )
+    )
+
+    assert result.grade == "low"
+    assert result.score < 45
+    assert all(hit.dimension != "bd_entry" for hit in result.rule_hits)
+
+
+def test_v2_downgrades_high_keyword_role_without_pressure_or_anomaly():
+    from app.services.job_facts import JobFacts, build_v1_score_input, build_v2_score_input
+
+    facts = JobFacts(
+        title="Principal AI Engineer",
+        category="AI/算法",
+        domain_tag="AI",
+        seniority="principal",
+        urgent=False,
+        critical=True,
+        bd_entry=False,
+        hard_to_fill=True,
+        role_complexity="high",
+        business_criticality="medium",
+        anomaly_signals=(),
+        compensation_signal="unknown",
+        company_signal="hot",
+        time_pressure_signals=(),
+    )
+
+    v1_result = score_job(build_v1_score_input(facts))
+    v2_result = score_job_v2(build_v2_score_input(facts))
+
+    assert v1_result.grade == "high"
+    assert v2_result.grade == "medium"
