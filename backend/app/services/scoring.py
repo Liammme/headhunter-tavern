@@ -230,6 +230,8 @@ def score_v2_modifiers(input_data: JobScoreV2Input) -> tuple[ScoreRuleHit, ...]:
         hits.append(ScoreRuleHit(code="compensation.strong", dimension="compensation", weight=3))
     if input_data.company_signal == "hot":
         hits.append(ScoreRuleHit(code="company_signal.hot", dimension="company_signal", weight=3))
+    if input_data.urgent and input_data.anomaly_signals:
+        hits.append(ScoreRuleHit(code="priority.urgent_with_anomaly", dimension="priority_boost", weight=8))
     return tuple(hits)
 
 
@@ -255,12 +257,12 @@ def build_v2_reasons(input_data: JobScoreV2Input, rule_hits: list[ScoreRuleHit])
     reasons: list[str] = []
     if any(hit.dimension == "time_pressure" for hit in rule_hits):
         reasons.append("时间压力高，适合猎头优先介入")
-    if any(hit.dimension == "hard_to_fill" for hit in rule_hits):
-        reasons.append("岗位难招，公开投递替代性较低")
-    if any(hit.dimension == "business_criticality" for hit in rule_hits):
-        reasons.append("岗位直接影响业务推进或关键能力建设")
     if any(hit.dimension == "anomaly" for hit in rule_hits):
         reasons.append("存在招聘异常或持续招不动信号")
+    if any(hit.dimension == "business_criticality" for hit in rule_hits):
+        reasons.append("岗位直接影响业务推进或关键能力建设")
+    if any(hit.dimension == "hard_to_fill" for hit in rule_hits):
+        reasons.append("岗位难招，公开投递替代性较低")
     if any(hit.dimension == "bd_entry" for hit in rule_hits):
         reasons.append("可作为切入公司关系的 BD 入口")
     if any(hit.dimension == "category_bias" for hit in rule_hits) and input_data.category in {"AI/算法", "数据", "技术", "产品"}:
