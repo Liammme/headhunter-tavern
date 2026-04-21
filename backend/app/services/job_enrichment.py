@@ -110,7 +110,10 @@ def build_signal_tags(
     bd_entry = job_category in {"商务", "增长", "产品"}
 
     if posted_at and posted_at.date() <= (datetime.now().date() - timedelta(days=7)):
-        display_tags[2] = "长期挂岗"
+        if len(display_tags) >= 3:
+            display_tags[2] = "长期挂岗"
+        else:
+            display_tags.append("长期挂岗")
 
     return {
         "display_tags": display_tags[:3],

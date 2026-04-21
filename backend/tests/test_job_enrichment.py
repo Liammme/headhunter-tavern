@@ -48,5 +48,24 @@ def test_build_job_payload_marks_stale_roles_as_long_running():
     assert payload["signal_tags"]["display_tags"][-1] == "长期挂岗"
 
 
+def test_build_job_payload_marks_stale_non_senior_roles_without_crashing():
+    job = NormalizedJob(
+        source_job_id="backend-role",
+        canonical_url="https://example.com/careers/backend-engineer",
+        title="Backend Engineer",
+        company="Acme",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Build internal tools.",
+        posted_at=datetime.now().replace(microsecond=0) - timedelta(days=8),
+        raw_payload={},
+    )
+
+    payload = build_job_payload(job)
+
+    assert payload["signal_tags"]["display_tags"][-1] == "长期挂岗"
+
+
 def test_derive_company_name_falls_back_to_unknown_when_missing_host():
     assert derive_company_name("") == "Unknown Company"

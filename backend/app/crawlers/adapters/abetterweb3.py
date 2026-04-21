@@ -13,6 +13,13 @@ PAGE_ID = "daa09583-0b62-4e96-af46-de63fb9771b9"
 NOTION_API_BASE = "https://www.notion.so/api/v3"
 
 
+def _unwrap_value(value: Any) -> dict[str, Any]:
+    current = value if isinstance(value, dict) else {}
+    while isinstance(current.get("value"), dict):
+        current = current["value"]
+    return current
+
+
 def _rich_text_to_str(value: Any) -> str:
     if not isinstance(value, list):
         return ""
@@ -30,7 +37,7 @@ def _extract_collection_and_view(record_map: dict[str, Any]) -> tuple[str, str, 
     target_collection_id = ""
     target_schema: dict[str, Any] = {}
     for cid, wrapped in collections.items():
-        value = (wrapped or {}).get("value") or {}
+        value = _unwrap_value((wrapped or {}).get("value"))
         schema = value.get("schema") or {}
         names = {str((meta or {}).get("name") or "") for meta in schema.values()}
         if "项目/公司" in names and "岗位需求" in names:
@@ -40,14 +47,14 @@ def _extract_collection_and_view(record_map: dict[str, Any]) -> tuple[str, str, 
 
     if not target_collection_id and collections:
         target_collection_id, wrapped = next(iter(collections.items()))
-        target_schema = ((wrapped or {}).get("value") or {}).get("schema") or {}
+        target_schema = _unwrap_value((wrapped or {}).get("value")).get("schema") or {}
 
     if not target_collection_id:
         raise ValueError("cannot locate target collection")
 
     target_view_id = ""
     for vid, wrapped in collection_views.items():
-        value = (wrapped or {}).get("value") or {}
+        value = _unwrap_value((wrapped or {}).get("value"))
         source_collection = value.get("source_collection_id") or (
             (value.get("format") or {}).get("collection_pointer") or {}
         ).get("id")
@@ -67,7 +74,7 @@ def _build_jobs_from_blocks(blocks: dict[str, Any], collection_id: str, schema: 
 
     jobs: list[NormalizedJob] = []
     for bid, wrapped in blocks.items():
-        value = (wrapped or {}).get("value") or {}
+        value = _unwrap_value((wrapped or {}).get("value"))
         if value.get("type") != "page":
             continue
         if value.get("parent_table") != "collection" or value.get("parent_id") != collection_id:
@@ -89,9 +96,10 @@ def _build_jobs_from_blocks(blocks: dict[str, Any], collection_id: str, schema: 
         company_url = (named_props.get("link") or "").strip()
         source_url = (named_props.get("来源") or "").strip()
 
-        canonical_url = apply_url or company_url or source_url
-        if canonical_url and not canonical_url.startswith("http"):
-            canonical_url = ""
+        canonical_url = next(
+            (candidate for candidate in (apply_url, company_url, source_url) if candidate.startswith("http")),
+            "",
+        )
         if not canonical_url:
             canonical_url = f"https://abetterweb3.notion.site/{bid.replace('-', '')}"
 
@@ -132,6 +140,33 @@ def _build_jobs_from_blocks(blocks: dict[str, Any], collection_id: str, schema: 
     return jobs
 
 
+def _hydrate_record_map_details(client: httpx.Client, record_map: dict[str, Any]) -> dict[str, Any]:
+    requests: list[dict[str, Any]] = []
+    requests.extend(
+        {"table": "collection", "id": cid, "version": -1}
+        for cid in (record_map.get("collection") or {}).keys()
+    )
+    requests.extend(
+        {"table": "collection_view", "id": vid, "version": -1}
+        for vid in (record_map.get("collection_view") or {}).keys()
+    )
+
+    if not requests:
+        return record_map
+
+    sync = client.post(f"{NOTION_API_BASE}/syncRecordValues", json={"requests": requests})
+    sync.raise_for_status()
+    hydrated = sync.json().get("recordMap") or {}
+
+    merged = dict(record_map)
+    for table in ("collection", "collection_view"):
+        base_table = dict(record_map.get(table) or {})
+        base_table.update(hydrated.get(table) or {})
+        merged[table] = base_table
+
+    return merged
+
+
 class ABetterWeb3Adapter(SourceAdapter):
     source_name = "abetterweb3"
 
@@ -151,6 +186,7 @@ class ABetterWeb3Adapter(SourceAdapter):
             )
             cached.raise_for_status()
             record_map = cached.json().get("recordMap") or {}
+            record_map = _hydrate_record_map_details(client, record_map)
             collection_id, view_id, schema = _extract_collection_and_view(record_map)
 
             query = client.post(
