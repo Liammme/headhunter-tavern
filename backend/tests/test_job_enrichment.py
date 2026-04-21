@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from app.crawlers.base import NormalizedJob
-from app.services.job_enrichment import build_job_payload, derive_company_name
+from app.services.job_enrichment import build_job_payload, derive_company_name, enrich_job
 
 
 def test_build_job_payload_derives_company_and_analysis_fields():
@@ -27,6 +27,33 @@ def test_build_job_payload_derives_company_and_analysis_fields():
     assert payload["domain_tag"] == "AI"
     assert payload["bounty_grade"] == "high"
     assert payload["signal_tags"]["display_tags"][0] == "AI"
+    assert "job_facts" not in payload
+    assert "score_inputs" not in payload
+    assert "score_results" not in payload
+
+
+def test_enrich_job_exposes_parallel_v1_and_v2_results_for_internal_compare():
+    job = NormalizedJob(
+        source_job_id="founding-ai",
+        canonical_url="https://open-gradient.ai/careers/principal-ai-engineer",
+        title="  Principal AI Engineer  ",
+        company="",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description=" Build LLM platform and hiring roadmap. ",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board"},
+    )
+
+    enriched = enrich_job(job)
+
+    assert enriched.v1_result.grade == "high"
+    assert enriched.v2_result.rule_version == "score-v2"
+    assert enriched.v2_result.grade in {"medium", "high"}
+    assert enriched.v2_result.reasons
+    assert enriched.v2_result.rule_hits
+    assert enriched.payload["bounty_grade"] == enriched.v1_result.grade
 
 
 def test_build_job_payload_marks_stale_roles_as_long_running():
