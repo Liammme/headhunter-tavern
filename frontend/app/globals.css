@@ -47,7 +47,8 @@ input {
 .intel-card,
 .day-section,
 .company-card,
-.claim-dialog {
+.claim-dialog,
+.empty-state {
   border: 1px solid var(--border);
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -136,6 +137,22 @@ input {
   padding: 20px;
   display: grid;
   gap: 16px;
+}
+
+.empty-state {
+  padding: 28px 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.empty-state h2,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state p:last-child {
+  color: var(--muted);
+  line-height: 1.65;
 }
 
 .day-title {
