@@ -81,4 +81,7 @@ def extract_company_url(job: NormalizedJob) -> str | None:
         return None
 
     normalized_url = company_url.strip()
-    return normalized_url or None
+    if not normalized_url.lower().startswith(("http://", "https://")):
+        return None
+
+    return normalized_url

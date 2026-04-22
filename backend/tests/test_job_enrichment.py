@@ -70,6 +70,25 @@ def test_build_job_payload_does_not_guess_company_url_when_missing():
     assert "company_url" not in payload["signal_tags"]
 
 
+def test_build_job_payload_ignores_non_absolute_company_url():
+    job = NormalizedJob(
+        source_job_id="with-invalid-company-url",
+        canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
+        title="Principal AI Engineer",
+        company="Open Gradient",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board", "company_url": "/"},
+    )
+
+    payload = build_job_payload(job)
+
+    assert "company_url" not in payload["signal_tags"]
+
+
 def test_enrich_job_exposes_parallel_v1_and_v2_results_for_internal_compare():
     job = NormalizedJob(
         source_job_id="founding-ai",
