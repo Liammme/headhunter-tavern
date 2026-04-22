@@ -37,11 +37,19 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
             {
                 "company": job.company,
                 "company_url": None,
+                "estimated_bounty_amount": None,
+                "estimated_bounty_label": None,
                 "jobs": [],
             },
         )
         if company_group["company_url"] is None:
             company_group["company_url"] = job.signal_tags.get("company_url")
+        estimated_bounty_amount = job.signal_tags.get("estimated_bounty_amount")
+        estimated_bounty_label = job.signal_tags.get("estimated_bounty_label")
+        if company_group["estimated_bounty_amount"] is None and isinstance(estimated_bounty_amount, int):
+            company_group["estimated_bounty_amount"] = estimated_bounty_amount
+        if company_group["estimated_bounty_label"] is None and isinstance(estimated_bounty_label, str) and estimated_bounty_label.strip():
+            company_group["estimated_bounty_label"] = estimated_bounty_label.strip()
         company_group["jobs"].append(
             {
                 "id": job.id,
@@ -77,6 +85,8 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     jobs=[JobFeedSnapshot(**job_item) for job_item in jobs_payload],
                     claimed_by=company_claims[0] if company_claims else None,
                     claim_status="claimed" if company_claims else None,
+                    estimated_bounty_amount=company["estimated_bounty_amount"],
+                    estimated_bounty_label=company["estimated_bounty_label"] or "待估算",
                 )
             )
 

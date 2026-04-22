@@ -220,3 +220,43 @@ def test_build_day_payloads_emits_company_level_claim_subject():
     assert company.claimed_by == "Mina"
     assert company.claim_status == "claimed"
     assert [job.claimed_names for job in company.jobs] == [[], []]
+
+
+def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        )
+    ]
+    jobs[0].signal_tags["estimated_bounty_amount"] = 1500
+    jobs[0].signal_tags["estimated_bounty_label"] = "¥1,500"
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    company = payloads[0].companies[0]
+    assert company.estimated_bounty_amount == 1500
+    assert company.estimated_bounty_label == "¥1,500"
+
+
+def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    company = payloads[0].companies[0]
+    assert company.estimated_bounty_amount is None
+    assert company.estimated_bounty_label == "待估算"
