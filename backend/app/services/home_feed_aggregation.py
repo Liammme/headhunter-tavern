@@ -36,9 +36,12 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
             company_key,
             {
                 "company": job.company,
+                "company_url": None,
                 "jobs": [],
             },
         )
+        if company_group["company_url"] is None:
+            company_group["company_url"] = job.signal_tags.get("company_url")
         company_group["jobs"].append(
             {
                 "id": job.id,
@@ -68,6 +71,7 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
             companies.append(
                 CompanyFeedSnapshot(
                     company=company["company"],
+                    company_url=company["company_url"],
                     company_grade=company_grade,
                     total_jobs=len(jobs_payload),
                     claimed_names=company_claims,

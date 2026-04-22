@@ -9,6 +9,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
             companies=[
                 CompanyFeedSnapshot(
                     company="OpenGradient",
+                    company_url="https://example.com/company/opengradient",
                     company_grade="focus",
                     total_jobs=1,
                     claimed_names=["Liam"],
@@ -54,6 +55,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                 "companies": [
                     {
                         "company": "OpenGradient",
+                        "company_url": "https://example.com/company/opengradient",
                         "company_grade": "focus",
                         "total_jobs": 1,
                         "claimed_names": ["Liam"],

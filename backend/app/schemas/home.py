@@ -12,6 +12,7 @@ class JobCardOut(BaseModel):
 
 class CompanyCardOut(BaseModel):
     company: str
+    company_url: str | None = None
     company_grade: str
     total_jobs: int
     claimed_names: list[str]
@@ -24,6 +25,7 @@ class DayBucketOut(BaseModel):
 
 
 class IntelligenceOut(BaseModel):
+    narrative: str
     headline: str
     summary: str
     analysis_version: str

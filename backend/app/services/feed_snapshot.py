@@ -29,6 +29,7 @@ class JobFeedSnapshot:
 @dataclass(frozen=True)
 class CompanyFeedSnapshot:
     company: str
+    company_url: str | None
     company_grade: str
     total_jobs: int
     claimed_names: list[str]

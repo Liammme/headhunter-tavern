@@ -38,6 +38,9 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
     standardized = standardize_job_input(job)
     facts = extract_job_facts(standardized, now=standardized.collected_at)
     signal_tags = build_legacy_signal_tags(facts)
+    company_url = extract_company_url(job)
+    if company_url:
+        signal_tags["company_url"] = company_url
     v1_input = build_v1_score_input(facts)
     v2_input = build_v2_score_input(facts)
     v1_result = score_job(v1_input)
@@ -70,3 +73,12 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
 
 def build_job_payload(job: NormalizedJob) -> dict:
     return enrich_job(job).payload
+
+
+def extract_company_url(job: NormalizedJob) -> str | None:
+    company_url = job.raw_payload.get("company_url")
+    if not isinstance(company_url, str):
+        return None
+
+    normalized_url = company_url.strip()
+    return normalized_url or None

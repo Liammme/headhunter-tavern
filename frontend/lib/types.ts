@@ -1,4 +1,5 @@
 export type IntelligencePayload = {
+  narrative: string;
   headline: string;
   summary: string;
   findings: string[];
@@ -16,6 +17,7 @@ export type JobCardPayload = {
 
 export type CompanyCardPayload = {
   company: string;
+  company_url?: string | null;
   company_grade: "focus" | "watch" | "normal";
   total_jobs: number;
   claimed_names: string[];

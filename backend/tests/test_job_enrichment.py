@@ -32,6 +32,44 @@ def test_build_job_payload_derives_company_and_analysis_fields():
     assert "score_results" not in payload
 
 
+def test_build_job_payload_preserves_company_url_when_present():
+    job = NormalizedJob(
+        source_job_id="with-company-url",
+        canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
+        title="Principal AI Engineer",
+        company="Open Gradient",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board", "company_url": " https://open-gradient.ai/company "},
+    )
+
+    payload = build_job_payload(job)
+
+    assert payload["signal_tags"]["company_url"] == "https://open-gradient.ai/company"
+
+
+def test_build_job_payload_does_not_guess_company_url_when_missing():
+    job = NormalizedJob(
+        source_job_id="without-company-url",
+        canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
+        title="Principal AI Engineer",
+        company="Open Gradient",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board"},
+    )
+
+    payload = build_job_payload(job)
+
+    assert "company_url" not in payload["signal_tags"]
+
+
 def test_enrich_job_exposes_parallel_v1_and_v2_results_for_internal_compare():
     job = NormalizedJob(
         source_job_id="founding-ai",

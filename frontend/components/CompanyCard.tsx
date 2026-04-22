@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import ClaimDialog from "./ClaimDialog";
 import type { CompanyCardPayload, JobCardPayload } from "../lib/types";
@@ -46,7 +46,15 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
     <article className="company-card">
       <div className="company-top">
         <div>
-          <h3>{companyState.company}</h3>
+          <h3>
+            {companyState.company_url ? (
+              <a href={companyState.company_url} target="_blank" rel="noreferrer">
+                {companyState.company}
+              </a>
+            ) : (
+              companyState.company
+            )}
+          </h3>
           <div className="company-meta">
             <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
             <span>共 {companyState.total_jobs} 个岗位</span>

@@ -15,6 +15,7 @@ def build_job(
     bounty_grade: str,
     days_ago: int,
     tags: list[str] | None = None,
+    company_url: str | None = None,
 ) -> Job:
     base_time = datetime(2026, 4, 18, 9, 0, 0)
     posted_at = base_time - timedelta(days=days_ago)
@@ -29,7 +30,10 @@ def build_job(
         posted_at=posted_at,
         collected_at=posted_at,
         bounty_grade=bounty_grade,
-        signal_tags={"display_tags": tags or []},
+        signal_tags={
+            "display_tags": tags or [],
+            **({"company_url": company_url} if company_url else {}),
+        },
     )
 
 
@@ -84,6 +88,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
     companies = payloads[0].companies
     assert [company.company for company in companies] == ["OpenGradient", "Beta Labs"]
     assert companies[0].company_grade == "watch"
+    assert companies[0].company_url is None
     assert [job.id for job in companies[0].jobs] == [1, 2]
     assert companies[0].claimed_names == ["Leo", "Mina"]
     assert companies[0].jobs[0].claimed_names == ["Leo", "Mina"]
@@ -165,3 +170,21 @@ def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
 
     assert payloads[0].companies[0].company_grade == "watch"
     assert [job.bounty_grade for job in payloads[0].companies[0].jobs] == ["medium", "medium", "low"]
+
+
+def test_build_day_payloads_preserves_company_url_for_company_card():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+            company_url="https://jobs.example.com/companies/opengradient",
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].company_url == "https://jobs.example.com/companies/opengradient"
