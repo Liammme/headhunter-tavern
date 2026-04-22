@@ -215,6 +215,10 @@ def request_zhipu_chat_completion(llm_input: dict) -> str:
     return _request_zhipu_chat_completion_with_retry(messages)
 
 
+def request_zhipu_structured_json(messages: list[dict]) -> str:
+    return _request_zhipu_chat_completion_with_retry(messages)
+
+
 def rewrite_llm_intelligence_fields(*, llm_input: dict, invalid_content: str, validation_error: str) -> str:
     messages = [
         {
