@@ -12,9 +12,11 @@ const LOADING_MESSAGES = [
 
 type CompanyCluePanelProps = {
   clue: CompanyClueState;
+  onRetry?: () => void;
+  onClose?: () => void;
 };
 
-export default function CompanyCluePanel({ clue }: CompanyCluePanelProps) {
+export default function CompanyCluePanel({ clue, onRetry, onClose }: CompanyCluePanelProps) {
   const [loadingIndex, setLoadingIndex] = useState(0);
 
   useEffect(() => {
@@ -60,6 +62,18 @@ export default function CompanyCluePanel({ clue }: CompanyCluePanelProps) {
         </div>
         <p className="company-clue-narrative">{clue.narrative}</p>
         {clue.error_message ? <p className="company-clue-meta">异常原因：{clue.error_message}</p> : null}
+        <div className="company-clue-actions">
+          {onRetry ? (
+            <button type="button" className="company-clue-retry" onClick={onRetry}>
+              重试
+            </button>
+          ) : null}
+          {onClose ? (
+            <button type="button" className="text-button" onClick={onClose}>
+              收起
+            </button>
+          ) : null}
+        </div>
       </section>
     );
   }

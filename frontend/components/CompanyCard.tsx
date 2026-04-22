@@ -66,12 +66,7 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
     handleClaimCreated(claimJob.id, claimerName);
   }
 
-  async function handleClueToggle() {
-    if (isClueOpen) {
-      setIsClueOpen(false);
-      return;
-    }
-
+  async function requestClueLetter() {
     const requestId = clueRequestIdRef.current + 1;
     clueRequestIdRef.current = requestId;
     setIsClueOpen(true);
@@ -103,6 +98,15 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
         error_message: "Failed to request company clue letter",
       });
     }
+  }
+
+  async function handleClueToggle() {
+    if (isClueOpen) {
+      setIsClueOpen(false);
+      return;
+    }
+
+    await requestClueLetter();
   }
 
   return (
@@ -146,7 +150,13 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
         </div>
         <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
       </div>
-      {isClueOpen && clueState ? <CompanyCluePanel clue={clueState} /> : null}
+      {isClueOpen && clueState ? (
+        <CompanyCluePanel
+          clue={clueState}
+          onRetry={clueState.status === "failure" ? requestClueLetter : undefined}
+          onClose={() => setIsClueOpen(false)}
+        />
+      ) : null}
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
         <div className="company-meta job-list-head">
           <span>重点岗位证据</span>

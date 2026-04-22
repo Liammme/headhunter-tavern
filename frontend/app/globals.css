@@ -711,6 +711,22 @@ input {
   border-color: rgba(111, 24, 24, 0.88);
 }
 
+.company-clue-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.company-clue-retry {
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--text);
+  color: #fffaf4;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(23, 21, 19, 0.78);
+}
+
 .job-list-head {
   justify-content: space-between;
   align-items: center;

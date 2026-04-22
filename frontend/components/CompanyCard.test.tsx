@@ -284,6 +284,37 @@ describe("CompanyCard", () => {
     expect(screen.getByText("线索生成失败")).toBeInTheDocument();
     expect(screen.getByText("OpenGradient 的单公司线索来信生成失败，请稍后重试。")).toBeInTheDocument();
     expect(screen.getByText("异常原因：Failed to request company clue letter")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重试" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "收起" })).toBeInTheDocument();
     expect(screen.queryByLabelText("公司线索来信")).not.toBeInTheDocument();
+  });
+
+  it("allows retrying a failed clue request from the failure container", async () => {
+    requestCompanyClueLetterMock
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce({
+        status: "success",
+        company: "OpenGradient",
+        generated_at: "2026-04-22T09:00:00",
+        narrative: "James侦探说第二次线索整理已经成功。",
+        sections: [
+          { key: "lead", title: "我先看到的", content: "测试内容" },
+          { key: "evidence", title: "这家公司现在露出的口子", content: "测试内容" },
+          { key: "next_move", title: "你下一步怎么查", content: "测试内容" },
+        ],
+        error_message: null,
+      });
+
+    render(<CompanyCard company={buildCompany()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "线索" }));
+
+    await waitFor(() => expect(screen.getByLabelText("公司线索失败结果")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+
+    expect(requestCompanyClueLetterMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByLabelText("公司线索来信")).toBeInTheDocument());
+    expect(screen.getByText("James侦探说第二次线索整理已经成功。")).toBeInTheDocument();
   });
 });
