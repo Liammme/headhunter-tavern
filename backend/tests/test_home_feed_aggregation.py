@@ -91,7 +91,9 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
     assert companies[0].company_url is None
     assert [job.id for job in companies[0].jobs] == [1, 2]
     assert companies[0].claimed_names == ["Leo", "Mina"]
-    assert companies[0].jobs[0].claimed_names == ["Leo", "Mina"]
+    assert companies[0].claimed_by == "Leo"
+    assert companies[0].claim_status == "claimed"
+    assert [job.claimed_names for job in companies[0].jobs] == [[], []]
 
 
 def test_build_day_payloads_filters_jobs_outside_window():
@@ -188,3 +190,33 @@ def test_build_day_payloads_preserves_company_url_for_company_card():
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     assert payloads[0].companies[0].company_url == "https://jobs.example.com/companies/opengradient"
+
+
+def test_build_day_payloads_emits_company_level_claim_subject():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        ),
+        build_job(
+            job_id=2,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Product Manager",
+            bounty_grade="medium",
+            days_ago=0,
+        ),
+    ]
+    claims = [build_claim(claim_id=1, job_id=1, claimer_name="Mina")]
+
+    payloads = build_day_payloads(jobs, claims, today=datetime(2026, 4, 18).date())
+
+    company = payloads[0].companies[0]
+    assert company.claimed_names == ["Mina"]
+    assert company.claimed_by == "Mina"
+    assert company.claim_status == "claimed"
+    assert [job.claimed_names for job in company.jobs] == [[], []]

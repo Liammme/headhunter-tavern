@@ -55,3 +55,27 @@ def test_create_claim_returns_404_when_job_missing(client):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Job not found"}
+
+
+def test_create_claim_returns_409_when_company_already_claimed(client, db_session):
+    first_job = build_job()
+    second_job = build_job()
+    second_job.canonical_url = "https://jobs.example.com/acme/staff-engineer"
+    second_job.title = "Staff Engineer"
+    db_session.add_all([first_job, second_job])
+    db_session.commit()
+    db_session.refresh(first_job)
+    db_session.refresh(second_job)
+
+    first_response = client.post(
+        "/api/v1/claims",
+        json={"job_id": first_job.id, "claimer_name": "Liam"},
+    )
+    second_response = client.post(
+        "/api/v1/claims",
+        json={"job_id": second_job.id, "claimer_name": "Mina"},
+    )
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 409
+    assert second_response.json() == {"detail": "Company already claimed"}

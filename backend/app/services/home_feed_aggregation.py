@@ -49,7 +49,7 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                 "canonical_url": job.canonical_url,
                 "bounty_grade": job.bounty_grade,
                 "tags": list(job.signal_tags.get("display_tags", [])),
-                "claimed_names": claim_map.get(job.id, []),
+                "claimed_names": [],
             }
         )
 
@@ -63,10 +63,9 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
             )
             company_claims: list[str] = []
             for job_item in jobs_payload:
-                for name in job_item["claimed_names"]:
+                for name in claim_map.get(job_item["id"], []):
                     if name not in company_claims:
                         company_claims.append(name)
-
             company_grade = derive_company_grade([job_item["bounty_grade"] for job_item in jobs_payload])
             companies.append(
                 CompanyFeedSnapshot(
@@ -76,6 +75,8 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     total_jobs=len(jobs_payload),
                     claimed_names=company_claims,
                     jobs=[JobFeedSnapshot(**job_item) for job_item in jobs_payload],
+                    claimed_by=company_claims[0] if company_claims else None,
+                    claim_status="claimed" if company_claims else None,
                 )
             )
 
