@@ -15,42 +15,39 @@ type CompanyClaimSealProps = {
 };
 
 export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: CompanyClaimSealProps) {
-  const signerName = company.claimed_by ?? company.claimed_names[0] ?? "待签署";
-  const claimStatus = renderClaimStatus(company.claim_status, company.claimed_names);
+  const signerName = company.claimed_by ?? company.claimed_names[0] ?? null;
   const estimatedBounty = renderEstimatedBounty(company);
+  const isClaimed = Boolean(company.claim_status || company.claimed_names.length || company.claimed_by);
 
   return (
-    <aside className="company-claim-seal" aria-label="公司签署区">
-      <p className="eyebrow">签署区</p>
-      <p className="seal-status">{claimStatus}</p>
-      <dl className="seal-details">
-        <div>
-          <dt>公司线索认领</dt>
-          <dd>{signerName}</dd>
-        </div>
-        <div>
-          <dt>预计赏金</dt>
-          <dd>{estimatedBounty}</dd>
-        </div>
-      </dl>
-      {claimJob ? <ClaimDialog job={claimJob} onClaimCreated={onClaimCreated} /> : null}
+    <aside className="company-claim-seal" aria-label={isClaimed ? "公司签署状态位" : "公司认领状态位"}>
+      {isClaimed ? (
+        <>
+          <div className="seal-mark" aria-hidden="true">
+            <span>SEALED</span>
+          </div>
+          <dl className="seal-details">
+            <div>
+              <dt>Signature</dt>
+              <dd className="seal-signature">{renderEnglishSignature(signerName)}</dd>
+            </div>
+            <div>
+              <dt>预计赏金</dt>
+              <dd>{estimatedBounty}</dd>
+            </div>
+          </dl>
+        </>
+      ) : (
+        <>
+          <div className="seal-bounty">
+            <span className="seal-bounty-label">预计赏金</span>
+            <strong>{estimatedBounty}</strong>
+          </div>
+          {claimJob ? <ClaimDialog job={claimJob} onClaimCreated={onClaimCreated} /> : null}
+        </>
+      )}
     </aside>
   );
-}
-
-function renderClaimStatus(
-  claimStatus: CompanyCardPayload["claim_status"],
-  claimedNames: CompanyCardPayload["claimed_names"],
-) {
-  if (claimStatus) {
-    return claimStatus;
-  }
-
-  if (claimedNames.length) {
-    return "已签署";
-  }
-
-  return "待签署";
 }
 
 function renderEstimatedBounty(company: CompanyClaimSealProps["company"]) {
@@ -63,4 +60,12 @@ function renderEstimatedBounty(company: CompanyClaimSealProps["company"]) {
   }
 
   return "待估算";
+}
+
+function renderEnglishSignature(signerName: string | null) {
+  if (!signerName) {
+    return "Signed";
+  }
+
+  return `Signed by ${signerName}`;
 }

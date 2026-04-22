@@ -527,8 +527,8 @@ input {
 
 .company-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr);
-  gap: 16px 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px 18px;
   align-items: start;
   padding-bottom: 14px;
   border-bottom: 2px dotted rgba(23, 21, 19, 0.2);
@@ -536,15 +536,49 @@ input {
 
 .company-dossier-head {
   display: grid;
-  gap: 12px;
-  max-width: min(100%, 40rem);
+  gap: 10px;
+  max-width: min(100%, 42rem);
+  min-width: 0;
 }
 
 .company-stamp-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.company-actions {
+  display: flex;
+  align-items: center;
+}
+
+.company-clue-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid rgba(23, 21, 19, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 252, 247, 0.72);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.company-clue-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+}
+
+.company-clue-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .company-top h3 {
@@ -564,12 +598,12 @@ input {
 .company-grade {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 5px 10px;
   background: rgba(23, 21, 19, 0.92);
   color: #fffaf4;
   font-weight: 700;
-  border: 2px solid var(--border);
-  box-shadow: 3px 3px 0 rgba(111, 24, 24, 0.35);
+  border: 1px solid var(--border);
+  box-shadow: 2px 2px 0 rgba(111, 24, 24, 0.24);
 }
 
 .job-list {
@@ -631,60 +665,95 @@ input {
 }
 
 .company-claim-seal {
-  padding: 14px 16px;
+  width: min(188px, 100%);
+  padding: 10px 10px 11px;
   display: grid;
-  gap: 12px;
+  gap: 7px;
   align-self: start;
-  border: 2px solid rgba(23, 21, 19, 0.82);
+  justify-self: end;
+  border: 1px solid rgba(23, 21, 19, 0.42);
   background:
-    linear-gradient(180deg, rgba(111, 24, 24, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(111, 24, 24, 0.06), transparent 30%),
     repeating-linear-gradient(
       180deg,
-      transparent 0 18px,
-      rgba(23, 21, 19, 0.12) 18px 19px,
-      transparent 19px 26px
+      transparent 0 16px,
+      rgba(23, 21, 19, 0.08) 16px 17px,
+      transparent 17px 23px
     ),
-    rgba(250, 247, 241, 0.96);
-  box-shadow: 4px 4px 0 rgba(23, 21, 19, 0.28);
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 10px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    rgba(250, 247, 241, 0.84);
+  box-shadow: 2px 2px 0 rgba(23, 21, 19, 0.12);
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 8px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
 }
 
-.seal-status,
+.seal-bounty {
+  display: grid;
+  gap: 4px;
+}
+
+.seal-bounty-label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.seal-bounty strong {
+  font-size: 15px;
+}
+
+.seal-mark {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.16), transparent 34%),
+    radial-gradient(circle, rgba(111, 24, 24, 0.92), rgba(87, 19, 19, 1) 70%);
+  color: #fff7ef;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 244, 232, 0.28),
+    2px 2px 0 rgba(23, 21, 19, 0.18);
+  text-transform: uppercase;
+}
+
 .seal-details dt,
 .seal-details dd {
   margin: 0;
 }
 
-.seal-status {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .seal-details {
   margin: 0;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .seal-details div {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .seal-details dt {
   color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .seal-details dd {
   color: var(--text);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
+}
+
+.seal-signature {
+  font-family: "Times New Roman", "Georgia", serif;
+  font-size: 18px;
+  font-style: italic;
+  letter-spacing: 0.02em;
 }
 
 .evidence-caption {
@@ -819,6 +888,11 @@ input {
 
   .company-top {
     grid-template-columns: 1fr;
+  }
+
+  .company-claim-seal {
+    width: 100%;
+    justify-self: stretch;
   }
 
   .intel-card,

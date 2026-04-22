@@ -80,6 +80,17 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
             <span>共 {companyState.total_jobs} 个岗位</span>
             <span>已认领 {companyState.claimed_names.length} 人</span>
           </div>
+          <div className="company-actions">
+            <button type="button" className="company-clue-tag" aria-label="线索">
+              <span className="company-clue-icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" focusable="false">
+                  <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M10.4 10.4L13.5 13.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span>线索</span>
+            </button>
+          </div>
         </div>
         <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
       </div>

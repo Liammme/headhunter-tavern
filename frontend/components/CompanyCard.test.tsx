@@ -29,6 +29,55 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
 }
 
 describe("CompanyCard", () => {
+  it("renders a lighter clue action and a simplified unclaimed right rail for task 5.5", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          estimated_bounty_label: "¥3,000+",
+          claimed_names: [],
+          claimed_by: null,
+          claim_status: null,
+        })}
+      />,
+    );
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
+
+    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
+    expect(rightRail).not.toBeNull();
+    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByRole("button", { name: /认领/ })).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("签署区")).not.toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("公司线索认领")).not.toBeInTheDocument();
+  });
+
+  it("shows a stamped or english signature state with estimated bounty after claim for task 5.5", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          claimed_names: ["Ada"],
+          claimed_by: "Ada",
+          claim_status: "已签署",
+          estimated_bounty_label: "¥3,000+",
+        })}
+      />,
+    );
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+    const rightRail = within(card as HTMLElement).getByLabelText("公司签署状态位");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
+    expect(rightRail).not.toBeNull();
+    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("SEALED")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("Signed by Ada")).toBeInTheDocument();
+  });
+
   it("renders a three-part dossier layout for task 5", () => {
     render(
       <CompanyCard
@@ -78,15 +127,15 @@ describe("CompanyCard", () => {
 
     const companyHeading = screen.getByRole("heading", { level: 3, name: "OpenGradient" });
     const card = companyHeading.closest("article");
-    const seal = within(card as HTMLElement).getByLabelText("公司签署区");
+    const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
 
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("共 4 个岗位")).toBeInTheDocument();
-    expect(within(seal).getByText("公司线索认领")).toBeInTheDocument();
-    expect(within(seal).getByText("Ada")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
+    expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
     expect(within(seal).getByText("预计赏金")).toBeInTheDocument();
     expect(within(seal).getByText("待估算")).toBeInTheDocument();
-    expect(within(seal).getByRole("button", { name: /认领/ })).toBeInTheDocument();
+    expect(within(seal).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
 
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
@@ -138,8 +187,9 @@ describe("CompanyCard", () => {
     );
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("共 2 个岗位")).toBeInTheDocument();
-    const seal = within(card as HTMLElement).getByLabelText("公司签署区");
-    expect(within(seal).getByText("Ada")).toBeInTheDocument();
+    const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
+    expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
+    expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
     expect(within(seal).getByText("待估算")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
