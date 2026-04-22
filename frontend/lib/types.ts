@@ -37,3 +37,42 @@ export type HomePayload = {
   intelligence: IntelligencePayload;
   days: DayBucketPayload[];
 };
+
+export type CompanyClueRequest = {
+  company: string;
+};
+
+export type CompanyClueStatus = "loading" | "success" | "failure";
+
+export type CompanyClueSection = {
+  key: string;
+  title: string;
+  content: string;
+};
+
+export type CompanyClueResponse = {
+  status: CompanyClueStatus;
+  company: string;
+  generated_at: string;
+  narrative: string;
+  sections: CompanyClueSection[];
+  error_message?: string | null;
+};
+
+export type CompanyClueState =
+  | {
+      status: "loading";
+      company: string;
+      generated_at: string;
+      narrative: string;
+      sections: CompanyClueSection[];
+      error_message?: null;
+    }
+  | {
+      status: "success" | "failure";
+      company: string;
+      generated_at: string;
+      narrative: string;
+      sections: CompanyClueSection[];
+      error_message?: string | null;
+    };
