@@ -18,6 +18,19 @@ def test_create_claim_requires_name(client):
     assert response.status_code == 422
 
 
+def test_claims_preflight_allows_127_localhost_frontend(client):
+    response = client.options(
+        "/api/v1/claims",
+        headers={
+            "Origin": "http://127.0.0.1:3000",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3000"
+
+
 def test_create_claim_returns_created_claim(client, db_session):
     job = build_job()
     db_session.add(job)
