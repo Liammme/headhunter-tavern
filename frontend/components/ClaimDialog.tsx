@@ -6,7 +6,13 @@ import { useState, useTransition } from "react";
 import { createClaim } from "../lib/api";
 import type { JobCardPayload } from "../lib/types";
 
-export default function ClaimDialog({ job }: { job: JobCardPayload }) {
+export default function ClaimDialog({
+  job,
+  onClaimCreated,
+}: {
+  job: JobCardPayload;
+  onClaimCreated?: (claimerName: string) => void;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -27,9 +33,11 @@ export default function ClaimDialog({ job }: { job: JobCardPayload }) {
     event.preventDefault();
     setSaving(true);
     setMessage("");
+    const trimmedName = name.trim();
 
     try {
-      await createClaim(job.id, name);
+      await createClaim(job.id, trimmedName);
+      onClaimCreated?.(trimmedName);
       setMessage("认领成功");
       setName("");
       toggleDialog(false);

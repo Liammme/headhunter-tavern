@@ -1,4 +1,5 @@
 import json
+import logging
 from collections import Counter
 from urllib import error, request
 
@@ -10,6 +11,9 @@ class IntelligenceGenerationError(RuntimeError):
     pass
 
 
+logger = logging.getLogger(__name__)
+
+
 def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
     fallback_snapshot = build_rule_intelligence_snapshot(day_payloads, meta)
     if not _should_use_llm():
@@ -17,7 +21,8 @@ def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: Fee
 
     try:
         llm_fields = generate_llm_intelligence_fields(day_payloads, meta)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Falling back to rule-based intelligence summary: %s", exc)
         return fallback_snapshot
 
     return {
@@ -158,27 +163,18 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
 
 
 def request_zhipu_chat_completion(llm_input: dict) -> str:
-    payload = {
-        "model": settings.bounty_pool_zhipu_model,
-        "temperature": 0.3,
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "你是猎头团队的晨报分析助手。"
-                    "你只能基于用户提供的聚合统计做判断，不能臆造未提供的数据。"
-                    "请输出 JSON 对象，包含 headline、summary、findings、actions 四个字段。"
-                    "headline 和 summary 必须是字符串。"
-                    "findings 和 actions 必须是长度为 3 的字符串数组。"
-                    "语言使用简洁、有判断力的中文，适合给猎头团队和老板同时阅读。"
-                ),
-            },
-            {
-                "role": "user",
-                "content": json.dumps(llm_input, ensure_ascii=False),
-            },
-        ],
-    }
+    errors: list[str] = []
+    for model_name in _iter_zhipu_models():
+        try:
+            return _request_zhipu_chat_completion_with_model(llm_input, model_name)
+        except Exception as exc:
+            errors.append(f"{model_name}: {exc}")
+
+    raise IntelligenceGenerationError("; ".join(errors))
+
+
+def _request_zhipu_chat_completion_with_model(llm_input: dict, model_name: str) -> str:
+    payload = _build_zhipu_payload(llm_input, model_name)
     endpoint = f"{settings.bounty_pool_zhipu_base_url.rstrip('/')}/chat/completions"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     http_request = request.Request(
@@ -194,6 +190,9 @@ def request_zhipu_chat_completion(llm_input: dict) -> str:
     try:
         with request.urlopen(http_request, timeout=20) as response:
             response_body = json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise IntelligenceGenerationError(f"LLM request failed with {exc.code}: {error_body}") from exc
     except (error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise IntelligenceGenerationError("LLM request failed") from exc
 
@@ -208,9 +207,36 @@ def request_zhipu_chat_completion(llm_input: dict) -> str:
     return message_content
 
 
+def _build_zhipu_payload(llm_input: dict, model_name: str) -> dict:
+    return {
+        "model": model_name,
+        "temperature": 0.3,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是猎头团队的晨报分析助手。"
+                    "你只能基于用户提供的聚合统计做判断，不能臆造未提供的数据。"
+                    "请直接输出 JSON 对象，不要输出额外解释，不要输出 markdown。"
+                    "JSON 必须包含 headline、summary、findings、actions 四个字段。"
+                    "headline 和 summary 必须是字符串。"
+                    "findings 和 actions 必须是长度为 3 的字符串数组。"
+                    "语言使用简洁、有判断力的中文，适合给猎头团队和老板同时阅读。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(llm_input, ensure_ascii=False),
+            },
+        ],
+        "response_format": {"type": "json_object"},
+    }
+
+
 def parse_llm_intelligence_fields(content: str) -> dict:
+    normalized_content = _strip_code_fence(content)
     try:
-        payload = json.loads(content)
+        payload = json.loads(normalized_content)
     except json.JSONDecodeError as exc:
         raise IntelligenceGenerationError("LLM response is not valid JSON") from exc
 
@@ -240,5 +266,32 @@ def _is_string_list(value: object) -> bool:
     return isinstance(value, list) and len(value) >= 1 and all(isinstance(item, str) and item.strip() for item in value)
 
 
+def _strip_code_fence(content: str) -> str:
+    stripped = content.strip()
+    if not stripped.startswith("```"):
+        return stripped
+
+    lines = stripped.splitlines()
+    if len(lines) >= 3 and lines[0].startswith("```") and lines[-1] == "```":
+        return "\n".join(lines[1:-1]).strip()
+
+    return stripped
+
+
 def _should_use_llm() -> bool:
     return settings.bounty_pool_intelligence_llm_enabled and bool(settings.bounty_pool_zhipu_api_key)
+
+
+def _iter_zhipu_models() -> list[str]:
+    models = [settings.bounty_pool_zhipu_model]
+    models.extend(
+        item.strip()
+        for item in settings.bounty_pool_zhipu_fallback_models.split(",")
+        if item.strip()
+    )
+
+    deduped: list[str] = []
+    for item in models:
+        if item not in deduped:
+            deduped.append(item)
+    return deduped

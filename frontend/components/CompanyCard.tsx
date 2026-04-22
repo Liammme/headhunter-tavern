@@ -1,33 +1,60 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ClaimDialog from "./ClaimDialog";
-import type { CompanyCardPayload } from "../lib/types";
+import type { CompanyCardPayload, JobCardPayload } from "../lib/types";
 
 export default function CompanyCard({ company }: { company: CompanyCardPayload }) {
+  const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setCompanyState(company);
+  }, [company]);
 
   const jobs = useMemo(() => {
     if (expanded) {
-      return company.jobs;
+      return companyState.jobs;
     }
-    return company.jobs.slice(0, 3);
-  }, [company.jobs, expanded]);
+    return companyState.jobs.slice(0, 3);
+  }, [companyState.jobs, expanded]);
+
+  function handleClaimCreated(jobId: number, claimerName: string) {
+    setCompanyState((current) => {
+      const normalizedName = claimerName.trim();
+      if (!normalizedName) {
+        return current;
+      }
+
+      return {
+        ...current,
+        claimed_names: appendClaimer(current.claimed_names, normalizedName),
+        jobs: current.jobs.map((job) =>
+          job.id === jobId
+            ? {
+                ...job,
+                claimed_names: appendClaimer(job.claimed_names, normalizedName),
+              }
+            : job,
+        ),
+      };
+    });
+  }
 
   return (
     <article className="company-card">
       <div className="company-top">
         <div>
-          <h3>{company.company}</h3>
+          <h3>{companyState.company}</h3>
           <div className="company-meta">
-            <span className="company-grade">{renderCompanyGrade(company.company_grade)}</span>
-            <span>共 {company.total_jobs} 个岗位</span>
+            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
+            <span>共 {companyState.total_jobs} 个岗位</span>
           </div>
         </div>
         <div className="job-claims">
           <span>已认领：</span>
-          <span>{company.claimed_names.length ? company.claimed_names.join("、") : "暂无"}</span>
+          <span>{companyState.claimed_names.length ? companyState.claimed_names.join("、") : "暂无"}</span>
         </div>
       </div>
       <div className="job-list">
@@ -52,12 +79,12 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
               <a href={job.canonical_url} target="_blank" rel="noreferrer">
                 查看原帖
               </a>
-              <ClaimDialog job={job} />
+              <ClaimDialog job={job} onClaimCreated={(claimerName) => handleClaimCreated(job.id, claimerName)} />
             </div>
           </div>
         ))}
       </div>
-      {company.jobs.length > 3 ? (
+      {companyState.jobs.length > 3 ? (
         <div className="company-footer">
           <button type="button" onClick={() => setExpanded((value) => !value)}>
             {expanded ? "收起岗位" : "展开更多岗位"}
@@ -86,4 +113,8 @@ function renderBountyGrade(grade: CompanyCardPayload["jobs"][number]["bounty_gra
     return "中赏金";
   }
   return "低赏金";
+}
+
+function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
+  return claimedNames.includes(claimerName) ? claimedNames : [...claimedNames, claimerName];
 }
