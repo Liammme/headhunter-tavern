@@ -1,12 +1,19 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import CompanyCard from "./CompanyCard";
+import { requestCompanyClueLetter } from "../lib/api";
 import type { CompanyCardPayload } from "../lib/types";
 
 vi.mock("./ClaimDialog", () => ({
   default: () => <button type="button">认领</button>,
 }));
+
+vi.mock("../lib/api", () => ({
+  requestCompanyClueLetter: vi.fn(),
+}));
+
+const requestCompanyClueLetterMock = vi.mocked(requestCompanyClueLetter);
 
 function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardPayload {
   return {
@@ -29,6 +36,10 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
 }
 
 describe("CompanyCard", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders a lighter clue action and a simplified unclaimed right rail for task 5.5", () => {
     render(
       <CompanyCard
@@ -215,5 +226,64 @@ describe("CompanyCard", () => {
 
     expect(screen.queryByRole("link", { name: "OpenGradient" })).not.toBeInTheDocument();
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
+  });
+
+  it("keeps clue content hidden until the clue action is triggered", () => {
+    render(<CompanyCard company={buildCompany()} />);
+
+    expect(screen.queryByLabelText("公司线索来信")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("公司线索处理中")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("公司线索失败结果")).not.toBeInTheDocument();
+  });
+
+  it("requests company clue and renders loading then success without reshaping backend sections", async () => {
+    let resolveRequest: ((value: Awaited<ReturnType<typeof requestCompanyClueLetter>>) => void) | undefined;
+    requestCompanyClueLetterMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+
+    render(<CompanyCard company={buildCompany()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "线索" }));
+
+    expect(requestCompanyClueLetterMock).toHaveBeenCalledWith({ company: "OpenGradient" });
+    expect(screen.getByLabelText("公司线索处理中")).toBeInTheDocument();
+    expect(screen.getByText("线索整理中")).toBeInTheDocument();
+
+    resolveRequest?.({
+      status: "success",
+      company: "OpenGradient",
+      generated_at: "2026-04-22T09:00:00",
+      narrative: "James侦探说这家公司该先从高赏金 AI 岗往里查。",
+      sections: [
+        { key: "lead", title: "我先看到的", content: "先看 Principal AI Engineer。" },
+        { key: "evidence", title: "这家公司现在露出的口子", content: "官网和岗位原帖都可直达。" },
+        { key: "next_move", title: "你下一步怎么查", content: "先核对团队扩张节奏。" },
+      ],
+      error_message: null,
+    });
+
+    await waitFor(() => expect(screen.getByLabelText("公司线索来信")).toBeInTheDocument());
+    expect(screen.getByText("James侦探说这家公司该先从高赏金 AI 岗往里查。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 5, name: "我先看到的" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 5, name: "这家公司现在露出的口子" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 5, name: "你下一步怎么查" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("公司线索处理中")).not.toBeInTheDocument();
+  });
+
+  it("renders failure container when company clue request fails", async () => {
+    requestCompanyClueLetterMock.mockRejectedValue(new Error("network"));
+
+    render(<CompanyCard company={buildCompany()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "线索" }));
+
+    await waitFor(() => expect(screen.getByLabelText("公司线索失败结果")).toBeInTheDocument());
+    expect(screen.getByText("线索生成失败")).toBeInTheDocument();
+    expect(screen.getByText("OpenGradient 的单公司线索来信生成失败，请稍后重试。")).toBeInTheDocument();
+    expect(screen.getByText("异常原因：Failed to request company clue letter")).toBeInTheDocument();
+    expect(screen.queryByLabelText("公司线索来信")).not.toBeInTheDocument();
   });
 });

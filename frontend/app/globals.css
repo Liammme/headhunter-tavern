@@ -611,6 +611,106 @@ input {
   gap: 12px;
 }
 
+.company-clue-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 2px solid rgba(23, 21, 19, 0.84);
+  background:
+    linear-gradient(180deg, rgba(111, 24, 24, 0.06), transparent 28%),
+    linear-gradient(180deg, rgba(250, 247, 241, 0.98), rgba(238, 232, 223, 0.98));
+  box-shadow: var(--shadow-soft);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 10px));
+}
+
+.company-clue-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.company-clue-panel-head h4,
+.company-clue-panel-head p,
+.company-clue-section h5,
+.company-clue-section p,
+.company-clue-narrative,
+.company-clue-meta {
+  margin: 0;
+}
+
+.company-clue-panel-head h4 {
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.company-clue-meta {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.company-clue-narrative {
+  font-size: 16px;
+  line-height: 1.78;
+  color: var(--text);
+}
+
+.company-clue-sections {
+  display: grid;
+  gap: 10px;
+}
+
+.company-clue-section {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid rgba(23, 21, 19, 0.18);
+  background: rgba(255, 252, 247, 0.82);
+}
+
+.company-clue-section h5 {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.company-clue-section p {
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.company-clue-loading-track {
+  display: grid;
+  gap: 8px;
+}
+
+.company-clue-loading-item {
+  padding: 10px 12px;
+  border: 1px dashed rgba(23, 21, 19, 0.24);
+  color: var(--muted);
+  background: rgba(255, 252, 247, 0.7);
+  transform: translateX(0);
+  opacity: 0.56;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.company-clue-loading-item.is-active {
+  opacity: 1;
+  transform: translateX(6px);
+  border-color: rgba(111, 24, 24, 0.46);
+  background: rgba(111, 24, 24, 0.08);
+  color: var(--text);
+}
+
+.company-clue-failure {
+  border-color: rgba(111, 24, 24, 0.88);
+}
+
 .job-list-head {
   justify-content: space-between;
   align-items: center;
@@ -930,7 +1030,12 @@ input {
     padding: 16px;
   }
 
+  .company-clue-panel,
   .company-claim-seal {
     clip-path: none;
+  }
+
+  .company-clue-panel-head {
+    display: grid;
   }
 }

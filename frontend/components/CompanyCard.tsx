@@ -1,16 +1,23 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import CompanyClaimSeal from "./CompanyClaimSeal";
-import type { CompanyCardPayload, JobCardPayload } from "../lib/types";
+import CompanyCluePanel from "./CompanyCluePanel";
+import { requestCompanyClueLetter } from "../lib/api";
+import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState, JobCardPayload } from "../lib/types";
 
 export default function CompanyCard({ company }: { company: CompanyCardPayload }) {
   const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
+  const [isClueOpen, setIsClueOpen] = useState(false);
+  const [clueState, setClueState] = useState<CompanyClueState | null>(null);
+  const clueRequestIdRef = useRef(0);
 
   useEffect(() => {
     setCompanyState(company);
+    setIsClueOpen(false);
+    setClueState(null);
   }, [company]);
 
   const jobs = useMemo(() => {
@@ -59,6 +66,45 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
     handleClaimCreated(claimJob.id, claimerName);
   }
 
+  async function handleClueToggle() {
+    if (isClueOpen) {
+      setIsClueOpen(false);
+      return;
+    }
+
+    const requestId = clueRequestIdRef.current + 1;
+    clueRequestIdRef.current = requestId;
+    setIsClueOpen(true);
+    setClueState({
+      status: "loading",
+      company: companyState.company,
+      generated_at: new Date().toISOString(),
+      narrative: "",
+      sections: [],
+      error_message: null,
+    });
+
+    try {
+      const response = await requestCompanyClueLetter({ company: companyState.company });
+      if (clueRequestIdRef.current !== requestId) {
+        return;
+      }
+      setClueState(normalizeClueResponse(response));
+    } catch {
+      if (clueRequestIdRef.current !== requestId) {
+        return;
+      }
+      setClueState({
+        status: "failure",
+        company: companyState.company,
+        generated_at: new Date().toISOString(),
+        narrative: `${companyState.company} 的单公司线索来信生成失败，请稍后重试。`,
+        sections: [],
+        error_message: "Failed to request company clue letter",
+      });
+    }
+  }
+
   return (
     <article className="company-card">
       <div className="company-top">
@@ -81,7 +127,13 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
             <span>已认领 {companyState.claimed_names.length} 人</span>
           </div>
           <div className="company-actions">
-            <button type="button" className="company-clue-tag" aria-label="线索">
+            <button
+              type="button"
+              className="company-clue-tag"
+              aria-label={isClueOpen ? "收起线索" : "线索"}
+              aria-expanded={isClueOpen}
+              onClick={handleClueToggle}
+            >
               <span className="company-clue-icon" aria-hidden="true">
                 <svg viewBox="0 0 16 16" focusable="false">
                   <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -94,6 +146,7 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
         </div>
         <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
       </div>
+      {isClueOpen && clueState ? <CompanyCluePanel clue={clueState} /> : null}
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
         <div className="company-meta job-list-head">
           <span>重点岗位证据</span>
@@ -159,4 +212,26 @@ function renderBountyGrade(grade: CompanyCardPayload["jobs"][number]["bounty_gra
 
 function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
   return claimedNames.includes(claimerName) ? claimedNames : [...claimedNames, claimerName];
+}
+
+function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {
+  if (response.status === "loading") {
+    return {
+      status: "loading",
+      company: response.company,
+      generated_at: response.generated_at,
+      narrative: response.narrative,
+      sections: response.sections,
+      error_message: null,
+    };
+  }
+
+  return {
+    status: response.status,
+    company: response.company,
+    generated_at: response.generated_at,
+    narrative: response.narrative,
+    sections: response.sections,
+    error_message: response.error_message ?? null,
+  };
 }
