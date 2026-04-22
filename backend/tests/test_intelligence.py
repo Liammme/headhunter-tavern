@@ -1,3 +1,4 @@
+from app.core.config import settings
 from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, FeedMetadata, JobFeedSnapshot
 from app.services.intelligence import build_intelligence_snapshot
 
@@ -98,3 +99,110 @@ def test_build_intelligence_snapshot_handles_empty_day_payloads():
             "先触发抓取，等统一聚合结果生成后再判断主线方向。",
         ],
     }
+
+
+def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", "project-only-key")
+
+    captured = {}
+
+    def fake_generate(day_payloads, meta):
+        captured["day_payloads"] = day_payloads
+        captured["meta"] = meta
+        return {
+            "headline": "LLM 判断今天先打 AI 核心产研。",
+            "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。",
+            "findings": ["AI 主线继续增强。"],
+            "actions": ["优先认领未认领高赏金岗位。"],
+        }
+
+    monkeypatch.setattr("app.services.intelligence.generate_llm_intelligence_fields", fake_generate)
+
+    day_payloads = [
+        DayBucketSnapshot(
+            bucket="today",
+            companies=[
+                CompanyFeedSnapshot(
+                    company="OpenGradient",
+                    company_grade="focus",
+                    total_jobs=1,
+                    claimed_names=[],
+                    jobs=[
+                        JobFeedSnapshot(
+                            id=1,
+                            title="Principal AI Engineer",
+                            canonical_url="https://example.com/1",
+                            bounty_grade="high",
+                            tags=["AI", "核心岗位"],
+                            claimed_names=[],
+                        )
+                    ],
+                )
+            ],
+        )
+    ]
+    meta = FeedMetadata(
+        analysis_version="feed-v1",
+        rule_version="score-v2",
+        window_start="2026-04-05",
+        window_end="2026-04-18",
+        generated_at="2026-04-18T09:00:00",
+    )
+
+    snapshot = build_intelligence_snapshot(day_payloads, meta)
+
+    assert captured["day_payloads"] == day_payloads
+    assert captured["meta"] == meta
+    assert snapshot["headline"] == "LLM 判断今天先打 AI 核心产研。"
+    assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。"
+    assert snapshot["findings"] == ["AI 主线继续增强。"]
+    assert snapshot["actions"] == ["优先认领未认领高赏金岗位。"]
+    assert snapshot["analysis_version"] == "feed-v1"
+    assert snapshot["rule_version"] == "score-v2"
+
+
+def test_build_intelligence_snapshot_falls_back_when_llm_fails(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", "project-only-key")
+
+    def fake_generate(*_args, **_kwargs):
+        raise RuntimeError("network error")
+
+    monkeypatch.setattr("app.services.intelligence.generate_llm_intelligence_fields", fake_generate)
+
+    snapshot = build_intelligence_snapshot(
+        [
+            DayBucketSnapshot(
+                bucket="today",
+                companies=[
+                    CompanyFeedSnapshot(
+                        company="OpenGradient",
+                        company_grade="focus",
+                        total_jobs=1,
+                        claimed_names=[],
+                        jobs=[
+                            JobFeedSnapshot(
+                                id=1,
+                                title="Principal AI Engineer",
+                                canonical_url="https://example.com/1",
+                                bounty_grade="high",
+                                tags=["AI", "Senior", "核心岗位"],
+                                claimed_names=[],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+    )
+
+    assert snapshot["headline"] == "近 14 天 AI 岗位活跃，建议优先跟进高赏金与重点公司。"
+    assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：1 家公司，1 个岗位，1 个高赏金岗位。"
