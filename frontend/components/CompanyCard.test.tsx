@@ -29,12 +29,82 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
 }
 
 describe("CompanyCard", () => {
+  it("renders a three-part dossier layout for task 5", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          company_url: "https://companies.example.com/opengradient",
+          claimed_names: ["Ada"],
+          claimed_by: "Ada",
+          claim_status: "已签署",
+          total_jobs: 4,
+          jobs: [
+            {
+              id: 1,
+              title: "Principal AI Engineer",
+              canonical_url: "https://jobs.example.com/1",
+              bounty_grade: "high",
+              tags: ["AI", "Infra"],
+              claimed_names: ["Lin"],
+            },
+            {
+              id: 2,
+              title: "Growth Engineer",
+              canonical_url: "https://jobs.example.com/2",
+              bounty_grade: "medium",
+              tags: ["Growth"],
+              claimed_names: [],
+            },
+            {
+              id: 3,
+              title: "Founding ML Engineer",
+              canonical_url: "https://jobs.example.com/3",
+              bounty_grade: "high",
+              tags: ["ML"],
+              claimed_names: [],
+            },
+            {
+              id: 4,
+              title: "Operations Analyst",
+              canonical_url: "https://jobs.example.com/4",
+              bounty_grade: "low",
+              tags: ["Ops"],
+              claimed_names: [],
+            },
+          ],
+        })}
+      />,
+    );
+
+    const companyHeading = screen.getByRole("heading", { level: 3, name: "OpenGradient" });
+    const card = companyHeading.closest("article");
+    const seal = within(card as HTMLElement).getByLabelText("公司签署区");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText("共 4 个岗位")).toBeInTheDocument();
+    expect(within(seal).getByText("公司线索认领")).toBeInTheDocument();
+    expect(within(seal).getByText("Ada")).toBeInTheDocument();
+    expect(within(seal).getByText("预计赏金")).toBeInTheDocument();
+    expect(within(seal).getByText("待估算")).toBeInTheDocument();
+    expect(within(seal).getByRole("button", { name: /认领/ })).toBeInTheDocument();
+
+    expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Founding ML Engineer" })).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByRole("heading", { level: 4, name: "Operations Analyst" })).not.toBeInTheDocument();
+
+    expect(within(card as HTMLElement).getByRole("button", { name: "展开更多岗位" })).toBeInTheDocument();
+  });
+
   it("renders as a company dossier card while preserving actionable company and job details", () => {
     render(
       <CompanyCard
         company={buildCompany({
           company_url: "https://companies.example.com/opengradient",
           claimed_names: ["Ada"],
+          claimed_by: "Ada",
+          claim_status: "已签署",
+          estimated_bounty_label: "待估算",
           total_jobs: 2,
           jobs: [
             {
@@ -68,11 +138,13 @@ describe("CompanyCard", () => {
     );
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("共 2 个岗位")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Ada")).toBeInTheDocument();
+    const seal = within(card as HTMLElement).getByLabelText("公司签署区");
+    expect(within(seal).getByText("Ada")).toBeInTheDocument();
+    expect(within(seal).getByText("待估算")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("公司线索认领：")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getAllByText("岗位认领：").length).toBeGreaterThan(0);
+    expect(within(card as HTMLElement).getByText("重点岗位证据")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText("证据备注：").length).toBeGreaterThan(0);
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",
       "https://jobs.example.com/1",

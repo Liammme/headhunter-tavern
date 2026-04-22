@@ -527,7 +527,8 @@ input {
 
 .company-top {
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.38fr);
+  gap: 16px 18px;
   align-items: start;
   padding-bottom: 14px;
   border-bottom: 2px dotted rgba(23, 21, 19, 0.2);
@@ -535,7 +536,8 @@ input {
 
 .company-dossier-head {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  max-width: min(100%, 40rem);
 }
 
 .company-stamp-row {
@@ -580,6 +582,7 @@ input {
   align-items: center;
   padding-bottom: 8px;
   border-bottom: 1px dashed rgba(23, 21, 19, 0.26);
+  color: var(--muted);
 }
 
 .job-row {
@@ -589,22 +592,22 @@ input {
   padding: 14px 16px;
   border-radius: 0;
   background:
-    linear-gradient(90deg, rgba(111, 24, 24, 0.07) 0 6px, transparent 6px 100%),
-    var(--surface-strong);
-  border: 2px solid rgba(23, 21, 19, 0.82);
-  box-shadow: 4px 4px 0 rgba(23, 21, 19, 0.32);
+    linear-gradient(90deg, rgba(111, 24, 24, 0.12) 0 4px, transparent 4px 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(247, 243, 236, 0.98));
+  border: 1px solid rgba(23, 21, 19, 0.68);
+  box-shadow: 2px 2px 0 rgba(23, 21, 19, 0.18);
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 12px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
 
 .job-title {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: 17px;
   letter-spacing: -0.02em;
 }
 
 .job-evidence {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .job-badges,
@@ -619,17 +622,75 @@ input {
 .job-badge {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(23, 21, 19, 0.06);
-  border: 1px solid rgba(23, 21, 19, 0.14);
+  background: rgba(23, 21, 19, 0.04);
+  border: 1px solid rgba(23, 21, 19, 0.1);
 }
 
 .company-claim-summary {
   padding-top: 2px;
 }
 
+.company-claim-seal {
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+  align-self: start;
+  border: 2px solid rgba(23, 21, 19, 0.82);
+  background:
+    linear-gradient(180deg, rgba(111, 24, 24, 0.1), transparent 34%),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 18px,
+      rgba(23, 21, 19, 0.12) 18px 19px,
+      transparent 19px 26px
+    ),
+    rgba(250, 247, 241, 0.96);
+  box-shadow: 4px 4px 0 rgba(23, 21, 19, 0.28);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 10px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.seal-status,
+.seal-details dt,
+.seal-details dd {
+  margin: 0;
+}
+
+.seal-status {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seal-details {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.seal-details div {
+  display: grid;
+  gap: 4px;
+}
+
+.seal-details dt {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.seal-details dd {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .evidence-caption {
   color: var(--accent);
   font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .job-actions {
@@ -756,6 +817,10 @@ input {
     justify-items: start;
   }
 
+  .company-top {
+    grid-template-columns: 1fr;
+  }
+
   .intel-card,
   .day-section,
   .company-card,
@@ -789,5 +854,9 @@ input {
   .company-card,
   .day-section {
     padding: 16px;
+  }
+
+  .company-claim-seal {
+    clip-path: none;
   }
 }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
-import ClaimDialog from "./ClaimDialog";
+import CompanyClaimSeal from "./CompanyClaimSeal";
 import type { CompanyCardPayload, JobCardPayload } from "../lib/types";
 
 export default function CompanyCard({ company }: { company: CompanyCardPayload }) {
@@ -29,6 +29,8 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
 
       return {
         ...current,
+        claimed_by: current.claimed_by ?? normalizedName,
+        claim_status: "已签署",
         claimed_names: appendClaimer(current.claimed_names, normalizedName),
         jobs: current.jobs.map((job) =>
           job.id === jobId
@@ -40,6 +42,21 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
         ),
       };
     });
+  }
+
+  const claimJob = companyState.jobs[0]
+    ? {
+        ...companyState.jobs[0],
+        claimed_names: companyState.claimed_names,
+      }
+    : null;
+
+  function handleSealClaimCreated(claimerName: string) {
+    if (!claimJob) {
+      return;
+    }
+
+    handleClaimCreated(claimJob.id, claimerName);
   }
 
   return (
@@ -63,16 +80,13 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
             <span>共 {companyState.total_jobs} 个岗位</span>
             <span>已认领 {companyState.claimed_names.length} 人</span>
           </div>
-          <div className="job-claims company-claim-summary">
-            <span>公司线索认领：</span>
-            <span>{companyState.claimed_names.length ? companyState.claimed_names.join("、") : "暂无"}</span>
-          </div>
         </div>
+        <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
       </div>
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
         <div className="company-meta job-list-head">
-          <span>在招岗位</span>
-          <span>{expanded ? "全部展开" : `先看前 ${jobs.length} 个`}</span>
+          <span>重点岗位证据</span>
+          <span>{expanded ? "全部展开" : `先看前 ${jobs.length} 个岗位摘要`}</span>
         </div>
         {jobs.map((job) => (
           <div key={job.id} className="job-row">
@@ -88,8 +102,8 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
                   ))}
                 </div>
                 <div className="job-claims">
-                  <span className="evidence-caption">岗位认领：</span>
-                  <span>{job.claimed_names.length ? job.claimed_names.join("、") : "暂无"}</span>
+                  <span className="evidence-caption">证据备注：</span>
+                  <span>{job.claimed_names.length ? `岗位已有 ${job.claimed_names.join("、")} 跟进` : "可作为公司线索的佐证岗位"}</span>
                 </div>
               </div>
             </div>
@@ -97,7 +111,6 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
               <a href={job.canonical_url} target="_blank" rel="noreferrer">
                 查看原帖
               </a>
-              <ClaimDialog job={job} onClaimCreated={(claimerName) => handleClaimCreated(job.id, claimerName)} />
             </div>
           </div>
         ))}
