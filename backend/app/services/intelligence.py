@@ -15,6 +15,21 @@ class IntelligenceGenerationError(RuntimeError):
 
 
 logger = logging.getLogger(__name__)
+REPORT_TONE_PHRASES = (
+    "根据数据分析可得",
+    "本周市场动态显示",
+    "综合来看",
+    "分析报告",
+    "市场动态",
+    "周报",
+)
+GENERIC_ACTION_PHRASES = (
+    "制定专项方案",
+    "加强关注",
+    "主动接触候选人",
+    "联系已报备的人",
+    "利用已报备线索",
+)
 
 
 def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job] | None = None) -> dict:
@@ -100,7 +115,20 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
 def generate_llm_intelligence_fields(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job]) -> dict:
     llm_input = build_llm_intelligence_input(day_payloads, meta, jobs=jobs)
     response_content = request_zhipu_chat_completion(llm_input)
-    return parse_llm_intelligence_fields(response_content)
+    banned_names = collect_claimed_names(day_payloads)
+    try:
+        parsed = parse_llm_intelligence_fields(response_content)
+        validate_llm_intelligence_fields(parsed, banned_names=banned_names)
+        return parsed
+    except IntelligenceGenerationError as exc:
+        repaired_content = rewrite_llm_intelligence_fields(
+            llm_input=llm_input,
+            invalid_content=response_content,
+            validation_error=str(exc),
+        )
+        repaired = parse_llm_intelligence_fields(repaired_content)
+        validate_llm_intelligence_fields(repaired, banned_names=banned_names)
+        return repaired
 
 
 def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job]) -> dict:
@@ -125,7 +153,6 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
             "company": company.company,
             "company_grade": company.company_grade,
             "job_count": company.total_jobs,
-            "claimed_names": company.claimed_names,
         }
         for company in companies
         if company.company_grade == "focus"
@@ -136,7 +163,6 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
             "title": job.title,
             "bounty_grade": job.bounty_grade,
             "tags": job.tags,
-            "claimed_names": job.claimed_names,
         }
         for company in companies
         for job in company.jobs
@@ -167,18 +193,54 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
 
 
 def request_zhipu_chat_completion(llm_input: dict) -> str:
+    messages = [
+        {
+            "role": "system",
+            "content": build_intelligence_system_prompt(),
+        },
+        {
+            "role": "user",
+            "content": build_intelligence_user_prompt(llm_input),
+        },
+    ]
+    return _request_zhipu_chat_completion_with_retry(messages)
+
+
+def rewrite_llm_intelligence_fields(*, llm_input: dict, invalid_content: str, validation_error: str) -> str:
+    messages = [
+        {
+            "role": "system",
+            "content": build_intelligence_system_prompt(),
+        },
+        {
+            "role": "user",
+            "content": (
+                "你上一版输出不合格，请只修正为合格 JSON，不要解释。"
+                f"不合格原因：{validation_error}。"
+                "你必须保留 James侦探 角色、酒馆情报口吻、直接清楚的判断。"
+                "你必须去掉报告腔、统计播报、联系人/候选人动作。"
+                "findings 和 actions 各只写 1 条。"
+                f"\n\n原始结构化输入：\n{json.dumps(llm_input, ensure_ascii=False)}"
+                f"\n\n你上一版输出：\n{invalid_content}"
+            ),
+        },
+    ]
+    return _request_zhipu_chat_completion_with_retry(messages)
+
+
+def _request_zhipu_chat_completion_with_retry(messages: list[dict]) -> str:
     errors: list[str] = []
     for model_name in _iter_zhipu_models():
         try:
-            return _request_zhipu_chat_completion_with_model(llm_input, model_name)
+            return _request_zhipu_chat_completion_with_model(messages, model_name)
         except Exception as exc:
             errors.append(f"{model_name}: {exc}")
 
     raise IntelligenceGenerationError("; ".join(errors))
 
 
-def _request_zhipu_chat_completion_with_model(llm_input: dict, model_name: str) -> str:
-    payload = _build_zhipu_payload(llm_input, model_name)
+def _request_zhipu_chat_completion_with_model(messages: list[dict], model_name: str) -> str:
+    payload = _build_zhipu_payload(messages, model_name)
     endpoint = f"{settings.bounty_pool_zhipu_base_url.rstrip('/')}/chat/completions"
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     http_request = request.Request(
@@ -211,34 +273,48 @@ def _request_zhipu_chat_completion_with_model(llm_input: dict, model_name: str) 
     return message_content
 
 
-def _build_zhipu_payload(llm_input: dict, model_name: str) -> dict:
+def _build_zhipu_payload(messages: list[dict], model_name: str) -> dict:
     return {
         "model": model_name,
-        "temperature": 0.3,
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "你是猎头团队的晨报分析助手。"
-                    "你只能基于用户提供的聚合统计做判断，不能臆造未提供的数据。"
-                    "请直接输出 JSON 对象，不要输出额外解释，不要输出 markdown。"
-                    "JSON 必须包含 headline、summary、findings、actions 四个字段。"
-                    "headline 和 summary 必须是字符串。"
-                    "findings 和 actions 必须是长度为 3 的字符串数组。"
-                    "语言使用简洁、有判断力的中文，适合给猎头团队和老板同时阅读。"
-                    "headline 必须像晨会第一句话，直接说今天先盯什么，不要写“分析报告”“市场动态”“周报”这类空标题。"
-                    "summary 必须引用输入里的具体数量或具体信号。"
-                    "findings 必须优先引用 job_fact_briefs、focus_companies、top_tags 里的具体线索。"
-                    "actions 必须是今天可执行的猎头动作，不能写泛泛的管理建议。"
-                ),
-            },
-            {
-                "role": "user",
-                "content": json.dumps(llm_input, ensure_ascii=False),
-            },
-        ],
+        "temperature": 0.55,
+        "messages": messages,
         "response_format": {"type": "json_object"},
     }
+
+
+def build_intelligence_system_prompt() -> str:
+    return (
+        "你是 James侦探，常在猎头酒馆里低声递情报，但表达必须直接、清楚，不装神秘。"
+        "你只能基于用户提供的结构化输入判断，不能臆造未提供的数据，也不能引用输入里不存在的公司、岗位、人物。"
+        "请直接输出 JSON 对象，不要输出额外解释，不要输出 markdown。"
+        "JSON 必须包含 headline、summary、findings、actions 四个字段。"
+        "headline 和 summary 必须是字符串。findings 和 actions 必须是字符串数组，且各只写 1 条。"
+        "整体要组成一段 250 到 400 字的情报短报，不是列表，不是报告。"
+        "固定结构必须是：James侦探出场一句；他说今天相对近14天哪里变了；你示意他继续，他解释判断；最后留一句今天该先盯什么公司类型和岗位类型。"
+        "角色感占三成，判断和信息占七成。可以有一点酒馆里交换情报的气味，但不能写成谜语、小说或周报。"
+        "重点必须回答：今天和近14天基线相比，猎场哪里变了；这个变化说明什么；今天更该先盯什么公司类型和岗位类型。"
+        "禁止纯统计播报，不能只重复标签次数、公司数量、岗位数量。"
+        "禁止报告腔，例如“根据数据分析可得”“本周市场动态显示”“综合来看”。"
+        "禁止空泛建议，例如“制定专项方案”“加强关注”“主动接触候选人”。"
+        "认领人只表示内部占坑状态，不是联系人，不是候选人，不是行动线索。"
+        "禁止引用任何认领人名字，禁止写“联系已报备的人”“利用已报备线索”。"
+        "请严格模仿下面这个 JSON 风格，只替换成当前输入对应的内容："
+        '{"headline":"James侦探晃了晃杯底，低声说：今天先盯那些把核心产研岗重新往前顶的公司。",'
+        '"summary":"他说，和近14天摊开的盘子比，今天真正冒头的不是热闹标签，而是更集中地压在高赏金、业务关键、时间压力更高的岗位上。",'
+        '"findings":["你示意他继续，他把话说透：这说明市场不是单纯变热，而是企业更愿意把真正卡节奏的岗位先往外放，尤其是技术、AI和产品里带负责人味道的岗位。"],'
+        '"actions":["他把杯子推回来，只留一句：今天更该先盯重点公司和持续招不动的团队，优先抢技术、AI、产品里的高赏金核心岗。"]}'
+    )
+
+
+def build_intelligence_user_prompt(llm_input: dict) -> str:
+    return (
+        "请基于下面的统一分析基线生成猎场情报。"
+        "优先使用 job_fact_briefs 解释今天相对近14天的变化，点名 1 到 3 个真正代表变化的公司或岗位方向即可。"
+        "不要做标签播报，不要写管理建议，不要写联系人动作。"
+        "输出时把四个字段拼成同一段情报的四段，而不是四块独立报告。"
+        "headline 必须以 James侦探 开头。findings 和 actions 各只写 1 条完整句子。"
+        f"\n\n结构化输入：\n{json.dumps(llm_input, ensure_ascii=False)}"
+    )
 
 
 def parse_llm_intelligence_fields(content: str) -> dict:
@@ -268,6 +344,25 @@ def parse_llm_intelligence_fields(content: str) -> dict:
         "findings": [item.strip() for item in findings[:3]],
         "actions": [item.strip() for item in actions[:3]],
     }
+
+
+def validate_llm_intelligence_fields(payload: dict, *, banned_names: set[str]) -> None:
+    text_parts = [payload["headline"], payload["summary"], *payload["findings"], *payload["actions"]]
+    joined = " ".join(text_parts)
+
+    if "James侦探" not in payload["headline"]:
+        raise IntelligenceGenerationError("LLM response is missing James侦探 framing")
+
+    for name in banned_names:
+        if name and name in joined:
+            raise IntelligenceGenerationError("LLM response leaked claimed_names")
+
+    for phrase in REPORT_TONE_PHRASES + GENERIC_ACTION_PHRASES:
+        if phrase in joined:
+            raise IntelligenceGenerationError(f"LLM response used banned phrase: {phrase}")
+
+    if "标签" in joined and ("出现" in joined or "达" in joined):
+        raise IntelligenceGenerationError("LLM response fell back to tag count broadcast")
 
 
 def _is_string_list(value: object) -> bool:
@@ -303,6 +398,16 @@ def _iter_zhipu_models() -> list[str]:
         if item not in deduped:
             deduped.append(item)
     return deduped
+
+
+def collect_claimed_names(day_payloads: list[DayBucketSnapshot]) -> set[str]:
+    claimed_names: set[str] = set()
+    for day in day_payloads:
+        for company in day.companies:
+            claimed_names.update(name for name in company.claimed_names if name)
+            for job in company.jobs:
+                claimed_names.update(name for name in job.claimed_names if name)
+    return claimed_names
 
 
 def build_job_fact_briefs(*, jobs_by_id: dict[int, Job], day_payloads: list[DayBucketSnapshot]) -> list[dict]:
@@ -347,7 +452,6 @@ def build_job_fact_briefs(*, jobs_by_id: dict[int, Job], day_payloads: list[DayB
                         "anomaly_signals": list(facts.anomaly_signals),
                         "time_pressure_signals": list(facts.time_pressure_signals),
                         "display_tags": list(feed_job.tags),
-                        "claimed_names": list(feed_job.claimed_names),
                         "reasons": list(score_result.reasons),
                     }
                 )
