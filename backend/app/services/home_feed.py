@@ -17,7 +17,7 @@ def build_home_payload(db: Session) -> dict:
     day_payloads = build_day_payloads(jobs, claims, today=now.date())
     meta = build_feed_metadata(now)
     return assemble_home_payload(
-        intelligence=build_intelligence_snapshot(day_payloads, meta),
+        intelligence=build_intelligence_snapshot(day_payloads, meta, jobs=jobs),
         day_payloads=day_payloads,
         meta=meta,
     )

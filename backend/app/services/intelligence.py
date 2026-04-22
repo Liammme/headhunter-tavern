@@ -4,7 +4,10 @@ from collections import Counter
 from urllib import error, request
 
 from app.core.config import settings
+from app.models import Job
 from app.services.feed_snapshot import DayBucketSnapshot, FeedMetadata
+from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
+from app.services.scoring import score_job_v2
 
 
 class IntelligenceGenerationError(RuntimeError):
@@ -14,13 +17,13 @@ class IntelligenceGenerationError(RuntimeError):
 logger = logging.getLogger(__name__)
 
 
-def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
+def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job] | None = None) -> dict:
     fallback_snapshot = build_rule_intelligence_snapshot(day_payloads, meta)
     if not _should_use_llm():
         return fallback_snapshot
 
     try:
-        llm_fields = generate_llm_intelligence_fields(day_payloads, meta)
+        llm_fields = generate_llm_intelligence_fields(day_payloads, meta, jobs=jobs or [])
     except Exception as exc:
         logger.warning("Falling back to rule-based intelligence summary: %s", exc)
         return fallback_snapshot
@@ -94,18 +97,18 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
     }
 
 
-def generate_llm_intelligence_fields(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
-    llm_input = build_llm_intelligence_input(day_payloads, meta)
+def generate_llm_intelligence_fields(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job]) -> dict:
+    llm_input = build_llm_intelligence_input(day_payloads, meta, jobs=jobs)
     response_content = request_zhipu_chat_completion(llm_input)
     return parse_llm_intelligence_fields(response_content)
 
 
-def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
+def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job]) -> dict:
     companies = [company for day in day_payloads for company in day.companies]
-    jobs = [job for company in companies for job in company.jobs]
+    feed_jobs = [job for company in companies for job in company.jobs]
     tag_counts = Counter(
         tag
-        for job in jobs
+        for job in feed_jobs
         for tag in job.tags
         if tag not in {"Senior", "核心岗位", "关键扩张", "长期挂岗", "高 BD 切入口"}
     )
@@ -150,15 +153,16 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
         },
         "overview": {
             "company_count": len(companies),
-            "job_count": len(jobs),
-            "high_bounty_job_count": sum(1 for job in jobs if job.bounty_grade == "high"),
-            "claimed_job_count": sum(1 for job in jobs if job.claimed_names),
+            "job_count": len(feed_jobs),
+            "high_bounty_job_count": sum(1 for job in feed_jobs if job.bounty_grade == "high"),
+            "claimed_job_count": sum(1 for job in feed_jobs if job.claimed_names),
             "focus_company_count": sum(1 for company in companies if company.company_grade == "focus"),
         },
         "bucket_stats": bucket_stats,
         "top_tags": [{"tag": tag, "count": count} for tag, count in tag_counts.most_common(8)],
         "focus_companies": focus_companies,
         "representative_jobs": representative_jobs,
+        "job_fact_briefs": build_job_fact_briefs(jobs_by_id={job.id: job for job in jobs}, day_payloads=day_payloads),
     }
 
 
@@ -222,6 +226,10 @@ def _build_zhipu_payload(llm_input: dict, model_name: str) -> dict:
                     "headline 和 summary 必须是字符串。"
                     "findings 和 actions 必须是长度为 3 的字符串数组。"
                     "语言使用简洁、有判断力的中文，适合给猎头团队和老板同时阅读。"
+                    "headline 必须像晨会第一句话，直接说今天先盯什么，不要写“分析报告”“市场动态”“周报”这类空标题。"
+                    "summary 必须引用输入里的具体数量或具体信号。"
+                    "findings 必须优先引用 job_fact_briefs、focus_companies、top_tags 里的具体线索。"
+                    "actions 必须是今天可执行的猎头动作，不能写泛泛的管理建议。"
                 ),
             },
             {
@@ -295,3 +303,62 @@ def _iter_zhipu_models() -> list[str]:
         if item not in deduped:
             deduped.append(item)
     return deduped
+
+
+def build_job_fact_briefs(*, jobs_by_id: dict[int, Job], day_payloads: list[DayBucketSnapshot]) -> list[dict]:
+    briefs: list[dict] = []
+    for day in day_payloads:
+        for company in day.companies:
+            for feed_job in company.jobs:
+                job = jobs_by_id.get(feed_job.id)
+                if job is None:
+                    continue
+
+                facts = extract_job_facts(
+                    StandardizedJobInput(
+                        canonical_url=job.canonical_url,
+                        source_name=job.source_name,
+                        title=job.title,
+                        company=job.company,
+                        company_normalized=job.company_normalized,
+                        description=job.description,
+                        posted_at=job.posted_at,
+                        collected_at=job.collected_at,
+                    ),
+                    now=job.collected_at,
+                )
+                score_result = score_job_v2(build_v2_score_input(facts))
+                briefs.append(
+                    {
+                        "bucket": day.bucket,
+                        "company": company.company,
+                        "company_grade": company.company_grade,
+                        "title": feed_job.title,
+                        "bounty_grade": feed_job.bounty_grade,
+                        "category": facts.category,
+                        "domain_tag": facts.domain_tag,
+                        "seniority": facts.seniority,
+                        "urgent": facts.urgent,
+                        "critical": facts.critical,
+                        "bd_entry": facts.bd_entry,
+                        "hard_to_fill": facts.hard_to_fill,
+                        "role_complexity": facts.role_complexity,
+                        "business_criticality": facts.business_criticality,
+                        "anomaly_signals": list(facts.anomaly_signals),
+                        "time_pressure_signals": list(facts.time_pressure_signals),
+                        "display_tags": list(feed_job.tags),
+                        "claimed_names": list(feed_job.claimed_names),
+                        "reasons": list(score_result.reasons),
+                    }
+                )
+
+    briefs.sort(
+        key=lambda item: (
+            {"today": 0, "yesterday": 1, "earlier": 2}.get(item["bucket"], 3),
+            {"focus": 0, "watch": 1, "normal": 2}.get(item["company_grade"], 3),
+            {"high": 0, "medium": 1, "low": 2}.get(item["bounty_grade"], 3),
+            item["company"].lower(),
+            item["title"].lower(),
+        )
+    )
+    return briefs[:12]

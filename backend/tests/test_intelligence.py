@@ -1,6 +1,9 @@
+from datetime import datetime
+
+from app.models import Job
 from app.core.config import settings
 from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, FeedMetadata, JobFeedSnapshot
-from app.services.intelligence import build_intelligence_snapshot, parse_llm_intelligence_fields
+from app.services.intelligence import build_intelligence_snapshot, build_llm_intelligence_input, parse_llm_intelligence_fields
 
 
 def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline():
@@ -107,9 +110,10 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
 
     captured = {}
 
-    def fake_generate(day_payloads, meta):
+    def fake_generate(day_payloads, meta, jobs):
         captured["day_payloads"] = day_payloads
         captured["meta"] = meta
+        captured["jobs"] = jobs
         return {
             "headline": "LLM 判断今天先打 AI 核心产研。",
             "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。",
@@ -154,6 +158,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
 
     assert captured["day_payloads"] == day_payloads
     assert captured["meta"] == meta
+    assert captured["jobs"] == []
     assert snapshot["headline"] == "LLM 判断今天先打 AI 核心产研。"
     assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。"
     assert snapshot["findings"] == ["AI 主线继续增强。"]
@@ -277,3 +282,64 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
 
     assert called_models == ["broken-model", "glm-4-flash-250414"]
     assert snapshot["headline"] == "LLM 已生效"
+
+
+def test_build_llm_intelligence_input_uses_fact_briefs_instead_of_raw_description():
+    llm_input = build_llm_intelligence_input(
+        [
+            DayBucketSnapshot(
+                bucket="today",
+                companies=[
+                    CompanyFeedSnapshot(
+                        company="OpenGradient",
+                        company_grade="focus",
+                        total_jobs=1,
+                        claimed_names=["Liam"],
+                        jobs=[
+                            JobFeedSnapshot(
+                                id=1,
+                                title="Staff AI Engineer",
+                                canonical_url="https://example.com/1",
+                                bounty_grade="high",
+                                tags=["AI", "Senior", "核心岗位"],
+                                claimed_names=["Liam"],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+        jobs=[
+            Job(
+                id=1,
+                canonical_url="https://example.com/1",
+                source_name="test",
+                title="Staff AI Engineer",
+                company="OpenGradient",
+                company_normalized="opengradient",
+                description="Urgent hire for a founding AI platform lead. Own LLM roadmap and infra delivery.",
+                posted_at=datetime(2026, 4, 18, 9, 0, 0),
+                collected_at=datetime(2026, 4, 18, 9, 0, 0),
+                job_category="AI/算法",
+                domain_tag="AI",
+                bounty_grade="high",
+                signal_tags={"display_tags": ["AI", "Senior", "核心岗位"]},
+            )
+        ],
+    )
+
+    assert "job_fact_briefs" in llm_input
+    assert llm_input["job_fact_briefs"][0]["company"] == "OpenGradient"
+    assert llm_input["job_fact_briefs"][0]["category"] == "AI/算法"
+    assert llm_input["job_fact_briefs"][0]["domain_tag"] == "AI"
+    assert llm_input["job_fact_briefs"][0]["seniority"] == "staff"
+    assert llm_input["job_fact_briefs"][0]["urgent"] is True
+    assert "urgent" in llm_input["job_fact_briefs"][0]["time_pressure_signals"]
+    assert "description" not in llm_input["job_fact_briefs"][0]
