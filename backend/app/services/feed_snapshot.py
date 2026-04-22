@@ -34,6 +34,10 @@ class CompanyFeedSnapshot:
     total_jobs: int
     claimed_names: list[str]
     jobs: list[JobFeedSnapshot]
+    claimed_by: str | None = None
+    claim_status: str | None = None
+    estimated_bounty_amount: int | None = None
+    estimated_bounty_label: str | None = None
 
 
 @dataclass(frozen=True)

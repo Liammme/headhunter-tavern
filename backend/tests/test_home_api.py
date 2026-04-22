@@ -70,6 +70,10 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
                     {
                         "company": "OpenGradient",
                         "company_url": "https://jobs.example.com/company/opengradient",
+                        "claimed_by": "Mina",
+                        "claim_status": "claimed",
+                        "estimated_bounty_amount": 1500,
+                        "estimated_bounty_label": "¥1,500",
                         "company_grade": "focus",
                         "total_jobs": 1,
                         "claimed_names": [],
@@ -85,7 +89,25 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
     response = client.get("/api/v1/home")
 
     assert response.status_code == 200
-    assert response.json()["days"][0]["companies"][0]["company_url"] == "https://jobs.example.com/company/opengradient"
+    company_card = response.json()["days"][0]["companies"][0]
+
+    assert company_card["company_url"] == "https://jobs.example.com/company/opengradient"
+    assert company_card["claimed_by"] == "Mina"
+    assert company_card["claim_status"] == "claimed"
+    assert company_card["estimated_bounty_amount"] == 1500
+    assert company_card["estimated_bounty_label"] == "¥1,500"
+    assert set(company_card) >= {
+        "company",
+        "company_url",
+        "claimed_by",
+        "claim_status",
+        "estimated_bounty_amount",
+        "estimated_bounty_label",
+        "company_grade",
+        "total_jobs",
+        "claimed_names",
+        "jobs",
+    }
 
 
 def test_trigger_crawl_endpoint_exists(client):
