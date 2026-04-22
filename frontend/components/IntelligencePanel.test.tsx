@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 import IntelligencePanel from "./IntelligencePanel";
 import type { CompanyCardPayload, IntelligencePayload } from "../lib/types";
@@ -39,20 +39,30 @@ describe("IntelligencePanel", () => {
     );
 
     expect(screen.getByText("猎场情报")).toBeInTheDocument();
-    expect(screen.getByText(intelligence.headline)).toBeInTheDocument();
-    expect(screen.getByText(intelligence.summary)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
+    const paper = screen.getByRole("article", { name: "今天的判断" });
+    expect(within(paper).getByText(intelligence.summary)).toBeInTheDocument();
+    expect(within(paper).getByText(intelligence.narrative)).toBeInTheDocument();
   });
 
-  it("renders the right-side notes content without requiring expand", () => {
+  it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
     const intelligence = buildIntelligence();
 
     render(
       <IntelligencePanel intelligence={intelligence} previewBucket="today" previewCompanies={[buildCompany()]} />,
     );
 
-    expect(screen.getByText(/侧栏注记|注记区/)).toBeInTheDocument();
-    expect(screen.getByText(intelligence.findings[0])).toBeInTheDocument();
-    expect(screen.getByText(intelligence.findings[1])).toBeInTheDocument();
+    const notes = screen.getByRole("complementary", { name: "今天怎么跟" });
+
+    expect(screen.getByText("侧栏注记")).toBeInTheDocument();
+    expect(within(notes).getByRole("heading", { level: 4, name: "情报发现" })).toBeInTheDocument();
+    expect(within(notes).getByRole("heading", { level: 4, name: "跟进动作" })).toBeInTheDocument();
+    expect(within(notes).getByText(intelligence.findings[0])).toBeInTheDocument();
+    expect(within(notes).getByText(intelligence.findings[1])).toBeInTheDocument();
+    expect(within(notes).getByText(intelligence.actions[0])).toBeInTheDocument();
+    expect(within(notes).getByText(intelligence.actions[1])).toBeInTheDocument();
+    expect(within(notes).queryByText(intelligence.summary)).not.toBeInTheDocument();
+    expect(within(notes).queryByText(intelligence.narrative)).not.toBeInTheDocument();
   });
 
   it("renders ranking guidance or early-signal cues on first paint", () => {

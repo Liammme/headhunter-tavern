@@ -45,7 +45,11 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
   return (
     <article className="company-card">
       <div className="company-top">
-        <div>
+        <div className="company-dossier-head">
+          <div className="company-stamp-row">
+            <p className="eyebrow">公司档案</p>
+            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
+          </div>
           <h3>
             {companyState.company_url ? (
               <a href={companyState.company_url} target="_blank" rel="noreferrer">
@@ -56,31 +60,37 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
             )}
           </h3>
           <div className="company-meta">
-            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
             <span>共 {companyState.total_jobs} 个岗位</span>
+            <span>已认领 {companyState.claimed_names.length} 人</span>
+          </div>
+          <div className="job-claims company-claim-summary">
+            <span>公司线索认领：</span>
+            <span>{companyState.claimed_names.length ? companyState.claimed_names.join("、") : "暂无"}</span>
           </div>
         </div>
-        <div className="job-claims">
-          <span>已认领：</span>
-          <span>{companyState.claimed_names.length ? companyState.claimed_names.join("、") : "暂无"}</span>
-        </div>
       </div>
-      <div className="job-list">
+      <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
+        <div className="company-meta job-list-head">
+          <span>在招岗位</span>
+          <span>{expanded ? "全部展开" : `先看前 ${jobs.length} 个`}</span>
+        </div>
         {jobs.map((job) => (
           <div key={job.id} className="job-row">
             <div>
               <h4 className="job-title">{job.title}</h4>
-              <div className="job-badges">
-                <span className="job-badge">{renderBountyGrade(job.bounty_grade)}</span>
-                {job.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="job-badge">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <div className="job-claims">
-                <span>已认领：</span>
-                <span>{job.claimed_names.length ? job.claimed_names.join("、") : "暂无"}</span>
+              <div className="job-evidence">
+                <div className="job-badges">
+                  <span className="job-badge">{renderBountyGrade(job.bounty_grade)}</span>
+                  {job.tags.slice(0, 3).map((tag) => (
+                    <span key={tag} className="job-badge">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="job-claims">
+                  <span className="evidence-caption">岗位认领：</span>
+                  <span>{job.claimed_names.length ? job.claimed_names.join("、") : "暂无"}</span>
+                </div>
               </div>
             </div>
             <div className="job-actions">
@@ -91,7 +101,7 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
             </div>
           </div>
         ))}
-      </div>
+      </section>
       {companyState.jobs.length > 3 ? (
         <div className="company-footer">
           <button type="button" onClick={() => setExpanded((value) => !value)}>
