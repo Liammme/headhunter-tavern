@@ -83,6 +83,16 @@ input {
   letter-spacing: -0.04em;
 }
 
+.intel-preview {
+  margin: 0;
+  max-width: 1080px;
+  font-size: clamp(28px, 4.8vw, 62px);
+  line-height: 1.16;
+  letter-spacing: -0.05em;
+  color: var(--text);
+  font-weight: 700;
+}
+
 .intel-head button,
 .company-footer button,
 .claim-trigger,
@@ -97,35 +107,18 @@ input {
 
 .intel-body {
   display: grid;
-  gap: 18px;
+  gap: 14px;
   color: var(--muted);
   line-height: 1.65;
 }
 
-.intel-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
-}
-
-.intel-block {
-  padding: 18px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--surface-strong);
-}
-
-.intel-block h2 {
-  margin: 0 0 12px;
-  font-size: 16px;
-}
-
-.intel-block ul,
-.intel-block ol {
+.intel-narrative {
   margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 8px;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.9;
+  color: var(--text);
+  max-width: 1180px;
+  text-wrap: pretty;
 }
 
 .intel-footnote {

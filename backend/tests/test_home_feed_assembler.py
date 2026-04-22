@@ -29,7 +29,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
     ]
 
     payload = assemble_home_payload(
-        intelligence={"headline": "test", "summary": "test", "findings": [], "actions": []},
+        intelligence={"narrative": "test", "headline": "test", "summary": "test", "findings": [], "actions": []},
         day_payloads=day_payloads,
         meta=FeedMetadata(
             analysis_version="feed-v1",
@@ -41,7 +41,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
     )
 
     assert payload == {
-        "intelligence": {"headline": "test", "summary": "test", "findings": [], "actions": []},
+        "intelligence": {"narrative": "test", "headline": "test", "summary": "test", "findings": [], "actions": []},
         "meta": {
             "analysis_version": "feed-v1",
             "rule_version": "score-v1",
