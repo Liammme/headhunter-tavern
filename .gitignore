@@ -1,9 +1,13 @@
 .worktrees/
 .reference/
 .codex-runtime/
+**/.codex-runtime/
+.pytest_cache/
 backend/.venv/
 backend/.pytest_cache/
 frontend/.next/
+frontend/.next-dev/
+frontend/.next-build/
 frontend/node_modules/
 **/__pycache__/
 *.egg-info/
