@@ -12,7 +12,7 @@ class Job(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     canonical_url: Mapped[str] = mapped_column(String(1024), unique=True)
     source_name: Mapped[str] = mapped_column(String(64))
-    title: Mapped[str] = mapped_column(String(512))
+    title: Mapped[str] = mapped_column(Text)
     company: Mapped[str] = mapped_column(String(256))
     company_normalized: Mapped[str] = mapped_column(String(256), index=True)
     description: Mapped[str] = mapped_column(Text, default="")

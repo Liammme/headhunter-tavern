@@ -67,6 +67,28 @@ def test_upsert_jobs_deduplicates_by_canonical_url_and_updates_existing(db_sessi
     assert jobs[0].description == "latest payload wins"
 
 
+def test_upsert_jobs_persists_long_titles(db_session):
+    long_title = "Principal AI Platform Engineer " * 30
+    expected_title = long_title.strip()
+
+    new_jobs = upsert_jobs(
+        db_session,
+        [
+            build_normalized_job(
+                canonical_url="https://jobs.example.com/acme/principal-ai-platform-engineer",
+                title=long_title,
+                company="Acme",
+                description="long title payload",
+            )
+        ],
+    )
+
+    stored_job = db_session.execute(select(Job)).scalars().one()
+
+    assert new_jobs == 1
+    assert stored_job.title == expected_title
+
+
 def test_purge_demo_jobs_removes_demo_jobs_and_claims(db_session):
     demo_job = Job(
         canonical_url="https://jobs.example.com/demo/demo-role",
