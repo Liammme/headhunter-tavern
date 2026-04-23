@@ -402,7 +402,6 @@ def build_narrative_from_fields(*, headline: str, summary: str, findings: list[s
 
     segments = [
         headline.strip(),
-        summary.strip(),
         follow_up,
         *clean_actions,
     ]

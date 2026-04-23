@@ -8,6 +8,7 @@ from app.services.intelligence import (
     build_intelligence_system_prompt,
     build_intelligence_user_prompt,
     build_llm_intelligence_input,
+    build_narrative_from_fields,
     parse_llm_intelligence_fields,
     validate_llm_intelligence_fields,
 )
@@ -78,12 +79,26 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline():
     assert snapshot["headline"] == "James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。"
     assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。"
     assert snapshot["narrative"].startswith("James侦探")
+    assert snapshot["summary"] not in snapshot["narrative"]
     assert "你抬眼示意他继续" in snapshot["narrative"]
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
     assert "重点公司 1 家，优先顺着公司卡往下打。" in snapshot["findings"]
     assert "已认领 1 个岗位，继续优先补齐未认领高赏金岗位。" in snapshot["findings"]
     assert snapshot["actions"][0] == "先看重点公司，再优先认领其中的高赏金岗位。"
+
+
+def test_build_narrative_from_fields_excludes_summary_text():
+    narrative = build_narrative_from_fields(
+        headline="James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。",
+        summary="基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。",
+        findings=["重点公司 1 家，优先顺着公司卡往下打。"],
+        actions=["先看重点公司，再优先认领其中的高赏金岗位。"],
+    )
+
+    assert "基于近 14 天统一聚合结果生成" not in narrative
+    assert "你抬眼示意他继续" in narrative
+    assert "先看重点公司，再优先认领其中的高赏金岗位。" in narrative
 
 
 def test_build_intelligence_snapshot_handles_empty_day_payloads():

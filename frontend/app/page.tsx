@@ -7,19 +7,18 @@ export default async function HomePage() {
   const hasDays = payload.days.length > 0;
   const previewDay = payload.days[0];
   const previewCompanies = previewDay ? previewDay.companies.slice(0, 2) : [];
+  const reportDateLabel = formatReportDate(new Date());
 
   return (
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
-          <p className="eyebrow">情报封面</p>
-          <h1 id="home-hero-title">先判断今天的猎场变化，再往下挑公司。</h1>
-          <p>
-            首屏先给你一张今天的情报封面，再把公司猎单池从底部露出来。用户第一眼应该先知道今天该盯什么，再进入行动。
-          </p>
+          <h1 id="home-hero-title">猎头酒馆</h1>
+          <p>今天的判断、重点线索和可操作公司都在这一页里。</p>
         </header>
         <IntelligencePanel
           intelligence={payload.intelligence}
+          reportDateLabel={reportDateLabel}
           previewBucket={previewDay?.bucket ?? null}
           previewCompanies={previewCompanies}
         />
@@ -46,4 +45,19 @@ export default async function HomePage() {
       </section>
     </main>
   );
+}
+
+function formatReportDate(date: Date) {
+  const parts = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+  return `${year}/${month}/${day}`;
 }

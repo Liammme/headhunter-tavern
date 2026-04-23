@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "set NEXT_DIST_DIR=.next-dev&& next dev",
+    "dev:reset": "node -e \"require('fs').rmSync('.next-dev',{ recursive: true, force: true })\" && set NEXT_DIST_DIR=.next-dev&& next dev",
+    "build": "set NEXT_DIST_DIR=.next-build&& next build",
     "test": "vitest run"
   },
   "dependencies": {

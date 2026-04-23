@@ -4,12 +4,14 @@ import type { CompanyCardPayload, DayBucketPayload, IntelligencePayload } from "
 
 type IntelligencePanelProps = {
   intelligence: IntelligencePayload;
+  reportDateLabel: string;
   previewBucket: DayBucketPayload["bucket"] | null;
   previewCompanies: CompanyCardPayload[];
 };
 
 export default function IntelligencePanel({
   intelligence,
+  reportDateLabel,
   previewBucket,
   previewCompanies,
 }: IntelligencePanelProps) {
@@ -19,27 +21,63 @@ export default function IntelligencePanel({
   const secondaryActions = intelligence.actions.slice(1, 3);
 
   return (
-    <section className="intel-card" aria-labelledby="intelligence-panel-title">
-      <div className="intel-head">
-        <div>
-          <p className="eyebrow">猎场情报</p>
-          <h2 id="intelligence-panel-title" className="intel-preview">
-            {intelligence.headline}
-          </h2>
+    <section className="intel-stage" aria-labelledby="intelligence-panel-title">
+      <div className="intel-center-column">
+        <div className="intel-card">
+          <div className="intel-body">
+            <article className="intel-paper" aria-labelledby="intelligence-paper-title">
+              <div className="intel-paper-label-row">
+                <p className="eyebrow intel-paper-label">猎场情报</p>
+              </div>
+              <h2 id="intelligence-panel-title" className="intel-preview">
+                {intelligence.headline}
+              </h2>
+              <div className="intel-paper-copy">
+                <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
+                <p className="intel-narrative">{intelligence.narrative}</p>
+              </div>
+            </article>
+          </div>
         </div>
-        <p className="intel-footnote">基于近 14 天岗位池与历史轻量统计生成</p>
+        <p className="intel-footnote">{intelligence.summary}</p>
+        <section className="intel-peek-shell" aria-label="公司猎单池露头">
+          <section className="intel-peek">
+            <div className="intel-peek-copy">
+              <p className="eyebrow">榜单露头</p>
+              <h3>
+                {previewBucket
+                  ? `${renderBucketTitle(previewBucket)}的公司猎单池已经露头`
+                  : "公司猎单池已经露头"}
+              </h3>
+              <p>下面就是今天的可操作机会池，往下滚就能直接进入公司档案卡。</p>
+            </div>
+            <div className="intel-peek-list">
+              {previewCompanies.map((company) => (
+                <article key={company.company} className="intel-peek-card">
+                  <p className="intel-peek-company">{company.company}</p>
+                  <p className="intel-peek-meta">
+                    {renderCompanyGrade(company.company_grade)} · {company.total_jobs} 个岗位
+                  </p>
+                  <p className="intel-peek-claim">
+                    {company.claimed_names.length
+                      ? `已认领 ${company.claimed_names.join("、")}`
+                      : "待认领"}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </section>
       </div>
-      <div className="intel-body">
-        <article className="intel-paper" aria-labelledby="intelligence-paper-title">
-          <p className="eyebrow">纸页正文</p>
-          <h3 id="intelligence-paper-title">今天的判断</h3>
-          <p className="intel-summary">{intelligence.summary}</p>
-          <p className="intel-narrative">{intelligence.narrative}</p>
-        </article>
-        <aside className="intel-notes" aria-labelledby="intelligence-notes-title">
-          <p className="eyebrow">侧栏注记</p>
-          <h3 id="intelligence-notes-title">今天怎么跟</h3>
-          <section className="intel-note-highlight" aria-labelledby="intelligence-findings-title">
+      <aside className="intel-notes" aria-label="侧栏注记">
+        <div className="intel-note-grid">
+          <section
+            className="intel-note-card intel-note-card-highlight"
+            aria-labelledby="intelligence-findings-title"
+          >
+            <span className="intel-note-badge" aria-hidden="true">
+              ☆
+            </span>
             <h4 id="intelligence-findings-title">情报发现</h4>
             {leadFinding ? <p>{leadFinding}</p> : <p>暂无新增发现。</p>}
             {secondaryFindings.length ? (
@@ -50,7 +88,10 @@ export default function IntelligencePanel({
               </ul>
             ) : null}
           </section>
-          <section aria-labelledby="intelligence-actions-title">
+          <section className="intel-note-card" aria-labelledby="intelligence-actions-title">
+            <span className="intel-note-badge" aria-hidden="true">
+              ☆
+            </span>
             <h4 id="intelligence-actions-title">跟进动作</h4>
             {leadAction ? (
               <p className="intel-action-lead">{leadAction}</p>
@@ -65,31 +106,8 @@ export default function IntelligencePanel({
               </ul>
             ) : null}
           </section>
-        </aside>
-      </div>
-
-      <section className="intel-peek" aria-label="公司猎单池露头">
-        <div className="intel-peek-copy">
-          <p className="eyebrow">榜单露头</p>
-          <h3>
-            {previewBucket ? `${renderBucketTitle(previewBucket)}的公司猎单池已经露头` : "公司猎单池已经露头"}
-          </h3>
-          <p>下面就是今天的可操作机会池，往下滚就能直接进入公司档案卡。</p>
         </div>
-        <div className="intel-peek-list">
-          {previewCompanies.map((company) => (
-            <article key={company.company} className="intel-peek-card">
-              <p className="intel-peek-company">{company.company}</p>
-              <p className="intel-peek-meta">
-                {renderCompanyGrade(company.company_grade)} · {company.total_jobs} 个岗位
-              </p>
-              <p className="intel-peek-claim">
-                {company.claimed_names.length ? `已认领 ${company.claimed_names.join("、")}` : "待认领"}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
+      </aside>
     </section>
   );
 }

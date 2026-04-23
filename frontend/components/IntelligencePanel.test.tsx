@@ -29,10 +29,12 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
 describe("IntelligencePanel", () => {
   it("renders the primary intelligence content above the fold", () => {
     const intelligence = buildIntelligence();
+    const reportDateLabel = "2026/4/23";
 
     render(
       <IntelligencePanel
         intelligence={intelligence}
+        reportDateLabel={reportDateLabel}
         previewBucket="today"
         previewCompanies={[buildCompany(), buildCompany({ company: "Beta Labs", company_grade: "watch", total_jobs: 2 })]}
       />,
@@ -40,21 +42,29 @@ describe("IntelligencePanel", () => {
 
     expect(screen.getByText("猎场情报")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
-    const paper = screen.getByRole("article", { name: "今天的判断" });
-    expect(within(paper).getByText(intelligence.summary)).toBeInTheDocument();
+    const paper = screen.getByRole("article", { name: reportDateLabel });
+    expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
     expect(within(paper).getByText(intelligence.narrative)).toBeInTheDocument();
+    expect(within(paper).queryByText(intelligence.summary)).not.toBeInTheDocument();
+    expect(screen.getByText(intelligence.summary)).toBeInTheDocument();
   });
 
   it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
     const intelligence = buildIntelligence();
 
     render(
-      <IntelligencePanel intelligence={intelligence} previewBucket="today" previewCompanies={[buildCompany()]} />,
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/23"
+        previewBucket="today"
+        previewCompanies={[buildCompany()]}
+      />,
     );
 
-    const notes = screen.getByRole("complementary", { name: "今天怎么跟" });
+    const notes = screen.getByRole("complementary", { name: "侧栏注记" });
 
-    expect(screen.getByText("侧栏注记")).toBeInTheDocument();
+    expect(within(notes).queryByText("今天怎么跟")).not.toBeInTheDocument();
+    expect(within(notes).queryByText("把今天最值得跟的两条线索贴出来，再进入行动。")).not.toBeInTheDocument();
     expect(within(notes).getByRole("heading", { level: 4, name: "情报发现" })).toBeInTheDocument();
     expect(within(notes).getByRole("heading", { level: 4, name: "跟进动作" })).toBeInTheDocument();
     expect(within(notes).getByText(intelligence.findings[0])).toBeInTheDocument();
@@ -69,7 +79,12 @@ describe("IntelligencePanel", () => {
     const intelligence = buildIntelligence();
 
     render(
-      <IntelligencePanel intelligence={intelligence} previewBucket="today" previewCompanies={[buildCompany()]} />,
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/23"
+        previewBucket="today"
+        previewCompanies={[buildCompany()]}
+      />,
     );
 
     expect(screen.getAllByText(/榜单引导|露头信号/).length).toBeGreaterThan(0);
