@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Job
-from app.services.bounty_estimation import BountyEstimateInput, estimate_bounty
+from app.services.bounty_estimation import BountyEstimate, BountyEstimateInput, estimate_bounty
 from app.services.job_facts import StandardizedJobInput, extract_job_facts
 
 
@@ -13,23 +13,13 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
 
     for job in jobs:
         signal_tags = dict(job.signal_tags or {})
-        if _has_persisted_estimate(signal_tags):
+        if BountyEstimate.from_signal_tags(signal_tags) is not None:
             skipped_jobs += 1
             continue
 
         facts = extract_job_facts(_build_standardized_job_input(job), now=job.collected_at)
         estimate = estimate_bounty(_build_bounty_estimate_input(facts))
-        signal_tags.update(
-            {
-                "estimated_bounty_amount": estimate.amount,
-                "estimated_bounty_label": estimate.label,
-                "estimated_bounty_min": estimate.min_amount,
-                "estimated_bounty_max": estimate.max_amount,
-                "estimated_bounty_rate_pct": estimate.rate_pct,
-                "estimated_bounty_rule_version": estimate.rule_version,
-                "estimated_bounty_confidence": estimate.confidence,
-            }
-        )
+        signal_tags.update(estimate.to_signal_tags())
         job.signal_tags = signal_tags
         updated_jobs += 1
 
@@ -39,14 +29,6 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
         "updated_jobs": updated_jobs,
         "skipped_jobs": skipped_jobs,
     }
-
-
-def _has_persisted_estimate(signal_tags: dict) -> bool:
-    return isinstance(signal_tags.get("estimated_bounty_amount"), int) and isinstance(
-        signal_tags.get("estimated_bounty_label"), str
-    )
-
-
 def _build_standardized_job_input(job: Job) -> StandardizedJobInput:
     return StandardizedJobInput(
         canonical_url=job.canonical_url,

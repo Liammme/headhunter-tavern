@@ -46,6 +46,11 @@ def test_generate_company_clue_letter_returns_success_contract(db_session, monke
                     "company_url": "https://opengradient.ai",
                     "estimated_bounty_amount": 1500,
                     "estimated_bounty_label": "¥1,500",
+                    "estimated_bounty_min": 1200,
+                    "estimated_bounty_max": 1800,
+                    "estimated_bounty_rate_pct": 12,
+                    "estimated_bounty_rule_version": "bounty-rule-v1",
+                    "estimated_bounty_confidence": "medium",
                 },
             ),
             build_job(
@@ -116,6 +121,11 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
                 "apply_url": "https://opengradient.ai/careers",
                 "estimated_bounty_amount": 1500,
                 "estimated_bounty_label": "¥1,500",
+                "estimated_bounty_min": 1200,
+                "estimated_bounty_max": 1800,
+                "estimated_bounty_rate_pct": 12,
+                "estimated_bounty_rule_version": "bounty-rule-v1",
+                "estimated_bounty_confidence": "medium",
             },
         )
     )
@@ -153,6 +163,50 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     assert llm_input["highlighted_jobs"][0]["entry_points"]["email"] == "careers@opengradient.ai"
     assert "description" not in llm_input["highlighted_jobs"][0]
     assert "description" not in llm_input["company_summary"]
+
+
+def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_session, monkeypatch):
+    db_session.add(
+        build_job(
+            company="OpenGradient",
+            title="Principal AI Engineer",
+            canonical_url="https://jobs.example.com/opengradient/1",
+            bounty_grade="high",
+            description="urgent llm infra platform roadmap hiring fast careers@opengradient.ai",
+            signal_tags={
+                "display_tags": ["AI"],
+                "company_url": "https://opengradient.ai",
+                "estimated_bounty_amount": 1500,
+                "estimated_bounty_label": "¥1,500",
+            },
+        )
+    )
+    db_session.commit()
+
+    captured_input: list[dict] = []
+    monkeypatch.setattr("app.services.company_clue_letter._should_use_company_clue_llm", lambda: True)
+
+    def fake_prompt(llm_input: dict) -> str:
+        captured_input.append(llm_input)
+        return "prompt"
+
+    monkeypatch.setattr("app.services.company_clue_letter.build_company_clue_user_prompt", fake_prompt)
+    monkeypatch.setattr(
+        "app.services.company_clue_letter.request_zhipu_structured_json",
+        lambda messages: (
+            '{"narrative":"James侦探说这家公司露出的线索够用了。",'
+            '"sections":['
+            '{"key":"lead","title":"我先看到的","content":"测试"},'
+            '{"key":"evidence","title":"这家公司现在露出的口子","content":"测试"},'
+            '{"key":"next_move","title":"你下一步怎么查","content":"测试"}'
+            ']}'
+        ),
+    )
+
+    result = generate_company_clue_letter(db_session, company="OpenGradient")
+
+    assert result["status"] == "success"
+    assert captured_input[0]["company_summary"]["estimated_bounty"] is None
 
 
 def test_generate_company_clue_letter_returns_failure_when_llm_generation_fails(db_session, monkeypatch):

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import Job
+from app.services.bounty_estimation import BountyEstimate
 from app.services.intelligence import IntelligenceGenerationError, request_zhipu_structured_json
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
 from app.services.scoring import score_job_v2
@@ -208,14 +209,9 @@ def _collect_entry_points(jobs: list[Job]) -> dict:
 
 def _collect_estimated_bounty(jobs: list[Job]) -> dict | None:
     for job in jobs:
-        signal_tags = job.signal_tags if isinstance(job.signal_tags, dict) else {}
-        amount = signal_tags.get("estimated_bounty_amount")
-        label = signal_tags.get("estimated_bounty_label")
-        if isinstance(amount, int):
-            normalized_label = label.strip() if isinstance(label, str) and label.strip() else None
-            return {"amount": amount, "label": normalized_label}
-        if isinstance(label, str) and label.strip():
-            return {"amount": None, "label": label.strip()}
+        estimate = BountyEstimate.from_signal_tags(job.signal_tags if isinstance(job.signal_tags, dict) else None)
+        if estimate is not None:
+            return {"amount": estimate.amount, "label": estimate.label}
     return None
 
 

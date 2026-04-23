@@ -62,6 +62,11 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
             "display_tags": ["AI", "Senior", "核心岗位"],
             "estimated_bounty_amount": 150000,
             "estimated_bounty_label": "¥120,000-¥180,000",
+            "estimated_bounty_min": 120000,
+            "estimated_bounty_max": 180000,
+            "estimated_bounty_rate_pct": 20,
+            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_confidence": "medium",
         },
     )
     db_session.add(job)

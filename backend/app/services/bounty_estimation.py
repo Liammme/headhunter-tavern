@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Mapping
 
 
 RULE_VERSION = "bounty-rule-v1"
@@ -28,6 +29,45 @@ class BountyEstimate:
     label: str
     confidence: str
     rule_version: str
+
+    def to_signal_tags(self) -> dict[str, int | str]:
+        return {
+            "estimated_bounty_amount": self.amount,
+            "estimated_bounty_label": self.label,
+            "estimated_bounty_min": self.min_amount,
+            "estimated_bounty_max": self.max_amount,
+            "estimated_bounty_rate_pct": self.rate_pct,
+            "estimated_bounty_rule_version": self.rule_version,
+            "estimated_bounty_confidence": self.confidence,
+        }
+
+    @classmethod
+    def from_signal_tags(cls, signal_tags: Mapping[str, object] | None) -> "BountyEstimate" | None:
+        if signal_tags is None:
+            return None
+
+        amount = signal_tags.get("estimated_bounty_amount")
+        label = signal_tags.get("estimated_bounty_label")
+        min_amount = signal_tags.get("estimated_bounty_min")
+        max_amount = signal_tags.get("estimated_bounty_max")
+        rate_pct = signal_tags.get("estimated_bounty_rate_pct")
+        rule_version = signal_tags.get("estimated_bounty_rule_version")
+        confidence = signal_tags.get("estimated_bounty_confidence")
+
+        if not all(isinstance(value, int) for value in (amount, min_amount, max_amount, rate_pct)):
+            return None
+        if not all(isinstance(value, str) and value.strip() for value in (label, rule_version, confidence)):
+            return None
+
+        return cls(
+            amount=amount,
+            min_amount=min_amount,
+            max_amount=max_amount,
+            rate_pct=rate_pct,
+            label=label.strip(),
+            confidence=confidence.strip(),
+            rule_version=rule_version.strip(),
+        )
 
 
 DEFAULT_ANNUAL_SALARY_BANDS = {

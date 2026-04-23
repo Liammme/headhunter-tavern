@@ -40,17 +40,7 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
     facts = extract_job_facts(standardized, now=standardized.collected_at)
     signal_tags = build_legacy_signal_tags(facts)
     bounty_estimate = estimate_bounty(_build_bounty_estimate_input(facts))
-    signal_tags.update(
-        {
-            "estimated_bounty_amount": bounty_estimate.amount,
-            "estimated_bounty_label": bounty_estimate.label,
-            "estimated_bounty_min": bounty_estimate.min_amount,
-            "estimated_bounty_max": bounty_estimate.max_amount,
-            "estimated_bounty_rate_pct": bounty_estimate.rate_pct,
-            "estimated_bounty_rule_version": bounty_estimate.rule_version,
-            "estimated_bounty_confidence": bounty_estimate.confidence,
-        }
-    )
+    signal_tags.update(bounty_estimate.to_signal_tags())
     company_url = extract_company_url(job)
     if company_url:
         signal_tags["company_url"] = company_url
