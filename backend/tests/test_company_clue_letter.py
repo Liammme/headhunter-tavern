@@ -5,6 +5,13 @@ from app.services.company_clue_letter import build_company_clue_llm_input, gener
 from app.services.intelligence import IntelligenceGenerationError
 
 
+def enable_estimated_bounty_read(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.company_clue_letter._should_expose_estimated_bounty",
+        lambda: True,
+    )
+
+
 def build_job(
     *,
     company: str,
@@ -108,6 +115,7 @@ def test_generate_company_clue_letter_uses_exact_company_match(db_session, monke
 
 
 def test_generate_company_clue_letter_passes_structured_context_only(db_session, monkeypatch):
+    enable_estimated_bounty_read(monkeypatch)
     db_session.add(
         build_job(
             company="OpenGradient",
@@ -165,7 +173,8 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     assert "description" not in llm_input["company_summary"]
 
 
-def test_generate_company_clue_letter_uses_top_ranked_job_estimate_in_summary():
+def test_generate_company_clue_letter_uses_top_ranked_job_estimate_in_summary(monkeypatch):
+    enable_estimated_bounty_read(monkeypatch)
     jobs = [
         build_job(
             company="OpenGradient",
@@ -210,6 +219,38 @@ def test_generate_company_clue_letter_uses_top_ranked_job_estimate_in_summary():
     assert llm_input["highlighted_jobs"][0]["title"] == "Principal AI Engineer"
     assert llm_input["company_summary"]["estimated_bounty"]["amount"] == 150000
     assert llm_input["company_summary"]["estimated_bounty"]["label"] == "¥120,000-¥180,000"
+
+
+def test_build_company_clue_llm_input_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
+    jobs = [
+        build_job(
+            company="OpenGradient",
+            title="Principal AI Engineer",
+            canonical_url="https://jobs.example.com/opengradient/principal-ai",
+            bounty_grade="high",
+            description="urgent llm infra platform roadmap hiring fast",
+            signal_tags={
+                "display_tags": ["AI"],
+                "company_url": "https://opengradient.ai",
+                "estimated_bounty_amount": 150000,
+                "estimated_bounty_label": "¥120,000-¥180,000",
+                "estimated_bounty_min": 120000,
+                "estimated_bounty_max": 180000,
+                "estimated_bounty_rate_pct": 20,
+                "estimated_bounty_rule_version": "bounty-rule-v1",
+                "estimated_bounty_confidence": "medium",
+            },
+        )
+    ]
+    monkeypatch.setattr(
+        "app.services.company_clue_letter._should_expose_estimated_bounty",
+        lambda: False,
+        raising=False,
+    )
+
+    llm_input = build_company_clue_llm_input(company="OpenGradient", jobs=jobs)
+
+    assert llm_input["company_summary"]["estimated_bounty"] is None
 
 
 def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_session, monkeypatch):

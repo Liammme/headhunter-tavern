@@ -6,6 +6,13 @@ from app.services.job_enrichment import build_job_payload
 from app.services.home_feed_aggregation import build_day_payloads
 
 
+def enable_estimated_bounty_read(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.home_feed_aggregation._should_expose_estimated_bounty",
+        lambda: True,
+    )
+
+
 def build_job(
     *,
     job_id: int,
@@ -222,7 +229,8 @@ def test_build_day_payloads_emits_company_level_claim_subject():
     assert [job.claimed_names for job in company.jobs] == [[], []]
 
 
-def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present():
+def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present(monkeypatch):
+    enable_estimated_bounty_read(monkeypatch)
     jobs = [
         build_job(
             job_id=1,
@@ -252,7 +260,8 @@ def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present
     assert company.estimated_bounty_label == "¥1,500"
 
 
-def test_build_day_payloads_keeps_persisted_estimated_bounty_values():
+def test_build_day_payloads_keeps_persisted_estimated_bounty_values(monkeypatch):
+    enable_estimated_bounty_read(monkeypatch)
     jobs = [
         build_job(
             job_id=1,
@@ -282,7 +291,43 @@ def test_build_day_payloads_keeps_persisted_estimated_bounty_values():
     assert company.estimated_bounty_label == "¥120,000-¥180,000"
 
 
-def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card():
+def test_build_day_payloads_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        )
+    ]
+    jobs[0].signal_tags.update(
+        {
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+            "estimated_bounty_min": 120000,
+            "estimated_bounty_max": 180000,
+            "estimated_bounty_rate_pct": 20,
+            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_confidence": "medium",
+        }
+    )
+    monkeypatch.setattr(
+        "app.services.home_feed_aggregation._should_expose_estimated_bounty",
+        lambda: False,
+        raising=False,
+    )
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    company = payloads[0].companies[0]
+    assert company.estimated_bounty_amount is None
+    assert company.estimated_bounty_label == "待估算"
+
+
+def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card(monkeypatch):
+    enable_estimated_bounty_read(monkeypatch)
     jobs = [
         build_job(
             job_id=1,

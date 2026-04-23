@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import Job
-from app.services.bounty_estimation import BountyEstimate
+from app.services.estimated_bounty_read import select_readable_estimated_bounty, should_expose_estimated_bounty
 from app.services.intelligence import IntelligenceGenerationError, request_zhipu_structured_json
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
 from app.services.scoring import score_job_v2
@@ -82,7 +82,11 @@ def build_company_clue_llm_input(*, company: str, jobs: list[Job]) -> dict:
             "critical_jobs": sum(1 for item in job_briefs if item["critical"]),
             "top_categories": [name for name, _count in categories.most_common(3)],
             "top_domains": [name for name, _count in domains.most_common(2)],
-            "estimated_bounty": _collect_estimated_bounty([job for job, _brief in sorted_job_brief_pairs]),
+            "estimated_bounty": (
+                _collect_estimated_bounty([job for job, _brief in sorted_job_brief_pairs])
+                if _should_expose_estimated_bounty()
+                else None
+            ),
         },
         "highlighted_jobs": sorted_briefs[:3],
         "entry_points": _collect_entry_points(jobs),
@@ -211,11 +215,14 @@ def _collect_entry_points(jobs: list[Job]) -> dict:
 
 
 def _collect_estimated_bounty(jobs: list[Job]) -> dict | None:
-    for job in jobs:
-        estimate = BountyEstimate.from_signal_tags(job.signal_tags if isinstance(job.signal_tags, dict) else None)
-        if estimate is not None:
-            return {"amount": estimate.amount, "label": estimate.label}
+    estimate = select_readable_estimated_bounty(jobs)
+    if estimate is not None:
+        return {"amount": estimate.amount, "label": estimate.label}
     return None
+
+
+def _should_expose_estimated_bounty() -> bool:
+    return should_expose_estimated_bounty()
 
 
 def _load_company_jobs_exact(db: Session, company: str) -> list[Job]:

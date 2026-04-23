@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     database_url: str = f"sqlite+pysqlite:///{DEFAULT_SQLITE_PATH}"
     cors_origins: str = "http://localhost:3000"
+    bounty_pool_estimated_bounty_live_write_enabled: bool = False
+    bounty_pool_estimated_bounty_read_enabled: bool = False
+    bounty_pool_estimated_bounty_startup_audit_enabled: bool = False
+    bounty_pool_estimated_bounty_audit_window_days: int = 14
     bounty_pool_intelligence_llm_enabled: bool = True
     bounty_pool_zhipu_api_key: str | None = None
     bounty_pool_zhipu_model: str = "glm-4-flash-250414"

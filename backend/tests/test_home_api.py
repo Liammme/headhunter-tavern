@@ -47,7 +47,8 @@ def test_home_payload_has_intelligence_and_days(client):
     assert body["meta"]["rule_version"] == "score-v2"
 
 
-def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session):
+def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.services.home_feed_aggregation._should_expose_estimated_bounty", lambda: True)
     job = Job(
         canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
         source_name="demo-board",
