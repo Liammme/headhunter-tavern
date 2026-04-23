@@ -1,10 +1,15 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+DEFAULT_SQLITE_PATH = (Path(__file__).resolve().parents[2] / "bounty_pool.db").as_posix()
 
 
 class Settings(BaseSettings):
     app_name: str = "Bounty Pool"
     api_prefix: str = "/api/v1"
-    database_url: str = "sqlite+pysqlite:///./bounty_pool.db"
+    database_url: str = f"sqlite+pysqlite:///{DEFAULT_SQLITE_PATH}"
     cors_origins: str = "http://localhost:3000"
     bounty_pool_intelligence_llm_enabled: bool = True
     bounty_pool_zhipu_api_key: str | None = None

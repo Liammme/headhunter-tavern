@@ -46,15 +46,16 @@ class DayBucketSnapshot:
     companies: list[CompanyFeedSnapshot]
 
 
-def build_feed_metadata(now: datetime) -> FeedMetadata:
+def build_feed_metadata(now: datetime, *, generated_at: datetime | None = None) -> FeedMetadata:
     window_end = now.date()
     window_start = window_end - timedelta(days=WINDOW_DAYS - 1)
+    generated_at_value = (generated_at or now).replace(microsecond=0)
     return FeedMetadata(
         analysis_version=ANALYSIS_VERSION,
         rule_version=DEFAULT_BOUNTY_RULE_VERSION,
         window_start=window_start.isoformat(),
         window_end=window_end.isoformat(),
-        generated_at=now.replace(microsecond=0).isoformat(),
+        generated_at=generated_at_value.isoformat(),
     )
 
 
