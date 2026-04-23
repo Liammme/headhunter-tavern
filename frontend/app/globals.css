@@ -543,6 +543,43 @@ h5,
   z-index: 1;
 }
 
+.feed-more {
+  display: grid;
+  justify-items: center;
+  margin-top: -4px;
+}
+
+.feed-more-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 9px 16px;
+  border: 3px solid var(--border);
+  border-radius: var(--radius-wobbly-pill);
+  background: var(--muted);
+  color: var(--foreground);
+  box-shadow: var(--shadow-standard);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.feed-more-button:hover {
+  background: var(--secondary-accent);
+  color: var(--background);
+  box-shadow: 2px 2px 0px 0px var(--border);
+  transform: translate(2px, 2px) rotate(0.45deg);
+}
+
+.feed-more-button:active {
+  box-shadow: 0px 0px 0px 0px var(--border);
+  transform: translate(4px, 4px);
+}
+
 .feed-shell-head {
   padding: 24px 24px 18px;
   position: relative;
@@ -637,6 +674,8 @@ h5,
 .company-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .company-top h3 {
@@ -663,6 +702,10 @@ h5,
   box-shadow: 2px 2px 0px 0px var(--border);
   font-family: var(--font-heading-stack);
   transform: rotate(1deg);
+}
+
+.company-actions .company-grade {
+  transform: rotate(0.85deg);
 }
 
 .company-clue-tag,
@@ -817,6 +860,14 @@ h5,
   transform: rotate(0.7deg);
 }
 
+.seal-unclaimed-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
 .seal-bounty {
   display: grid;
   gap: 4px;
@@ -832,6 +883,11 @@ h5,
 .seal-bounty strong {
   font-size: 21px;
   line-height: 1;
+}
+
+.company-claim-seal .claim-trigger {
+  min-width: 84px;
+  white-space: nowrap;
 }
 
 .seal-mark {
@@ -1230,6 +1286,11 @@ h5,
     justify-self: start;
   }
 
+  .seal-unclaimed-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
   .job-actions {
     justify-items: start;
   }
@@ -1244,7 +1305,8 @@ h5,
   .company-clue-actions button,
   .dialog-actions button,
   .company-footer button,
-  .claim-trigger {
+  .claim-trigger,
+  .feed-more-button {
     width: 100%;
   }
 }
@@ -1288,6 +1350,10 @@ h5,
   .job-source-link {
     justify-self: start;
   }
+
+  .feed-more {
+    margin-top: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1307,12 +1373,14 @@ h5,
   .claim-form button:hover,
   .company-footer button:hover,
   .company-clue-retry:hover,
+  .feed-more-button:hover,
   .text-button:hover,
   .company-clue-tag:active,
   .claim-trigger:active,
   .claim-form button:active,
   .company-footer button:active,
   .company-clue-retry:active,
+  .feed-more-button:active,
   .text-button:active {
     transform: none;
   }

@@ -1,4 +1,4 @@
-import CompanyDaySection from "../components/CompanyDaySection";
+import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
 import { fetchHomePayload } from "../lib/api";
 
@@ -30,9 +30,7 @@ export default async function HomePage() {
           <h2 id="leaderboard-start-title">从这里开始进入今天的公司档案卡。</h2>
         </header>
         {hasDays ? (
-          payload.days.map((day) => (
-            <CompanyDaySection key={day.bucket} bucket={day.bucket} companies={day.companies} />
-          ))
+          <CompanyFeedTimeline days={payload.days} />
         ) : (
           <section className="empty-state" aria-live="polite">
             <p className="eyebrow">赏金池状态</p>

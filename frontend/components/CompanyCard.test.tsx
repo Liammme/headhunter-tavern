@@ -61,6 +61,8 @@ describe("CompanyCard", () => {
     expect(rightRail).not.toBeNull();
     expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByRole("button", { name: /认领/ })).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("签署区")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("公司线索认领")).not.toBeInTheDocument();
@@ -196,6 +198,7 @@ describe("CompanyCard", () => {
       "href",
       "https://companies.example.com/opengradient",
     );
+    expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("共 2 个岗位")).toBeInTheDocument();
     const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");

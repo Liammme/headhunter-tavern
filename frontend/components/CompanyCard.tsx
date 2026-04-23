@@ -113,10 +113,6 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
     <article className="company-card">
       <div className="company-top">
         <div className="company-dossier-head">
-          <div className="company-stamp-row">
-            <p className="eyebrow">公司档案</p>
-            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
-          </div>
           <h3>
             {companyState.company_url ? (
               <a href={companyState.company_url} target="_blank" rel="noreferrer">
@@ -146,6 +142,7 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
               </span>
               <span>线索</span>
             </button>
+            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
         </div>
         <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />

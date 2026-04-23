@@ -1,3 +1,5 @@
+import React from "react";
+
 import CompanyCard from "./CompanyCard";
 import type { CompanyCardPayload, DayBucketPayload } from "../lib/types";
 

@@ -38,13 +38,13 @@ export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: 
           </dl>
         </>
       ) : (
-        <>
+        <div className="seal-unclaimed-row">
           <div className="seal-bounty">
             <span className="seal-bounty-label">预计赏金</span>
             <strong>{estimatedBounty}</strong>
           </div>
           {claimJob ? <ClaimDialog job={claimJob} onClaimCreated={onClaimCreated} /> : null}
-        </>
+        </div>
       )}
     </aside>
   );
