@@ -1,9 +1,19 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 DEFAULT_SQLITE_PATH = (Path(__file__).resolve().parents[2] / "bounty_pool.db").as_posix()
+
+
+def normalize_database_url(value: str) -> str:
+    normalized = value.strip()
+    if normalized.startswith("postgres://"):
+        return "postgresql+psycopg://" + normalized[len("postgres://") :]
+    if normalized.startswith("postgresql://"):
+        return "postgresql+psycopg://" + normalized[len("postgresql://") :]
+    return normalized
 
 
 class Settings(BaseSettings):
@@ -18,6 +28,11 @@ class Settings(BaseSettings):
     bounty_pool_zhipu_fallback_models: str = "glm-4-flash-250414,glm-4.7-flash"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url_field(cls, value: str) -> str:
+        return normalize_database_url(value)
 
 
 settings = Settings()
