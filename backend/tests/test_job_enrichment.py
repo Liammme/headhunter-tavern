@@ -51,6 +51,29 @@ def test_build_job_payload_preserves_company_url_when_present():
     assert payload["signal_tags"]["company_url"] == "https://open-gradient.ai/company"
 
 
+def test_build_job_payload_adds_estimated_bounty_signal_tags():
+    job = NormalizedJob(
+        source_job_id="founding-ai",
+        canonical_url="https://open-gradient.ai/careers/principal-ai-engineer",
+        title="Principal AI Engineer",
+        company="Open Gradient",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board"},
+    )
+
+    payload = build_job_payload(job)
+
+    assert payload["signal_tags"]["estimated_bounty_amount"] == 150000
+    assert payload["signal_tags"]["estimated_bounty_label"] == "¥120,000-¥180,000"
+    assert payload["signal_tags"]["estimated_bounty_rate_pct"] == 20
+    assert payload["signal_tags"]["estimated_bounty_rule_version"] == "bounty-rule-v1"
+    assert payload["signal_tags"]["estimated_bounty_confidence"] == "medium"
+
+
 def test_build_job_payload_does_not_guess_company_url_when_missing():
     job = NormalizedJob(
         source_job_id="without-company-url",
