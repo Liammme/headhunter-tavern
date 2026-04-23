@@ -2,7 +2,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Job
-from app.services.bounty_estimation import BountyEstimate, build_bounty_estimate_input_from_facts, estimate_bounty
+from app.services.bounty_estimation import (
+    build_bounty_estimate_input_from_facts,
+    classify_bounty_signal_tags,
+    estimate_bounty,
+)
 from app.services.job_facts import StandardizedJobInput, extract_job_facts
 
 
@@ -13,7 +17,7 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
 
     for job in jobs:
         signal_tags = dict(job.signal_tags or {})
-        if BountyEstimate.from_signal_tags(signal_tags) is not None:
+        if classify_bounty_signal_tags(signal_tags) == "complete":
             skipped_jobs += 1
             continue
 

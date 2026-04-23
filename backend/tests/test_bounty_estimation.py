@@ -4,6 +4,7 @@ from app.services.bounty_estimation import (
     BountyEstimate,
     BountyEstimateInput,
     build_bounty_estimate_input_from_facts,
+    classify_bounty_signal_tags,
     estimate_bounty,
 )
 
@@ -82,6 +83,47 @@ def test_bounty_estimate_from_signal_tags_rejects_partial_snapshot():
     )
 
     assert restored is None
+
+
+def test_classify_bounty_signal_tags_marks_complete_snapshot():
+    assert classify_bounty_signal_tags(
+        {
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+            "estimated_bounty_min": 120000,
+            "estimated_bounty_max": 180000,
+            "estimated_bounty_rate_pct": 20,
+            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_confidence": "medium",
+        }
+    ) == "complete"
+
+
+def test_classify_bounty_signal_tags_marks_partial_snapshot():
+    assert classify_bounty_signal_tags(
+        {
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+        }
+    ) == "partial"
+
+
+def test_classify_bounty_signal_tags_marks_invalid_snapshot():
+    assert classify_bounty_signal_tags(
+        {
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+            "estimated_bounty_min": 160000,
+            "estimated_bounty_max": 180000,
+            "estimated_bounty_rate_pct": 25,
+            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_confidence": "medium",
+        }
+    ) == "invalid"
+
+
+def test_classify_bounty_signal_tags_marks_missing_snapshot():
+    assert classify_bounty_signal_tags({"display_tags": ["AI"]}) == "missing"
 
 
 @dataclass(frozen=True)

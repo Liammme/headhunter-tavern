@@ -93,3 +93,38 @@ def test_backfill_estimated_bounties_repairs_partial_estimate_snapshots(db_sessi
     assert refreshed.signal_tags["estimated_bounty_rate_pct"] == 20
     assert refreshed.signal_tags["estimated_bounty_rule_version"] == "bounty-rule-v1"
     assert refreshed.signal_tags["estimated_bounty_confidence"] == "medium"
+
+
+def test_backfill_estimated_bounties_repairs_invalid_estimate_snapshots(db_session):
+    job = Job(
+        canonical_url="https://jobs.example.com/opengradient/4",
+        source_name="demo-board",
+        title="Principal AI Engineer",
+        company="OpenGradient",
+        company_normalized="opengradient",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime(2026, 4, 23, 9, 0, 0),
+        collected_at=datetime(2026, 4, 23, 9, 0, 0),
+        bounty_grade="medium",
+        signal_tags={
+            "display_tags": ["AI", "Senior", "核心岗位"],
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+            "estimated_bounty_min": 160000,
+            "estimated_bounty_max": 180000,
+            "estimated_bounty_rate_pct": 25,
+            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_confidence": "medium",
+        },
+    )
+    db_session.add(job)
+    db_session.commit()
+
+    summary = backfill_estimated_bounties(db_session)
+    refreshed = db_session.get(Job, job.id)
+
+    assert summary == {"scanned_jobs": 1, "updated_jobs": 1, "skipped_jobs": 0}
+    assert refreshed.signal_tags["estimated_bounty_amount"] == 150000
+    assert refreshed.signal_tags["estimated_bounty_min"] == 120000
+    assert refreshed.signal_tags["estimated_bounty_max"] == 180000
+    assert refreshed.signal_tags["estimated_bounty_rate_pct"] == 20

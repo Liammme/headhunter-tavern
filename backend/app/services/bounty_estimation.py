@@ -1,8 +1,18 @@
 from dataclasses import dataclass
-from typing import Mapping, Protocol
+from typing import Literal, Mapping, Protocol
 
 
 RULE_VERSION = "bounty-rule-v1"
+ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS = (
+    "estimated_bounty_amount",
+    "estimated_bounty_label",
+    "estimated_bounty_min",
+    "estimated_bounty_max",
+    "estimated_bounty_rate_pct",
+    "estimated_bounty_rule_version",
+    "estimated_bounty_confidence",
+)
+ALLOWED_BOUNTY_CONFIDENCE_VALUES = {"low", "medium", "high"}
 
 
 @dataclass(frozen=True)
@@ -203,6 +213,32 @@ def build_bounty_estimate_input_from_facts(facts: SupportsBountyEstimateFacts) -
         company_signal=facts.company_signal,
         time_pressure_signals=facts.time_pressure_signals,
     )
+
+
+def classify_bounty_signal_tags(signal_tags: Mapping[str, object] | None) -> Literal["complete", "partial", "invalid", "missing"]:
+    estimate = read_bounty_estimate_from_signal_tags(signal_tags)
+    if estimate is not None:
+        return "complete"
+
+    normalized = signal_tags if signal_tags is not None else {}
+    if any(key in normalized for key in ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS):
+        return "invalid" if BountyEstimate.from_signal_tags(normalized) is not None else "partial"
+    return "missing"
+
+
+def read_bounty_estimate_from_signal_tags(signal_tags: Mapping[str, object] | None) -> BountyEstimate | None:
+    estimate = BountyEstimate.from_signal_tags(signal_tags)
+    if estimate is None:
+        return None
+    if estimate.rule_version != RULE_VERSION:
+        return None
+    if estimate.min_amount > estimate.amount or estimate.amount > estimate.max_amount:
+        return None
+    if estimate.rate_pct < 10 or estimate.rate_pct > 20:
+        return None
+    if estimate.confidence not in ALLOWED_BOUNTY_CONFIDENCE_VALUES:
+        return None
+    return estimate
 
 
 def _resolve_salary_band(category: str, seniority: str) -> tuple[int, int]:
