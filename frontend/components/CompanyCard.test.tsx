@@ -208,6 +208,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点岗位证据")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("高赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("中赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("低赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText("证据备注：").length).toBeGreaterThan(0);
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",

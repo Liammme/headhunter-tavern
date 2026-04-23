@@ -165,7 +165,6 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
               <h4 className="job-title">{job.title}</h4>
               <div className="job-evidence">
                 <div className="job-badges">
-                  <span className="job-badge">{renderBountyGrade(job.bounty_grade)}</span>
                   {job.tags.slice(0, 3).map((tag) => (
                     <span key={tag} className="job-badge">
                       {tag}
@@ -205,16 +204,6 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
-}
-
-function renderBountyGrade(grade: CompanyCardPayload["jobs"][number]["bounty_grade"]) {
-  if (grade === "high") {
-    return "高赏金";
-  }
-  if (grade === "medium") {
-    return "中赏金";
-  }
-  return "低赏金";
 }
 
 function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
