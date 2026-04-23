@@ -243,6 +243,31 @@ def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present
     assert company.estimated_bounty_label == "¥1,500"
 
 
+def test_build_day_payloads_keeps_persisted_estimated_bounty_values():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        )
+    ]
+    jobs[0].signal_tags.update(
+        {
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+        }
+    )
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    company = payloads[0].companies[0]
+    assert company.estimated_bounty_amount == 150000
+    assert company.estimated_bounty_label == "¥120,000-¥180,000"
+
+
 def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():
     jobs = [
         build_job(

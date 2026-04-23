@@ -1,3 +1,8 @@
+from datetime import datetime
+
+from app.models import Job
+
+
 def test_home_endpoint_returns_query_service_result(client, monkeypatch):
     expected = {
         "intelligence": {
@@ -40,6 +45,34 @@ def test_home_payload_has_intelligence_and_days(client):
     assert "days" in body
     assert body["meta"]["analysis_version"] == "feed-v1"
     assert body["meta"]["rule_version"] == "score-v2"
+
+
+def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session):
+    job = Job(
+        canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
+        source_name="demo-board",
+        title="Principal AI Engineer",
+        company="OpenGradient",
+        company_normalized="opengradient",
+        description="Build LLM platform and hiring roadmap.",
+        posted_at=datetime(2026, 4, 18, 9, 0, 0),
+        collected_at=datetime(2026, 4, 18, 9, 0, 0),
+        bounty_grade="medium",
+        signal_tags={
+            "display_tags": ["AI", "Senior", "核心岗位"],
+            "estimated_bounty_amount": 150000,
+            "estimated_bounty_label": "¥120,000-¥180,000",
+        },
+    )
+    db_session.add(job)
+    db_session.commit()
+
+    response = client.get("/api/v1/home")
+
+    assert response.status_code == 200
+    company = response.json()["days"][0]["companies"][0]
+    assert company["estimated_bounty_amount"] == 150000
+    assert company["estimated_bounty_label"] == "¥120,000-¥180,000"
 
 
 def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
