@@ -1,4 +1,4 @@
-from app.core.config import DEFAULT_SQLITE_PATH, normalize_database_url, parse_cors_origins
+from app.core.config import DEFAULT_SQLITE_PATH, Settings, normalize_database_url, parse_cors_origins
 
 
 def test_parse_cors_origins_supports_comma_separated_values():
@@ -39,3 +39,18 @@ def test_normalize_database_url_upgrades_legacy_postgres_scheme():
     assert normalize_database_url(url) == (
         "postgresql+psycopg://bounty_pool_user:secret@127.0.0.1:5432/bounty_pool"
     )
+
+
+def test_settings_support_estimated_bounty_rollout_flags():
+    rollout_settings = Settings(
+        _env_file=None,
+        bounty_pool_estimated_bounty_live_write_enabled=True,
+        bounty_pool_estimated_bounty_read_enabled=True,
+        bounty_pool_estimated_bounty_startup_audit_enabled=True,
+        bounty_pool_estimated_bounty_audit_window_days=21,
+    )
+
+    assert rollout_settings.bounty_pool_estimated_bounty_live_write_enabled is True
+    assert rollout_settings.bounty_pool_estimated_bounty_read_enabled is True
+    assert rollout_settings.bounty_pool_estimated_bounty_startup_audit_enabled is True
+    assert rollout_settings.bounty_pool_estimated_bounty_audit_window_days == 21
