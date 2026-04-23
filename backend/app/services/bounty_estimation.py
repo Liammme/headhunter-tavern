@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, Protocol
 
 
 RULE_VERSION = "bounty-rule-v1"
@@ -7,6 +7,20 @@ RULE_VERSION = "bounty-rule-v1"
 
 @dataclass(frozen=True)
 class BountyEstimateInput:
+    category: str
+    seniority: str
+    domain_tag: str
+    urgent: bool
+    critical: bool
+    hard_to_fill: bool
+    role_complexity: str
+    business_criticality: str
+    compensation_signal: str
+    company_signal: str
+    time_pressure_signals: tuple[str, ...]
+
+
+class SupportsBountyEstimateFacts(Protocol):
     category: str
     seniority: str
     domain_tag: str
@@ -172,6 +186,22 @@ def estimate_bounty(input: BountyEstimateInput) -> BountyEstimate:
         label=f"¥{min_amount:,.0f}-¥{max_amount:,.0f}",
         confidence=_resolve_confidence(input.compensation_signal),
         rule_version=RULE_VERSION,
+    )
+
+
+def build_bounty_estimate_input_from_facts(facts: SupportsBountyEstimateFacts) -> BountyEstimateInput:
+    return BountyEstimateInput(
+        category=facts.category,
+        seniority=facts.seniority,
+        domain_tag=facts.domain_tag,
+        urgent=facts.urgent,
+        critical=facts.critical,
+        hard_to_fill=facts.hard_to_fill,
+        role_complexity=facts.role_complexity,
+        business_criticality=facts.business_criticality,
+        compensation_signal=facts.compensation_signal,
+        company_signal=facts.company_signal,
+        time_pressure_signals=facts.time_pressure_signals,
     )
 
 

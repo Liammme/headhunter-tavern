@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Job
-from app.services.bounty_estimation import BountyEstimate, BountyEstimateInput, estimate_bounty
+from app.services.bounty_estimation import BountyEstimate, build_bounty_estimate_input_from_facts, estimate_bounty
 from app.services.job_facts import StandardizedJobInput, extract_job_facts
 
 
@@ -18,7 +18,7 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
             continue
 
         facts = extract_job_facts(_build_standardized_job_input(job), now=job.collected_at)
-        estimate = estimate_bounty(_build_bounty_estimate_input(facts))
+        estimate = estimate_bounty(build_bounty_estimate_input_from_facts(facts))
         signal_tags.update(estimate.to_signal_tags())
         job.signal_tags = signal_tags
         updated_jobs += 1
@@ -29,6 +29,8 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
         "updated_jobs": updated_jobs,
         "skipped_jobs": skipped_jobs,
     }
+
+
 def _build_standardized_job_input(job: Job) -> StandardizedJobInput:
     return StandardizedJobInput(
         canonical_url=job.canonical_url,
@@ -39,20 +41,4 @@ def _build_standardized_job_input(job: Job) -> StandardizedJobInput:
         description=job.description,
         posted_at=job.posted_at,
         collected_at=job.collected_at,
-    )
-
-
-def _build_bounty_estimate_input(facts) -> BountyEstimateInput:
-    return BountyEstimateInput(
-        category=facts.category,
-        seniority=facts.seniority,
-        domain_tag=facts.domain_tag,
-        urgent=facts.urgent,
-        critical=facts.critical,
-        hard_to_fill=facts.hard_to_fill,
-        role_complexity=facts.role_complexity,
-        business_criticality=facts.business_criticality,
-        compensation_signal=facts.compensation_signal,
-        company_signal=facts.company_signal,
-        time_pressure_signals=facts.time_pressure_signals,
     )

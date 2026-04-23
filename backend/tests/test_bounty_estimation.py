@@ -1,4 +1,11 @@
-from app.services.bounty_estimation import BountyEstimate, BountyEstimateInput, estimate_bounty
+from dataclasses import dataclass
+
+from app.services.bounty_estimation import (
+    BountyEstimate,
+    BountyEstimateInput,
+    build_bounty_estimate_input_from_facts,
+    estimate_bounty,
+)
 
 
 def test_estimate_bounty_returns_high_end_range_for_ai_principal():
@@ -75,3 +82,50 @@ def test_bounty_estimate_from_signal_tags_rejects_partial_snapshot():
     )
 
     assert restored is None
+
+
+@dataclass(frozen=True)
+class StubBountyFacts:
+    category: str
+    seniority: str
+    domain_tag: str
+    urgent: bool
+    critical: bool
+    hard_to_fill: bool
+    role_complexity: str
+    business_criticality: str
+    compensation_signal: str
+    company_signal: str
+    time_pressure_signals: tuple[str, ...]
+
+
+def test_build_bounty_estimate_input_from_facts_maps_all_fields():
+    facts = StubBountyFacts(
+        category="AI/算法",
+        seniority="principal",
+        domain_tag="AI",
+        urgent=True,
+        critical=True,
+        hard_to_fill=True,
+        role_complexity="high",
+        business_criticality="high",
+        compensation_signal="strong",
+        company_signal="hot",
+        time_pressure_signals=("urgent", "long_running"),
+    )
+
+    estimate_input = build_bounty_estimate_input_from_facts(facts)
+
+    assert estimate_input == BountyEstimateInput(
+        category="AI/算法",
+        seniority="principal",
+        domain_tag="AI",
+        urgent=True,
+        critical=True,
+        hard_to_fill=True,
+        role_complexity="high",
+        business_criticality="high",
+        compensation_signal="strong",
+        company_signal="hot",
+        time_pressure_signals=("urgent", "long_running"),
+    )

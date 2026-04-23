@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.crawlers.base import NormalizedJob
-from app.services.bounty_estimation import BountyEstimateInput, estimate_bounty
+from app.services.bounty_estimation import build_bounty_estimate_input_from_facts, estimate_bounty
 from app.services.job_facts import (
     JobFacts,
     StandardizedJobInput,
@@ -39,7 +39,7 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
     standardized = standardize_job_input(job)
     facts = extract_job_facts(standardized, now=standardized.collected_at)
     signal_tags = build_legacy_signal_tags(facts)
-    bounty_estimate = estimate_bounty(_build_bounty_estimate_input(facts))
+    bounty_estimate = estimate_bounty(build_bounty_estimate_input_from_facts(facts))
     signal_tags.update(bounty_estimate.to_signal_tags())
     company_url = extract_company_url(job)
     if company_url:
@@ -76,22 +76,6 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
 
 def build_job_payload(job: NormalizedJob) -> dict:
     return enrich_job(job).payload
-
-
-def _build_bounty_estimate_input(facts: JobFacts) -> BountyEstimateInput:
-    return BountyEstimateInput(
-        category=facts.category,
-        seniority=facts.seniority,
-        domain_tag=facts.domain_tag,
-        urgent=facts.urgent,
-        critical=facts.critical,
-        hard_to_fill=facts.hard_to_fill,
-        role_complexity=facts.role_complexity,
-        business_criticality=facts.business_criticality,
-        compensation_signal=facts.compensation_signal,
-        company_signal=facts.company_signal,
-        time_pressure_signals=facts.time_pressure_signals,
-    )
 
 
 def extract_company_url(job: NormalizedJob) -> str | None:
