@@ -66,17 +66,10 @@ def generate_company_clue_letter(db: Session, *, company: str) -> dict:
 
 
 def build_company_clue_llm_input(*, company: str, jobs: list[Job]) -> dict:
-    job_briefs = [_build_job_brief(job) for job in jobs]
-    sorted_briefs = sorted(
-        job_briefs,
-        key=lambda item: (
-            {"high": 0, "medium": 1, "low": 2}.get(item["bounty_grade"], 3),
-            -len(item["time_pressure_signals"]),
-            -len(item["anomaly_signals"]),
-            {"high": 0, "medium": 1, "low": 2}.get(item["business_criticality"], 3),
-            item["title"].lower(),
-        ),
-    )
+    job_brief_pairs = [(job, _build_job_brief(job)) for job in jobs]
+    job_briefs = [brief for _job, brief in job_brief_pairs]
+    sorted_job_brief_pairs = sorted(job_brief_pairs, key=lambda item: _job_brief_sort_key(item[1]))
+    sorted_briefs = [brief for _job, brief in sorted_job_brief_pairs]
     categories = Counter(item["category"] for item in job_briefs)
     domains = Counter(item["domain_tag"] for item in job_briefs)
 
@@ -89,7 +82,7 @@ def build_company_clue_llm_input(*, company: str, jobs: list[Job]) -> dict:
             "critical_jobs": sum(1 for item in job_briefs if item["critical"]),
             "top_categories": [name for name, _count in categories.most_common(3)],
             "top_domains": [name for name, _count in domains.most_common(2)],
-            "estimated_bounty": _collect_estimated_bounty(jobs),
+            "estimated_bounty": _collect_estimated_bounty([job for job, _brief in sorted_job_brief_pairs]),
         },
         "highlighted_jobs": sorted_briefs[:3],
         "entry_points": _collect_entry_points(jobs),
@@ -192,6 +185,16 @@ def _build_job_brief(job: Job) -> dict:
             "email": _extract_email(job),
         },
     }
+
+
+def _job_brief_sort_key(brief: dict) -> tuple:
+    return (
+        {"high": 0, "medium": 1, "low": 2}.get(brief["bounty_grade"], 3),
+        -len(brief["time_pressure_signals"]),
+        -len(brief["anomaly_signals"]),
+        {"high": 0, "medium": 1, "low": 2}.get(brief["business_criticality"], 3),
+        brief["title"].lower(),
+    )
 
 
 def _collect_entry_points(jobs: list[Job]) -> dict:

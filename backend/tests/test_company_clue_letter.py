@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.models import Job
-from app.services.company_clue_letter import generate_company_clue_letter
+from app.services.company_clue_letter import build_company_clue_llm_input, generate_company_clue_letter
 from app.services.intelligence import IntelligenceGenerationError
 
 
@@ -163,6 +163,53 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     assert llm_input["highlighted_jobs"][0]["entry_points"]["email"] == "careers@opengradient.ai"
     assert "description" not in llm_input["highlighted_jobs"][0]
     assert "description" not in llm_input["company_summary"]
+
+
+def test_generate_company_clue_letter_uses_top_ranked_job_estimate_in_summary():
+    jobs = [
+        build_job(
+            company="OpenGradient",
+            title="Operations Coordinator",
+            canonical_url="https://jobs.example.com/opengradient/ops",
+            bounty_grade="low",
+            description="operations support",
+            signal_tags={
+                "display_tags": ["运营"],
+                "company_url": "https://opengradient.ai",
+                "estimated_bounty_amount": 24000,
+                "estimated_bounty_label": "¥19,200-¥28,800",
+                "estimated_bounty_min": 19200,
+                "estimated_bounty_max": 28800,
+                "estimated_bounty_rate_pct": 12,
+                "estimated_bounty_rule_version": "bounty-rule-v1",
+                "estimated_bounty_confidence": "medium",
+            },
+        ),
+        build_job(
+            company="OpenGradient",
+            title="Principal AI Engineer",
+            canonical_url="https://jobs.example.com/opengradient/principal-ai",
+            bounty_grade="high",
+            description="urgent llm infra platform roadmap hiring fast",
+            signal_tags={
+                "display_tags": ["AI"],
+                "company_url": "https://opengradient.ai",
+                "estimated_bounty_amount": 150000,
+                "estimated_bounty_label": "¥120,000-¥180,000",
+                "estimated_bounty_min": 120000,
+                "estimated_bounty_max": 180000,
+                "estimated_bounty_rate_pct": 20,
+                "estimated_bounty_rule_version": "bounty-rule-v1",
+                "estimated_bounty_confidence": "medium",
+            },
+        ),
+    ]
+
+    llm_input = build_company_clue_llm_input(company="OpenGradient", jobs=jobs)
+
+    assert llm_input["highlighted_jobs"][0]["title"] == "Principal AI Engineer"
+    assert llm_input["company_summary"]["estimated_bounty"]["amount"] == 150000
+    assert llm_input["company_summary"]["estimated_bounty"]["label"] == "¥120,000-¥180,000"
 
 
 def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_session, monkeypatch):
