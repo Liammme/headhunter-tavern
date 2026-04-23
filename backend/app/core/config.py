@@ -21,3 +21,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def parse_cors_origins(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
