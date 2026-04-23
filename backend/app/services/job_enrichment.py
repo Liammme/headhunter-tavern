@@ -1,6 +1,8 @@
+import logging
 from dataclasses import dataclass
 
 from app.crawlers.base import NormalizedJob
+from app.core.config import settings
 from app.services.bounty_estimation import build_bounty_estimate_input_from_facts, estimate_bounty
 from app.services.job_facts import (
     JobFacts,
@@ -22,6 +24,8 @@ from app.services.scoring import (
     select_primary_bounty_grade,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class JobEnrichmentResult:
@@ -39,8 +43,7 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
     standardized = standardize_job_input(job)
     facts = extract_job_facts(standardized, now=standardized.collected_at)
     signal_tags = build_legacy_signal_tags(facts)
-    bounty_estimate = estimate_bounty(build_bounty_estimate_input_from_facts(facts))
-    signal_tags.update(bounty_estimate.to_signal_tags())
+    _append_estimated_bounty_signal_tags(signal_tags, facts)
     company_url = extract_company_url(job)
     if company_url:
         signal_tags["company_url"] = company_url
@@ -76,6 +79,23 @@ def enrich_job(job: NormalizedJob) -> JobEnrichmentResult:
 
 def build_job_payload(job: NormalizedJob) -> dict:
     return enrich_job(job).payload
+
+
+def _append_estimated_bounty_signal_tags(signal_tags: dict, facts: JobFacts) -> None:
+    if not _should_write_estimated_bounty():
+        return
+
+    try:
+        bounty_estimate = estimate_bounty(build_bounty_estimate_input_from_facts(facts))
+    except Exception:
+        logger.warning("Failed to estimate bounty for %s / %s", facts.company_signal, facts.category, exc_info=True)
+        return
+
+    signal_tags.update(bounty_estimate.to_signal_tags())
+
+
+def _should_write_estimated_bounty() -> bool:
+    return settings.bounty_pool_estimated_bounty_live_write_enabled
 
 
 def extract_company_url(job: NormalizedJob) -> str | None:
