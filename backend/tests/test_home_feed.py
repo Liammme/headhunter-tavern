@@ -36,6 +36,6 @@ def test_settings_default_database_url_points_to_backend_db(monkeypatch):
     reloaded = reload(config)
 
     try:
-        assert reloaded.settings.database_url == "sqlite+pysqlite:///F:/赏金猎人/.worktrees/bounty-pool-v1/backend/bounty_pool.db"
+        assert reloaded.settings.database_url == f"sqlite+pysqlite:///{reloaded.DEFAULT_SQLITE_PATH}"
     finally:
         reload(config)
