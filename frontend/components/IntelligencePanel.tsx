@@ -21,7 +21,7 @@ export default function IntelligencePanel({
   const secondaryFindings = intelligence.findings.slice(1, 3);
   const leadAction = intelligence.actions[0];
   const secondaryActions = intelligence.actions.slice(1, 3);
-  const narrativeParagraphs = splitNarrativeIntoParagraphs(dailyCaptureSummary);
+  const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
 
   return (
     <section className="intel-stage" aria-labelledby="intelligence-panel-title">
@@ -46,7 +46,7 @@ export default function IntelligencePanel({
             </article>
           </div>
         </div>
-        <p className="intel-footnote">{intelligence.summary}</p>
+        <p className="intel-footnote">{dailyCaptureSummary}</p>
         <section className="intel-peek-shell" aria-label="公司猎单池露头">
           <section className="intel-peek">
             <div className="intel-peek-copy">

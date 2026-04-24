@@ -31,7 +31,7 @@ describe("IntelligencePanel", () => {
     const intelligence = buildIntelligence();
     const reportDateLabel = "2026/4/23";
 
-    render(
+    const { container } = render(
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
@@ -45,10 +45,13 @@ describe("IntelligencePanel", () => {
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
-    expect(within(paper).getByText("今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。")).toBeInTheDocument();
-    expect(within(paper).queryByText(intelligence.narrative)).not.toBeInTheDocument();
+    expect(within(paper).getByText(intelligence.narrative)).toBeInTheDocument();
+    expect(within(paper).queryByText("今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。")).not.toBeInTheDocument();
     expect(within(paper).queryByText(intelligence.summary)).not.toBeInTheDocument();
-    expect(screen.getByText(intelligence.summary)).toBeInTheDocument();
+    expect(container.querySelector(".intel-footnote")).toHaveTextContent(
+      "今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。",
+    );
+    expect(screen.queryByText(intelligence.summary)).not.toBeInTheDocument();
   });
 
   it("breaks a multi-sentence narrative into letter-like paragraphs", () => {
@@ -70,9 +73,9 @@ describe("IntelligencePanel", () => {
     const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
 
     expect(narrativeParagraphs).toHaveLength(3);
-    expect(narrativeParagraphs[0]).toHaveTextContent("今日抓取 12 个岗位");
-    expect(narrativeParagraphs[1]).toHaveTextContent("分布来源：Aijobs");
-    expect(narrativeParagraphs[2]).toHaveTextContent("重点公司 2 家");
+    expect(narrativeParagraphs[0]).toHaveTextContent("James侦探晃了晃杯底");
+    expect(narrativeParagraphs[1]).toHaveTextContent("今天真正冒头的不是热闹标签");
+    expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
   });
 
   it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
