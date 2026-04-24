@@ -1,6 +1,15 @@
 from app.core.config import DEFAULT_SQLITE_PATH, Settings, normalize_database_url, parse_cors_origins
 
 
+def test_settings_default_cors_origins_allow_common_local_frontends():
+    rollout_settings = Settings(_env_file=None)
+
+    assert parse_cors_origins(rollout_settings.cors_origins) == [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+
 def test_parse_cors_origins_supports_comma_separated_values():
     origins = parse_cors_origins(
         "https://example.vercel.app, https://www.example.com ,http://localhost:3000"

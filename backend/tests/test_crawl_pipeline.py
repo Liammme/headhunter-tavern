@@ -118,5 +118,7 @@ def test_claim_persists_and_surfaces_in_home_payload(client, monkeypatch):
     first_company = refreshed_home.json()["days"][0]["companies"][0]
     first_job = first_company["jobs"][0]
 
-    assert "Liam" in first_job["claimed_names"]
+    assert first_job["claimed_names"] == []
     assert "Liam" in first_company["claimed_names"]
+    assert first_company["claimed_by"] == "Liam"
+    assert first_company["claim_status"] == "claimed"

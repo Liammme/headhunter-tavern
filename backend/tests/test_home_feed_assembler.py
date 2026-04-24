@@ -59,6 +59,10 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                         "company_grade": "focus",
                         "total_jobs": 1,
                         "claimed_names": ["Liam"],
+                        "claimed_by": None,
+                        "claim_status": None,
+                        "estimated_bounty_amount": None,
+                        "estimated_bounty_label": None,
                         "jobs": [
                             {
                                 "id": 1,
