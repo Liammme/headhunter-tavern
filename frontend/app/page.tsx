@@ -1,6 +1,5 @@
 import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
-import { CpuArchitecture } from "../components/ui/cpu-architecture";
 import { Typewriter } from "../components/ui/typewriter";
 import { fetchHomePayload } from "../lib/api";
 
@@ -26,9 +25,6 @@ export default async function HomePage() {
             />
           </h1>
         </header>
-        <div className="hero-architecture" aria-hidden="true">
-          <CpuArchitecture text="AI" />
-        </div>
         <IntelligencePanel
           intelligence={payload.intelligence}
           reportDateLabel={reportDateLabel}
