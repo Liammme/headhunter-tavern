@@ -41,7 +41,7 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    expect(screen.getByText("猎场情报")).toBeInTheDocument();
+    expect(screen.getByText("猎场控制台")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    const notes = screen.getByRole("complementary", { name: "侧栏注记" });
+    const notes = screen.getByRole("complementary", { name: "今日行动信号" });
 
     expect(within(notes).queryByText("今天怎么跟")).not.toBeInTheDocument();
     expect(within(notes).queryByText("把今天最值得跟的两条线索贴出来，再进入行动。")).not.toBeInTheDocument();
@@ -121,7 +121,7 @@ describe("IntelligencePanel", () => {
     expect(screen.getAllByText(/榜单引导|露头信号/).length).toBeGreaterThan(0);
     expect(screen.getByText(intelligence.actions[0])).toBeInTheDocument();
     expect(screen.getByText(intelligence.actions[1])).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "今日招聘" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "今日机会雷达" })).toBeInTheDocument();
     expect(screen.getByText("找找看有没有能BD的公司？")).toBeInTheDocument();
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
   });

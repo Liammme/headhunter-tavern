@@ -30,7 +30,7 @@ export default function IntelligencePanel({
           <div className="intel-body">
             <article className="intel-paper" aria-labelledby="intelligence-paper-title">
               <div className="intel-paper-label-row">
-                <p className="eyebrow intel-paper-label">猎场情报</p>
+                <p className="eyebrow intel-paper-label">猎场控制台</p>
               </div>
               <h2 id="intelligence-panel-title" className="intel-preview">
                 {intelligence.headline}
@@ -51,7 +51,7 @@ export default function IntelligencePanel({
           <section className="intel-peek">
             <div className="intel-peek-copy">
               <p className="eyebrow">榜单露头</p>
-              <h3>今日招聘</h3>
+              <h3>今日机会雷达</h3>
               <p>找找看有没有能BD的公司？</p>
             </div>
             <div className="intel-peek-list">
@@ -72,7 +72,7 @@ export default function IntelligencePanel({
           </section>
         </section>
       </div>
-      <aside className="intel-notes" aria-label="侧栏注记">
+      <aside className="intel-notes" aria-label="今日行动信号">
         <div className="intel-note-grid">
           <section
             className="intel-note-card intel-note-card-highlight"

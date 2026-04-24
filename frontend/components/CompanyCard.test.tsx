@@ -87,7 +87,8 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(rightRail).not.toBeNull();
     expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
-    expect(within(rightRail as HTMLElement).getByText("SEALED")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("OWNER")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("SEALED")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("Signed by Ada")).toBeInTheDocument();
   });
 
