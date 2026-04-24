@@ -2,6 +2,9 @@
   "name": "bounty-pool-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "set NEXT_DIST_DIR=.next-dev&& next dev",
     "dev:reset": "node -e \"require('fs').rmSync('.next-dev',{ recursive: true, force: true })\" && set NEXT_DIST_DIR=.next-dev&& next dev",
