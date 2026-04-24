@@ -297,8 +297,8 @@ h5,
 
 .animated-card-body {
   display: grid;
-  gap: 7px;
-  padding: 18px 20px 20px;
+  gap: 5px;
+  padding: 14px 18px 15px;
   border-top: 1px solid var(--border);
   text-align: left;
 }
@@ -310,14 +310,14 @@ h5,
 
 .animated-card-title {
   color: var(--foreground);
-  font-size: 24px;
-  line-height: 1.1;
+  font-size: 18px;
+  line-height: 1.08;
 }
 
 .animated-card-description {
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .animated-chart-visual {
@@ -587,11 +587,29 @@ h5,
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  padding: 5px;
-  border: 1px solid rgba(10, 10, 10, 0.92);
+  gap: 0;
+}
+
+.animated-tabs-logo {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
   border-radius: 999px;
   background: var(--foreground);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 0 0 3px var(--foreground);
+  overflow: hidden;
+}
+
+.animated-tabs-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  transform-origin: center;
 }
 
 .animated-tabs-track {
@@ -601,21 +619,26 @@ h5,
   gap: 3px;
   width: 100%;
   justify-content: center;
+  min-height: 48px;
+  padding: 3px;
+  border: 3px solid var(--foreground);
+  border-radius: 999px;
+  background: var(--foreground);
 }
 
 .animated-tab {
   position: relative;
-  height: 38px;
-  min-height: 38px;
+  height: 36px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 74px;
-  padding: 0 22px;
+  min-width: 76px;
+  padding: 0 20px;
   border: 0;
   border-radius: 999px;
-  background: transparent;
-  color: var(--surface-raised);
+  background: var(--surface-raised);
+  color: var(--foreground);
   font-weight: 650;
   font-size: 16px;
   line-height: 1;
@@ -641,7 +664,7 @@ h5,
   z-index: 1;
   display: block;
   border-radius: 50%;
-  background: var(--surface-raised);
+  background: var(--foreground);
   pointer-events: none;
   will-change: transform;
 }
@@ -664,16 +687,8 @@ h5,
   position: absolute;
   left: 0;
   top: 0;
-  color: var(--foreground);
+  color: var(--surface-raised);
   opacity: 0;
-}
-
-.animated-tab-active .animated-tab-label-hover {
-  display: none;
-}
-
-.animated-tab-active .animated-tab-hover-circle {
-  display: none;
 }
 
 .animated-tab-active::after {
@@ -1238,11 +1253,11 @@ h5,
   }
 
   .animated-card-title {
-    font-size: 22px;
+    font-size: 17px;
   }
 
   .animated-card-description {
-    font-size: 13px;
+    font-size: 11px;
     overflow-wrap: anywhere;
   }
 
