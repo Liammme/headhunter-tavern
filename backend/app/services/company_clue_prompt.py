@@ -9,6 +9,7 @@ def build_company_clue_messages(context: dict) -> list[dict]:
 
 
 def build_company_clue_rewrite_messages(*, context: dict, invalid_content: str, validation_error: str) -> list[dict]:
+    title_requirement = _build_title_requirement(context)
     return [
         {"role": "system", "content": build_company_clue_system_prompt()},
         {
@@ -17,7 +18,7 @@ def build_company_clue_rewrite_messages(*, context: dict, invalid_content: str, 
                 "你上一版输出不合格，请只修正为合格 JSON。"
                 f"不合格原因：{validation_error}。"
                 "必须保留现有响应 schema：narrative + sections。"
-                "必须点名至少 2 个岗位标题，必须把 next_move 绑定到真实入口，禁止泛泛建议。"
+                f"{title_requirement}，必须把 next_move 绑定到真实入口，禁止泛泛建议。"
                 f"\n\n结构化输入：\n{json.dumps(context, ensure_ascii=False)}"
                 f"\n\n上一版输出：\n{invalid_content}"
             ),
@@ -47,3 +48,9 @@ def build_company_clue_user_prompt(context: dict) -> str:
         "sections 的标题固定写成“为什么现在值得查”“最能代表需求的岗位”“你下一步先验证什么”。"
         f"\n\n结构化输入：\n{json.dumps(context, ensure_ascii=False)}"
     )
+
+
+def _build_title_requirement(context: dict) -> str:
+    if len(context.get("evidence_cards", [])) >= 2:
+        return "必须点名至少 2 个岗位标题"
+    return "必须点名 evidence_cards 里的岗位标题"
