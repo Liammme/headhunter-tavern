@@ -28,6 +28,7 @@ export default async function HomePage() {
           intelligence={payload.intelligence}
           reportDateLabel={reportDateLabel}
           dailyCaptureSummary={dailyCaptureSummary}
+          collectionStats={buildCollectionStats(payload.days)}
         />
       </section>
 
@@ -72,4 +73,17 @@ function buildDailyCaptureSummary(days: Awaited<ReturnType<typeof fetchHomePaylo
   const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
 
   return `今日抓取 ${jobCount} 个岗位，分布来源：${sourceSummary}${overflow}。`;
+}
+
+function buildCollectionStats(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
+  const labels: Record<(typeof days)[number]["bucket"], string> = {
+    today: "今天",
+    yesterday: "昨天",
+    earlier: "更早",
+  };
+
+  return days.map((day) => ({
+    label: labels[day.bucket],
+    value: day.companies.reduce((sum, company) => sum + company.total_jobs, 0),
+  }));
 }

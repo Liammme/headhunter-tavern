@@ -276,6 +276,166 @@ h5,
   text-align: center;
 }
 
+.intel-chart-card {
+  justify-self: center;
+  width: 356px;
+  max-width: 100%;
+  min-height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.animated-card-visual {
+  position: relative;
+  height: 180px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.animated-card-body {
+  display: grid;
+  gap: 7px;
+  padding: 18px 20px 20px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+
+.animated-card-title,
+.animated-card-description {
+  margin: 0;
+}
+
+.animated-card-title {
+  color: var(--foreground);
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.animated-card-description {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.animated-chart-visual {
+  position: relative;
+  height: 180px;
+  width: 100%;
+  overflow: hidden;
+  color: rgba(10, 10, 10, 0.12);
+}
+
+.animated-chart-pills {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+}
+
+.animated-chart-pills span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 22px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--foreground);
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.animated-chart-pills i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--chart-main);
+}
+
+.animated-chart-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgba(10, 10, 10, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.055) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 58%, transparent 100%);
+}
+
+.animated-chart-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 70%, rgba(117, 251, 110, 0.22), transparent 64%);
+}
+
+.animated-chart-bars {
+  position: absolute;
+  inset: 46px 34px 26px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.animated-chart-bar-button {
+  position: relative;
+  min-height: 0;
+  width: 15px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+}
+
+.animated-chart-bar {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border-radius: 3px;
+  background: var(--chart-main);
+  box-shadow: 0 10px 32px rgba(38, 161, 123, 0.24);
+  transition: height 280ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.animated-chart-bar.is-positive {
+  bottom: 46px;
+}
+
+.animated-chart-bar.is-negative {
+  top: 74px;
+  background: rgba(10, 10, 10, 0.12);
+  box-shadow: none;
+}
+
+.animated-chart-bar.is-hovered {
+  background: var(--chart-secondary);
+  transform: translateY(-4px);
+}
+
+.intel-mode-toggle {
+  justify-self: center;
+  min-height: 34px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--surface-raised);
+  font-weight: 650;
+  cursor: pointer;
+}
+
 .intel-notes {
   width: 100%;
 }
@@ -921,6 +1081,50 @@ h5,
     min-height: 252px;
     padding: 20px 14px;
     border-radius: var(--radius-lg);
+  }
+
+  .intel-card,
+  .intel-body,
+  .intel-center-column {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .intel-chart-card {
+    width: 280px;
+    max-width: calc(100vw - 56px);
+    margin-inline: auto;
+  }
+
+  .animated-card-visual,
+  .animated-chart-visual {
+    width: 100%;
+  }
+
+  .animated-chart-bars {
+    inset: 46px 18px 26px;
+    gap: 4px;
+  }
+
+  .animated-chart-bar {
+    width: 100%;
+  }
+
+  .animated-chart-bar-button {
+    width: 10px;
+  }
+
+  .animated-chart-pills {
+    left: 16px;
+  }
+
+  .animated-card-title {
+    font-size: 22px;
+  }
+
+  .animated-card-description {
+    font-size: 13px;
+    overflow-wrap: anywhere;
   }
 
   .intel-preview {

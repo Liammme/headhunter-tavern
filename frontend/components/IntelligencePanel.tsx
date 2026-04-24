@@ -1,18 +1,32 @@
-import React from "react";
+"use client";
 
+import React, { useState } from "react";
+
+import {
+  AnimatedCard,
+  CardBody,
+  CardDescription,
+  CardTitle,
+  CardVisual,
+  type ChartDatum,
+  Visual3,
+} from "./ui/animated-card-chart";
 import type { IntelligencePayload } from "../lib/types";
 
 type IntelligencePanelProps = {
   intelligence: IntelligencePayload;
   reportDateLabel: string;
   dailyCaptureSummary: string;
+  collectionStats: ChartDatum[];
 };
 
 export default function IntelligencePanel({
   intelligence,
   reportDateLabel,
   dailyCaptureSummary,
+  collectionStats,
 }: IntelligencePanelProps) {
+  const [showIntelPaper, setShowIntelPaper] = useState(false);
   const leadFinding = intelligence.findings[0];
   const secondaryFindings = intelligence.findings.slice(1, 3);
   const leadAction = intelligence.actions[0];
@@ -24,24 +38,45 @@ export default function IntelligencePanel({
       <div className="intel-center-column">
         <div className="intel-card">
           <div className="intel-body">
-            <article className="intel-paper" aria-labelledby="intelligence-paper-title">
-              <div className="intel-paper-label-row">
-                <p className="eyebrow intel-paper-label">猎场控制台</p>
-              </div>
-              <h2 id="intelligence-panel-title" className="intel-preview">
-                {intelligence.headline}
-              </h2>
-              <div className="intel-paper-copy">
-                <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
-                {narrativeParagraphs.map((paragraph, index) => (
-                  <p key={`${index}-${paragraph}`} className="intel-narrative">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </article>
+            {showIntelPaper ? (
+              <article className="intel-paper" aria-labelledby="intelligence-paper-title">
+                <div className="intel-paper-label-row">
+                  <p className="eyebrow intel-paper-label">猎场控制台</p>
+                </div>
+                <h2 id="intelligence-panel-title" className="intel-preview">
+                  {intelligence.headline}
+                </h2>
+                <div className="intel-paper-copy">
+                  <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
+                  {narrativeParagraphs.map((paragraph, index) => (
+                    <p key={`${index}-${paragraph}`} className="intel-narrative">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </article>
+            ) : (
+              <AnimatedCard className="intel-chart-card" aria-labelledby="intelligence-panel-title">
+                <CardVisual>
+                  <Visual3 data={collectionStats} mainColor="#75fb6e" secondaryColor="#26a17b" />
+                </CardVisual>
+                <CardBody>
+                  <p className="eyebrow intel-paper-label">猎场控制台</p>
+                  <CardTitle id="intelligence-panel-title">每日岗位收集数量</CardTitle>
+                  <CardDescription>默认展示抓取节奏。需要看文字情报时，再切回猎场控制台。</CardDescription>
+                </CardBody>
+              </AnimatedCard>
+            )}
           </div>
         </div>
+        <button
+          type="button"
+          className="intel-mode-toggle"
+          aria-expanded={showIntelPaper}
+          onClick={() => setShowIntelPaper((value) => !value)}
+        >
+          {showIntelPaper ? "返回岗位统计" : "查看猎场控制台"}
+        </button>
         <p className="intel-footnote">{dailyCaptureSummary}</p>
       </div>
       <aside className="intel-notes" aria-label="今日行动信号">

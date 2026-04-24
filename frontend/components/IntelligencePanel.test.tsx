@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import IntelligencePanel from "./IntelligencePanel";
 import type { IntelligencePayload } from "../lib/types";
@@ -16,7 +16,13 @@ function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): Intell
 }
 
 describe("IntelligencePanel", () => {
-  it("renders the primary intelligence content above the fold", () => {
+  const collectionStats = [
+    { label: "今天", value: 5 },
+    { label: "昨天", value: 3 },
+    { label: "更早", value: 12 },
+  ];
+
+  it("shows the collection chart by default and reveals intelligence on demand", () => {
     const intelligence = buildIntelligence();
     const reportDateLabel = "2026/4/23";
 
@@ -25,10 +31,18 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
         dailyCaptureSummary="今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。"
+        collectionStats={collectionStats}
       />,
     );
 
     expect(screen.getByText("猎场控制台")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "每日岗位收集数量" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "今天，5 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看猎场控制台" }));
+
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
@@ -52,8 +66,11 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/24"
         dailyCaptureSummary="今日抓取 12 个岗位。分布来源：Aijobs。重点公司 2 家。"
+        collectionStats={collectionStats}
       />,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "查看猎场控制台" }));
 
     const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
 
@@ -71,6 +88,7 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
         dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
+        collectionStats={collectionStats}
       />,
     );
 
@@ -96,6 +114,7 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
         dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
+        collectionStats={collectionStats}
       />,
     );
 
