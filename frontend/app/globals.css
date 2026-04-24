@@ -138,61 +138,6 @@ h5,
   overflow-wrap: anywhere;
 }
 
-.product-logo-ascii {
-  position: relative;
-  width: min(360px, 74vw);
-  height: 54px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-.product-logo-wordmark {
-  position: relative;
-  z-index: 3;
-  color: var(--foreground);
-  font-family: var(--font-mono-stack);
-  font-size: 26px;
-  font-weight: 850;
-  line-height: 1;
-  letter-spacing: 0;
-  text-shadow: 0 1px 0 rgba(117, 251, 110, 0.35);
-}
-
-.ascii-text-container,
-.ascii-text-filter {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  opacity: 0.38;
-  pointer-events: none;
-}
-
-.ascii-text-container canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-}
-
-.ascii-text-container pre {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  margin: 0;
-  padding: 0;
-  background-image: radial-gradient(circle, var(--accent-ink) 0%, var(--foreground) 58%, rgba(17, 17, 17, 0.68) 100%);
-  background-attachment: fixed;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  line-height: 1em;
-  text-align: left;
-  user-select: none;
-}
-
 .typewriter {
   display: inline;
   min-height: 1.05em;
@@ -1244,15 +1189,6 @@ h5,
     font-size: clamp(22px, 6.2vw, 28px);
     line-height: 1.08;
     text-wrap: balance;
-  }
-
-  .product-logo-ascii {
-    width: min(292px, 78vw);
-    height: 44px;
-  }
-
-  .product-logo-wordmark {
-    font-size: 21px;
   }
 
   .home-hero-copy p {
