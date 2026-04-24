@@ -27,10 +27,6 @@ export default function IntelligencePanel({
   collectionStats,
 }: IntelligencePanelProps) {
   const [showIntelPaper, setShowIntelPaper] = useState(false);
-  const leadFinding = intelligence.findings[0];
-  const secondaryFindings = intelligence.findings.slice(1, 3);
-  const leadAction = intelligence.actions[0];
-  const secondaryActions = intelligence.actions.slice(1, 3);
   const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
 
   return (
@@ -78,45 +74,6 @@ export default function IntelligencePanel({
         </button>
         <p className="intel-footnote">{dailyCaptureSummary}</p>
       </div>
-      <aside className="intel-notes" aria-label="今日行动信号">
-        <div className="intel-note-grid">
-          <section
-            className="intel-note-card intel-note-card-highlight"
-            aria-labelledby="intelligence-findings-title"
-          >
-            <span className="intel-note-badge" aria-hidden="true">
-              ☆
-            </span>
-            <h4 id="intelligence-findings-title">情报发现</h4>
-            {leadFinding ? <p>{leadFinding}</p> : <p>暂无新增发现。</p>}
-            {secondaryFindings.length ? (
-              <ul>
-                {secondaryFindings.map((finding) => (
-                  <li key={finding}>{finding}</li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-          <section className="intel-note-card" aria-labelledby="intelligence-actions-title">
-            <span className="intel-note-badge" aria-hidden="true">
-              ☆
-            </span>
-            <h4 id="intelligence-actions-title">跟进动作</h4>
-            {leadAction ? (
-              <p className="intel-action-lead">{leadAction}</p>
-            ) : (
-              <p className="intel-action-lead">暂无跟进动作。</p>
-            )}
-            {secondaryActions.length ? (
-              <ul>
-                {secondaryActions.map((action) => (
-                  <li key={action}>{action}</li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        </div>
-      </aside>
     </section>
   );
 }

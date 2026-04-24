@@ -84,7 +84,7 @@ describe("IntelligencePanel", () => {
     expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
   });
 
-  it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
+  it("does not render the secondary intelligence note cards", () => {
     const intelligence = buildIntelligence();
 
     render(
@@ -96,21 +96,16 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    const notes = screen.getByRole("complementary", { name: "今日行动信号" });
-
-    expect(within(notes).queryByText("今天怎么跟")).not.toBeInTheDocument();
-    expect(within(notes).queryByText("把今天最值得跟的两条线索贴出来，再进入行动。")).not.toBeInTheDocument();
-    expect(within(notes).getByRole("heading", { level: 4, name: "情报发现" })).toBeInTheDocument();
-    expect(within(notes).getByRole("heading", { level: 4, name: "跟进动作" })).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.findings[0])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.findings[1])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.actions[0])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.actions[1])).toBeInTheDocument();
-    expect(within(notes).queryByText(intelligence.summary)).not.toBeInTheDocument();
-    expect(within(notes).queryByText(intelligence.narrative)).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "今日行动信号" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 4, name: "情报发现" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 4, name: "跟进动作" })).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.findings[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.findings[1])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[1])).not.toBeInTheDocument();
   });
 
-  it("keeps ranking guidance in action notes without rendering the peek block", () => {
+  it("does not render ranking guidance or the removed peek block", () => {
     const intelligence = buildIntelligence();
 
     render(
@@ -122,9 +117,9 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    expect(screen.getAllByText(/榜单引导|露头信号/).length).toBeGreaterThan(0);
-    expect(screen.getByText(intelligence.actions[0])).toBeInTheDocument();
-    expect(screen.getByText(intelligence.actions[1])).toBeInTheDocument();
+    expect(screen.queryByText(/榜单引导|露头信号/)).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[1])).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3, name: "今日机会雷达" })).not.toBeInTheDocument();
     expect(screen.queryByText("榜单露头")).not.toBeInTheDocument();
     expect(screen.queryByText("找找看有没有能BD的公司？")).not.toBeInTheDocument();
