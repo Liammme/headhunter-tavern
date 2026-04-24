@@ -49,6 +49,29 @@ describe("IntelligencePanel", () => {
     expect(screen.getByText(intelligence.summary)).toBeInTheDocument();
   });
 
+  it("breaks a multi-sentence narrative into letter-like paragraphs", () => {
+    const intelligence = buildIntelligence({
+      narrative:
+        "James侦探晃了晃杯底，低声说：今天先盯核心产研岗。和近14天摊开的盘子比，今天真正冒头的不是热闹标签。你示意他继续，他把话说透：优先抢技术、AI、产品里的高赏金核心岗。",
+    });
+
+    const { container } = render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/24"
+        previewBucket="today"
+        previewCompanies={[buildCompany()]}
+      />,
+    );
+
+    const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
+
+    expect(narrativeParagraphs).toHaveLength(3);
+    expect(narrativeParagraphs[0]).toHaveTextContent("James侦探晃了晃杯底");
+    expect(narrativeParagraphs[1]).toHaveTextContent("今天真正冒头的不是热闹标签");
+    expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
+  });
+
   it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
     const intelligence = buildIntelligence();
 

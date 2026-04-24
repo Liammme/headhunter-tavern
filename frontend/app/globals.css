@@ -359,6 +359,11 @@ h5,
   font-size: clamp(14px, 0.95vw, 16px);
   line-height: 1.8;
   text-align: left;
+  text-indent: 2em;
+}
+
+.intel-narrative + .intel-narrative {
+  margin-top: 10px;
 }
 
 .intel-notes-heading {
