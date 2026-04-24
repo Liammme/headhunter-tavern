@@ -155,10 +155,6 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
         />
       ) : null}
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
-        <div className="company-meta job-list-head">
-          <span>重点岗位证据</span>
-          <span>{expanded ? "全部展开" : `先看前 ${jobs.length} 个岗位摘要`}</span>
-        </div>
         {jobs.map((job) => (
           <div key={job.id} className="job-row">
             <div>

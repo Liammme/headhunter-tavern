@@ -652,11 +652,6 @@ h5,
   gap: 10px;
 }
 
-.job-list-head {
-  justify-content: space-between;
-  padding-top: 2px;
-}
-
 .job-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
