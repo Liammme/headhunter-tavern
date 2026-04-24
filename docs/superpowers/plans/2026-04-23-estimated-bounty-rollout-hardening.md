@@ -89,6 +89,7 @@
 - Enable readers only when:
   - `active_partial_jobs == 0`
   - `active_invalid_jobs == 0`
+  - `active_missing_jobs == 0`
 - The feature flag is the operational switch.
 
 ### 4. Rollback

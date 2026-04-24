@@ -59,7 +59,11 @@ def audit_estimated_bounties(db: Session, *, today: date, window_days: int) -> d
         "active_invalid_jobs": active_totals["invalid"],
         "active_missing_jobs": active_totals["missing"],
         "active_companies_without_estimate": active_companies_without_estimate,
-        "strict_readiness": active_totals["partial"] == 0 and active_totals["invalid"] == 0,
+        "strict_readiness": (
+            active_totals["partial"] == 0
+            and active_totals["invalid"] == 0
+            and active_totals["missing"] == 0
+        ),
         "window_start": window_start.isoformat(),
         "window_end": today.isoformat(),
         "issue_samples": issue_samples,

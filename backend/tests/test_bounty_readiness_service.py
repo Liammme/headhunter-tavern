@@ -111,3 +111,20 @@ def test_audit_estimated_bounties_reports_strict_readiness_when_active_rows_are_
     assert summary["strict_readiness"] is True
     assert summary["active_partial_jobs"] == 0
     assert summary["active_invalid_jobs"] == 0
+
+
+def test_audit_estimated_bounties_fails_strict_readiness_when_active_rows_are_missing(db_session):
+    db_session.add(
+        build_job(
+            company="OpenGradient",
+            title="Backend Engineer",
+            days_ago=0,
+            signal_tags={"display_tags": ["技术"]},
+        )
+    )
+    db_session.commit()
+
+    summary = audit_estimated_bounties(db_session, today=date(2026, 4, 23), window_days=14)
+
+    assert summary["active_missing_jobs"] == 1
+    assert summary["strict_readiness"] is False
