@@ -427,10 +427,10 @@ h5,
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px;
-  border: 1px solid rgba(10, 10, 10, 0.08);
+  padding: 8px 18px;
+  border: 1px solid rgba(10, 10, 10, 0.9);
   border-radius: 999px;
-  background: rgba(248, 248, 248, 0.78);
+  background: var(--foreground);
   box-shadow: var(--shadow-subtle);
 }
 
@@ -449,12 +449,13 @@ h5,
 .animated-tabs-track {
   position: relative;
   display: flex;
+  gap: 8px;
   width: 100%;
   justify-content: center;
 }
 
 .animated-tabs-active-track {
-  background: var(--foreground);
+  background: var(--surface-raised);
 }
 
 .animated-tabs-track {
@@ -467,18 +468,23 @@ h5,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 13px;
+  min-width: 58px;
+  padding: 0 18px;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--muted-strong);
+  color: var(--surface-raised);
   font-weight: 650;
   font-size: 14px;
   cursor: pointer;
 }
 
 .animated-tab-active {
-  color: var(--surface-raised);
+  color: var(--foreground);
+}
+
+.animated-tab[aria-selected="true"] {
+  color: var(--foreground);
 }
 
 .feed-shell-head {
