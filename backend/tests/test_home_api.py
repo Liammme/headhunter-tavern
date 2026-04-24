@@ -40,6 +40,19 @@ def test_home_payload_has_intelligence_and_days(client):
 
     assert response.status_code == 200
     body = response.json()
+    assert set(body) == {"intelligence", "meta", "days"}
+    assert set(body["intelligence"]) == {
+        "narrative",
+        "headline",
+        "summary",
+        "analysis_version",
+        "rule_version",
+        "window_start",
+        "window_end",
+        "generated_at",
+        "findings",
+        "actions",
+    }
     assert "intelligence" in body
     assert "meta" in body
     assert "days" in body

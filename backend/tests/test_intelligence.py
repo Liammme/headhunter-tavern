@@ -14,7 +14,8 @@ from app.services.intelligence import (
 )
 
 
-def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline():
+def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", False)
     day_payloads = [
         DayBucketSnapshot(
             bucket="today",
@@ -101,7 +102,8 @@ def test_build_narrative_from_fields_excludes_summary_text():
     assert "先看重点公司，再优先认领其中的高赏金岗位。" in narrative
 
 
-def test_build_intelligence_snapshot_handles_empty_day_payloads():
+def test_build_intelligence_snapshot_handles_empty_day_payloads(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", False)
     snapshot = build_intelligence_snapshot(
         [],
         FeedMetadata(
@@ -131,8 +133,47 @@ def test_build_intelligence_snapshot_handles_empty_day_payloads():
     }
 
 
+def test_build_intelligence_snapshot_keeps_empty_fallback_when_only_stale_jobs_exist(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", False)
+    stale_job = Job(
+        id=1,
+        canonical_url="https://example.com/stale",
+        source_name="test",
+        title="Old Backend Engineer",
+        company="Legacy Co",
+        company_normalized="legacy-co",
+        description="Old role.",
+        posted_at=datetime(2026, 3, 1, 9, 0, 0),
+        collected_at=datetime(2026, 3, 1, 9, 0, 0),
+        job_category="技术",
+        domain_tag="SaaS",
+        bounty_grade="medium",
+        signal_tags={"display_tags": ["技术"]},
+    )
+
+    snapshot = build_intelligence_snapshot(
+        [],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+        jobs=[stale_job],
+    )
+
+    assert snapshot["headline"] == "James侦探把杯子往吧台边一推：近 14 天岗位池暂时没起风，先把抓取拉起来再看下一步。"
+    assert snapshot["summary"] == "当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。"
+    assert snapshot["actions"] == ["先触发抓取，等统一聚合结果生成后再判断主线方向。"]
+
+
 def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(monkeypatch):
     monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_llm_api_key", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_model", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_base_url", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_fallback_models", "")
     monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", "project-only-key")
 
     captured = {}
@@ -244,6 +285,66 @@ def test_build_intelligence_snapshot_falls_back_when_llm_fails(monkeypatch):
     assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：1 家公司，1 个岗位，1 个高赏金岗位。"
 
 
+def test_rule_intelligence_uses_change_context_when_jobs_are_available(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", False)
+
+    snapshot = build_intelligence_snapshot(
+        [
+            DayBucketSnapshot(
+                bucket="today",
+                companies=[
+                    CompanyFeedSnapshot(
+                        company="OpenGradient",
+                        company_url="https://example.com/company/opengradient",
+                        company_grade="focus",
+                        total_jobs=1,
+                        claimed_names=[],
+                        jobs=[
+                            JobFeedSnapshot(
+                                id=1,
+                                title="Staff AI Engineer",
+                                canonical_url="https://example.com/1",
+                                bounty_grade="high",
+                                tags=["AI", "Senior", "核心岗位"],
+                                claimed_names=[],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+        jobs=[
+            Job(
+                id=1,
+                canonical_url="https://example.com/1",
+                source_name="test",
+                title="Staff AI Engineer",
+                company="OpenGradient",
+                company_normalized="opengradient",
+                description="Urgent hire for a founding AI platform lead.",
+                posted_at=datetime(2026, 4, 18, 9, 0, 0),
+                collected_at=datetime(2026, 4, 18, 9, 0, 0),
+                job_category="AI/算法",
+                domain_tag="AI",
+                bounty_grade="high",
+                signal_tags={"display_tags": ["AI", "Senior", "核心岗位"]},
+            )
+        ],
+    )
+
+    assert "OpenGradient" in snapshot["headline"]
+    assert "今天真正变化" in snapshot["summary"]
+    assert "Staff AI Engineer" in snapshot["summary"]
+    assert "不是复述近14天总量" in snapshot["findings"][0]
+
+
 def test_parse_llm_intelligence_fields_accepts_json_code_fence():
     payload = parse_llm_intelligence_fields(
         """```json
@@ -262,6 +363,10 @@ def test_parse_llm_intelligence_fields_accepts_json_code_fence():
 
 def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
     monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_llm_api_key", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_model", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_base_url", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_fallback_models", "")
     monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", "project-only-key")
     monkeypatch.setattr(settings, "bounty_pool_zhipu_model", "broken-model")
     monkeypatch.setattr(settings, "bounty_pool_zhipu_fallback_models", "glm-4-flash-250414,glm-4.7-flash")
@@ -388,6 +493,64 @@ def test_build_llm_intelligence_input_uses_fact_briefs_instead_of_raw_descriptio
     assert "description" not in llm_input["job_fact_briefs"][0]
 
 
+def test_build_llm_intelligence_input_includes_change_context():
+    llm_input = build_llm_intelligence_input(
+        [
+            DayBucketSnapshot(
+                bucket="today",
+                companies=[
+                    CompanyFeedSnapshot(
+                        company="OpenGradient",
+                        company_url="https://example.com/company/opengradient",
+                        company_grade="focus",
+                        total_jobs=1,
+                        claimed_names=[],
+                        jobs=[
+                            JobFeedSnapshot(
+                                id=1,
+                                title="Staff AI Engineer",
+                                canonical_url="https://example.com/1",
+                                bounty_grade="high",
+                                tags=["AI", "Senior", "核心岗位"],
+                                claimed_names=[],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+        jobs=[
+            Job(
+                id=1,
+                canonical_url="https://example.com/1",
+                source_name="test",
+                title="Staff AI Engineer",
+                company="OpenGradient",
+                company_normalized="opengradient",
+                description="Urgent hire for a founding AI platform lead.",
+                posted_at=datetime(2026, 4, 18, 9, 0, 0),
+                collected_at=datetime(2026, 4, 18, 9, 0, 0),
+                job_category="AI/算法",
+                domain_tag="AI",
+                bounty_grade="high",
+                signal_tags={"display_tags": ["AI", "Senior", "核心岗位"]},
+            )
+        ],
+    )
+
+    assert "change_context" in llm_input
+    assert llm_input["change_context"]["today_counts"]["job_count"] == 1
+    assert llm_input["change_context"]["new_companies_today"][0]["company"] == "OpenGradient"
+    assert llm_input["change_context"]["representative_changes"][0]["evidence"][0]["canonical_url"] == "https://example.com/1"
+
+
 def test_intelligence_prompts_include_james_style_and_banned_rules():
     system_prompt = build_intelligence_system_prompt()
     user_prompt = build_intelligence_user_prompt({"overview": {"job_count": 1}})
@@ -399,7 +562,9 @@ def test_intelligence_prompts_include_james_style_and_banned_rules():
     assert "禁止纯统计播报" in system_prompt
     assert "禁止空泛建议" in system_prompt
     assert "你示意他继续" in system_prompt or "你抬眼示意他继续" in system_prompt
+    assert "只能根据 change_context" in system_prompt
     assert "第三段必须写出你追问或示意他继续" in user_prompt
+    assert "change_context" in user_prompt
     assert "不要做标签播报" in user_prompt
 
 
