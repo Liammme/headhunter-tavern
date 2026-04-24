@@ -335,6 +335,12 @@ h5,
   z-index: 5;
   display: flex;
   gap: 8px;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.animated-chart-visual.is-active .animated-chart-pills {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .animated-chart-pills span {
@@ -358,6 +364,52 @@ h5,
   background: var(--chart-main);
 }
 
+.animated-chart-tooltip {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  z-index: 7;
+  width: 258px;
+  max-width: calc(100% - 40px);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--foreground);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.animated-chart-visual.is-active .animated-chart-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.animated-chart-tooltip span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.animated-chart-tooltip i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--chart-main);
+}
+
+.animated-chart-tooltip p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
 .animated-chart-grid {
   position: absolute;
   inset: 0;
@@ -371,24 +423,34 @@ h5,
 .animated-chart-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 70%, rgba(117, 251, 110, 0.22), transparent 64%);
+  background: radial-gradient(ellipse at 50% 70%, rgba(117, 251, 110, 0.2), transparent 64%);
+  transition: background 260ms ease;
+}
+
+.animated-chart-visual.is-active .animated-chart-glow {
+  background: radial-gradient(ellipse at 50% 76%, rgba(117, 251, 110, 0.32), transparent 66%);
 }
 
 .animated-chart-bars {
   position: absolute;
-  inset: 46px 34px 26px;
+  inset: 42px 34px 0;
   z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   gap: 7px;
+  transition: transform 440ms cubic-bezier(0.6, 0.6, 0, 1);
+}
+
+.animated-chart-visual.is-active .animated-chart-bars {
+  transform: translateY(18px) scale(1.14);
 }
 
 .animated-chart-bar-button {
   position: relative;
   min-height: 0;
   width: 15px;
-  height: 120px;
+  height: 138px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -397,6 +459,12 @@ h5,
   background: transparent;
   color: var(--muted-strong);
   cursor: pointer;
+}
+
+.animated-chart-bar-button:focus-visible {
+  outline: 2px solid rgba(117, 251, 110, 0.75);
+  outline-offset: 3px;
+  border-radius: 5px;
 }
 
 .animated-chart-bar {
@@ -410,18 +478,22 @@ h5,
 }
 
 .animated-chart-bar.is-positive {
-  bottom: 46px;
+  bottom: 52px;
 }
 
 .animated-chart-bar.is-negative {
-  top: 74px;
+  top: 86px;
   background: rgba(10, 10, 10, 0.12);
   box-shadow: none;
 }
 
-.animated-chart-bar.is-hovered {
-  background: var(--chart-secondary);
-  transform: translateY(-4px);
+.animated-chart-visual.is-active .animated-chart-bar.is-positive {
+  bottom: 0;
+}
+
+.animated-chart-visual.is-active .animated-chart-bar {
+  background: var(--chart-main);
+  box-shadow: 0 12px 30px rgba(117, 251, 110, 0.24);
 }
 
 .intel-mode-toggle {
@@ -513,67 +585,108 @@ h5,
   position: relative;
   width: fit-content;
   max-width: 100%;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  padding: 8px 18px;
-  border: 1px solid rgba(10, 10, 10, 0.9);
+  padding: 5px;
+  border: 1px solid rgba(10, 10, 10, 0.92);
   border-radius: 999px;
   background: var(--foreground);
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
 }
 
-.animated-tabs-active-layer {
-  position: absolute;
-  inset: 8px 0;
-  z-index: 1;
-  width: 100%;
-  overflow: hidden;
-  clip-path: inset(0 75% 0 0 round 17px);
-  pointer-events: none;
-  transition: clip-path 250ms ease;
-}
-
-.animated-tabs-active-track,
 .animated-tabs-track {
   position: relative;
   display: flex;
-  gap: 8px;
+  align-items: stretch;
+  gap: 3px;
   width: 100%;
   justify-content: center;
 }
 
-.animated-tabs-active-track {
-  background: var(--surface-raised);
-}
-
-.animated-tabs-track {
-  z-index: 2;
-}
-
 .animated-tab {
-  height: 32px;
-  min-height: 32px;
+  position: relative;
+  height: 38px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 58px;
-  padding: 0 18px;
+  min-width: 74px;
+  padding: 0 22px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--surface-raised);
   font-weight: 650;
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  isolation: isolate;
 }
 
 .animated-tab-active {
   color: var(--foreground);
+  background: var(--surface-raised);
 }
 
 .animated-tab[aria-selected="true"] {
   color: var(--foreground);
+}
+
+.animated-tab-hover-circle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 1;
+  display: block;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.animated-tab-label-stack {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  line-height: 1;
+}
+
+.animated-tab-label,
+.animated-tab-label-hover {
+  display: inline-block;
+  line-height: 1;
+  will-change: transform, opacity;
+}
+
+.animated-tab-label-hover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--foreground);
+  opacity: 0;
+}
+
+.animated-tab-active .animated-tab-label-hover {
+  display: none;
+}
+
+.animated-tab-active .animated-tab-hover-circle {
+  display: none;
+}
+
+.animated-tab-active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  z-index: 4;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--foreground);
+  transform: translateX(-50%);
 }
 
 .feed-shell-head {
@@ -1102,7 +1215,7 @@ h5,
   }
 
   .animated-chart-bars {
-    inset: 46px 18px 26px;
+    inset: 42px 18px 0;
     gap: 4px;
   }
 
@@ -1116,6 +1229,12 @@ h5,
 
   .animated-chart-pills {
     left: 16px;
+  }
+
+  .animated-chart-tooltip {
+    top: 18px;
+    width: 228px;
+    max-width: calc(100% - 32px);
   }
 
   .animated-card-title {

@@ -61,7 +61,6 @@ export default function IntelligencePanel({
                   <Visual3 data={collectionStats} mainColor="#75fb6e" secondaryColor="#26a17b" />
                 </CardVisual>
                 <CardBody>
-                  <p className="eyebrow intel-paper-label">猎场控制台</p>
                   <CardTitle id="intelligence-panel-title">每日岗位收集数量</CardTitle>
                   <CardDescription>默认展示抓取节奏。需要看文字情报时，再切回猎场控制台。</CardDescription>
                 </CardBody>

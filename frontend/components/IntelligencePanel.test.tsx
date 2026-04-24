@@ -35,10 +35,14 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    expect(screen.getByText("猎场控制台")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "每日岗位收集数量" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "今天，5 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.getByText("Daily Capture Signal")).toBeInTheDocument();
+    const chartVisual = container.querySelector(".animated-chart-visual");
+    expect(chartVisual).not.toHaveClass("is-active");
+    fireEvent.mouseEnter(chartVisual as Element);
+    expect(chartVisual).toHaveClass("is-active");
     expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "查看猎场控制台" }));

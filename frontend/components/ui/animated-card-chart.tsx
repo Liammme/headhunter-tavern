@@ -41,13 +41,20 @@ type Visual3Props = {
 };
 
 export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b" }: Visual3Props) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isActive, setIsActive] = useState(false);
   const chartBars = useMemo(() => buildChartBars(data), [data]);
-  const maxAbsValue = useMemo(() => Math.max(...chartBars.map((item) => Math.abs(item.value)), 1), [chartBars]);
 
   return (
     <div
-      className="animated-chart-visual"
+      className={joinClassNames("animated-chart-visual", isActive && "is-active")}
+      onMouseEnter={() => setIsActive(true)}
+      onMouseLeave={() => setIsActive(false)}
+      onFocus={() => setIsActive(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsActive(false);
+        }
+      }}
       style={
         {
           "--chart-main": mainColor,
@@ -65,30 +72,31 @@ export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b
           +18.7%
         </span>
       </div>
+      <div className="animated-chart-tooltip" aria-hidden={!isActive}>
+        <span>
+          <i />
+          Daily Capture Signal
+        </span>
+        <p>Showing live collection movement.</p>
+      </div>
       <div className="animated-chart-grid" aria-hidden="true" />
       <div className="animated-chart-glow" aria-hidden="true" />
       <div className="animated-chart-bars" role="img" aria-label="每日岗位收集数量统计图">
         {chartBars.map((item, index) => {
-          const height = Math.max(16, Math.round((Math.abs(item.value) / maxAbsValue) * 70));
-          const isHovered = hoveredIndex === index;
-          const isPositive = item.value >= 0;
+          const height = isActive ? item.activeHeight : item.idleHeight;
+          const isPositive = isActive || item.idleDirection === "positive";
 
           return (
             <button
               key={`${item.label}-${index}`}
               type="button"
               className="animated-chart-bar-button"
-              onMouseEnter={() => setHoveredIndex(index)}
-              onMouseLeave={() => setHoveredIndex(null)}
-              onFocus={() => setHoveredIndex(index)}
-              onBlur={() => setHoveredIndex(null)}
-              aria-label={`${item.label}，${Math.abs(item.value)} 个岗位`}
+              aria-label={`${item.label}，${item.value} 个岗位`}
             >
               <span
                 className={joinClassNames(
                   "animated-chart-bar",
                   isPositive ? "is-positive" : "is-negative",
-                  isHovered && "is-hovered",
                 )}
                 style={{ height }}
               />
@@ -113,15 +121,27 @@ function buildChartBars(data: ChartDatum[]) {
         { label: "更早", value: 0 },
       ];
 
-  const expanded = Array.from({ length: 14 }, (_, index) => {
+  return REFERENCE_BARS.map((bar, index) => {
     const base = source[index % source.length];
-    const direction = index % 5 === 0 || index % 7 === 0 ? -1 : 1;
-    const offset = (index % 4) * 2;
     return {
       label: base.label,
-      value: direction * Math.max(1, base.value + offset),
+      value: Math.max(0, base.value),
+      ...bar,
     };
   });
-
-  return expanded;
 }
+
+const REFERENCE_BARS = [
+  { idleHeight: 26, activeHeight: 36, idleDirection: "negative" },
+  { idleHeight: 25, activeHeight: 54, idleDirection: "positive" },
+  { idleHeight: 48, activeHeight: 92, idleDirection: "positive" },
+  { idleHeight: 36, activeHeight: 74, idleDirection: "positive" },
+  { idleHeight: 38, activeHeight: 36, idleDirection: "negative" },
+  { idleHeight: 62, activeHeight: 56, idleDirection: "negative" },
+  { idleHeight: 68, activeHeight: 56, idleDirection: "positive" },
+  { idleHeight: 38, activeHeight: 38, idleDirection: "positive" },
+  { idleHeight: 24, activeHeight: 74, idleDirection: "negative" },
+  { idleHeight: 56, activeHeight: 92, idleDirection: "positive" },
+  { idleHeight: 62, activeHeight: 54, idleDirection: "negative" },
+  { idleHeight: 26, activeHeight: 92, idleDirection: "positive" },
+] as const;
