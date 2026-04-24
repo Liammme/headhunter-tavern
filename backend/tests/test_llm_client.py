@@ -28,6 +28,7 @@ def test_generic_llm_config_requires_generic_key(monkeypatch):
 def test_generic_llm_request_uses_generic_base_url_and_key(monkeypatch):
     monkeypatch.setattr(settings, "bounty_pool_llm_api_key", "generic-key")
     monkeypatch.setattr(settings, "bounty_pool_llm_base_url", "https://llm.example.com/v1")
+    monkeypatch.setattr(settings, "bounty_pool_llm_timeout_seconds", 60)
 
     captured = {}
 
@@ -55,5 +56,5 @@ def test_generic_llm_request_uses_generic_base_url_and_key(monkeypatch):
     assert captured == {
         "url": "https://llm.example.com/v1/chat/completions",
         "authorization": "Bearer generic-key",
-        "timeout": 20,
+        "timeout": 60,
     }

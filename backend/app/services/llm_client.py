@@ -38,7 +38,7 @@ def request_chat_completion_with_model(messages: list[dict], model_name: str) ->
     )
 
     try:
-        with request.urlopen(http_request, timeout=20) as response:
+        with request.urlopen(http_request, timeout=settings.bounty_pool_llm_timeout_seconds) as response:
             response_body = json.loads(response.read().decode("utf-8"))
     except error.HTTPError as exc:
         error_body = exc.read().decode("utf-8", errors="replace")

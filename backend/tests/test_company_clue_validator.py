@@ -166,6 +166,21 @@ def test_parse_company_clue_response_inferrs_section_key_from_title():
     assert payload["sections"][2]["title"] == "线索三：下手路径"
 
 
+def test_parse_company_clue_response_normalizes_key_title_pair_with_content():
+    payload = parse_company_clue_response(
+        '{"narrative":"Aijobs 的 Backend Engineer 和 Lead Analytics Manager 同时暴露需求。",'
+        '"sections":['
+        '{"clue_1":"线索一：露出的口子","content":"Backend Engineer 和 Lead Analytics Manager 同时挂出。"},'
+        '{"clue_2":"线索二：卡住的岗位","content":"Backend Engineer 指向 AML 框架，Lead Analytics Manager 指向分析管理。"},'
+        '{"clue_3":"线索三：下手路径","content":"先查 https://jobs.example.com/1，再查 https://jobs.example.com/2。"}'
+        ']}'
+    )
+
+    assert [section["key"] for section in payload["sections"]] == ["clue_1", "clue_2", "clue_3"]
+    assert payload["sections"][0]["title"] == "线索一：露出的口子"
+    assert payload["sections"][0]["content"] == "Backend Engineer 和 Lead Analytics Manager 同时挂出。"
+
+
 def test_parse_company_clue_response_rejects_incomplete_section_object_shape():
     with pytest.raises(IntelligenceGenerationError, match="three sections"):
         parse_company_clue_response(

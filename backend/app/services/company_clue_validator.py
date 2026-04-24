@@ -120,6 +120,14 @@ def _normalize_section_list_item(section) -> object:
             "title": title.strip(),
             "content": section.get("content"),
         }
+    for raw_key, raw_title in section.items():
+        key = SECTION_KEY_ALIASES.get(raw_key)
+        if key is not None and isinstance(raw_title, str) and "content" in section:
+            return {
+                "key": key,
+                "title": raw_title.strip() or SECTION_TITLES[key],
+                "content": section.get("content"),
+            }
     if len(section) != 1:
         return section
 
