@@ -211,7 +211,7 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText("高赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("中赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("低赏金")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getAllByText("证据备注：").length).toBeGreaterThan(0);
+    expect(within(card as HTMLElement).queryByText("证据备注：")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",
       "https://jobs.example.com/1",
