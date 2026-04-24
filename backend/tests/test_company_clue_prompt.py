@@ -1,4 +1,4 @@
-from app.services.company_clue_prompt import build_company_clue_rewrite_messages
+from app.services.company_clue_prompt import build_company_clue_rewrite_messages, build_company_clue_system_prompt
 
 
 def test_rewrite_prompt_does_not_require_two_titles_for_single_evidence_card():
@@ -16,3 +16,16 @@ def test_rewrite_prompt_does_not_require_two_titles_for_single_evidence_card():
 
     assert "至少 2 个岗位标题" not in rewrite_prompt
     assert "evidence_cards 里的岗位标题" in rewrite_prompt
+    assert "clue_3" in rewrite_prompt
+
+
+def test_system_prompt_uses_detective_clue_sections():
+    prompt = build_company_clue_system_prompt()
+
+    assert "猎头酒馆里的线索侦探" in prompt
+    assert "clue_1" in prompt
+    assert "clue_2" in prompt
+    assert "clue_3" in prompt
+    assert "线索一：露出的口子" in prompt
+    assert "线索二：卡住的岗位" in prompt
+    assert "线索三：下手路径" in prompt

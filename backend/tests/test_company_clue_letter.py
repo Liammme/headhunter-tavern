@@ -106,7 +106,7 @@ def test_generate_company_clue_letter_returns_success_contract(db_session, monke
     assert result["company"] == "OpenGradient"
     assert result["generated_at"] == "2026-04-22T09:00:00"
     assert "James侦探" in result["narrative"]
-    assert [section["key"] for section in result["sections"]] == ["lead", "evidence", "next_move"]
+    assert [section["key"] for section in result["sections"]] == ["clue_1", "clue_2", "clue_3"]
 
 
 def test_generate_company_clue_letter_rewrites_generic_first_pass_and_uses_windowed_jobs(db_session, monkeypatch):
@@ -399,9 +399,9 @@ def test_company_clue_endpoint_returns_service_contract(client, monkeypatch):
         "generated_at": "2026-04-22T09:00:00",
         "narrative": "James侦探留下了一封单公司线索来信。",
         "sections": [
-            {"key": "lead", "title": "我先看到的", "content": "测试内容"},
-            {"key": "evidence", "title": "这家公司现在露出的口子", "content": "测试内容"},
-            {"key": "next_move", "title": "你下一步怎么查", "content": "测试内容"},
+            {"key": "clue_1", "title": "线索一：露出的口子", "content": "测试内容"},
+            {"key": "clue_2", "title": "线索二：卡住的岗位", "content": "测试内容"},
+            {"key": "clue_3", "title": "线索三：下手路径", "content": "测试内容"},
         ],
         "error_message": None,
     }
