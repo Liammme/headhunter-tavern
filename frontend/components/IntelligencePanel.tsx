@@ -1,21 +1,17 @@
 import React from "react";
 
-import type { CompanyCardPayload, DayBucketPayload, IntelligencePayload } from "../lib/types";
+import type { IntelligencePayload } from "../lib/types";
 
 type IntelligencePanelProps = {
   intelligence: IntelligencePayload;
   reportDateLabel: string;
   dailyCaptureSummary: string;
-  previewBucket: DayBucketPayload["bucket"] | null;
-  previewCompanies: CompanyCardPayload[];
 };
 
 export default function IntelligencePanel({
   intelligence,
   reportDateLabel,
   dailyCaptureSummary,
-  previewBucket,
-  previewCompanies,
 }: IntelligencePanelProps) {
   const leadFinding = intelligence.findings[0];
   const secondaryFindings = intelligence.findings.slice(1, 3);
@@ -47,30 +43,6 @@ export default function IntelligencePanel({
           </div>
         </div>
         <p className="intel-footnote">{dailyCaptureSummary}</p>
-        <section className="intel-peek-shell" aria-label="公司猎单池露头">
-          <section className="intel-peek">
-            <div className="intel-peek-copy">
-              <p className="eyebrow">榜单露头</p>
-              <h3>今日机会雷达</h3>
-              <p>找找看有没有能BD的公司？</p>
-            </div>
-            <div className="intel-peek-list">
-              {previewCompanies.map((company) => (
-                <article key={company.company} className="intel-peek-card">
-                  <p className="intel-peek-company">{company.company}</p>
-                  <p className="intel-peek-meta">
-                    {renderCompanyGrade(company.company_grade)} · {company.total_jobs} 个岗位
-                  </p>
-                  <p className="intel-peek-claim">
-                    {company.claimed_names.length
-                      ? `已认领 ${company.claimed_names.join("、")}`
-                      : "待认领"}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
       </div>
       <aside className="intel-notes" aria-label="今日行动信号">
         <div className="intel-note-grid">
@@ -113,16 +85,6 @@ export default function IntelligencePanel({
       </aside>
     </section>
   );
-}
-
-function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
-  if (grade === "focus") {
-    return "重点公司";
-  }
-  if (grade === "watch") {
-    return "关注公司";
-  }
-  return "普通公司";
 }
 
 function splitNarrativeIntoParagraphs(narrative: string) {

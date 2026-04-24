@@ -6,8 +6,6 @@ import { fetchHomePayload } from "../lib/api";
 export default async function HomePage() {
   const payload = await fetchHomePayload();
   const hasDays = payload.days.length > 0;
-  const previewDay = payload.days[0];
-  const previewCompanies = previewDay ? previewDay.companies.slice(0, 2) : [];
   const reportDateLabel = formatReportDate(new Date());
   const dailyCaptureSummary = buildDailyCaptureSummary(payload.days);
 
@@ -30,8 +28,6 @@ export default async function HomePage() {
           intelligence={payload.intelligence}
           reportDateLabel={reportDateLabel}
           dailyCaptureSummary={dailyCaptureSummary}
-          previewBucket={previewDay?.bucket ?? null}
-          previewCompanies={previewCompanies}
         />
       </section>
 

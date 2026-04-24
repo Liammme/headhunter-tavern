@@ -92,7 +92,6 @@ h4,
 h5,
 .day-title,
 .intel-preview,
-.intel-peek-company,
 .seal-bounty strong {
   font-family: var(--font-heading-stack);
   font-weight: 650;
@@ -275,76 +274,6 @@ h5,
   font-size: 13px;
   line-height: 1.55;
   text-align: center;
-}
-
-.intel-peek-shell {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-subtle);
-  overflow: hidden;
-}
-
-.intel-peek {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 16px;
-  padding: 18px;
-  align-items: stretch;
-}
-
-.intel-peek-copy {
-  display: grid;
-  align-content: center;
-  gap: 6px;
-}
-
-.intel-peek-copy h3,
-.intel-peek-copy p,
-.intel-peek-company,
-.intel-peek-meta,
-.intel-peek-claim {
-  margin: 0;
-}
-
-.intel-peek-copy h3 {
-  font-size: clamp(22px, 2.4vw, 30px);
-  line-height: 1.05;
-}
-
-.intel-peek-copy p:last-child {
-  color: var(--muted);
-}
-
-.intel-peek-list {
-  display: grid;
-  gap: 10px;
-}
-
-.intel-peek-card {
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.intel-peek-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-lift);
-  transform: translateY(-2px);
-}
-
-.intel-peek-company {
-  font-size: 17px;
-  line-height: 1.15;
-}
-
-.intel-peek-meta,
-.intel-peek-claim {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .intel-notes {
@@ -570,8 +499,7 @@ h5,
 }
 
 .day-title::before,
-.intel-action-lead::before,
-.intel-peek-claim::before {
+.intel-action-lead::before {
   content: "";
   width: 8px;
   height: 8px;
@@ -952,7 +880,6 @@ h5,
     gap: 28px;
   }
 
-  .intel-peek,
   .company-top,
   .job-row {
     grid-template-columns: 1fr;
@@ -1023,7 +950,6 @@ h5,
     grid-template-columns: 1fr;
   }
 
-  .intel-peek,
   .day-section,
   .company-card,
   .company-clue-panel,
@@ -1063,7 +989,6 @@ h5,
   }
 
   .company-card:hover,
-  .intel-peek-card:hover,
   .feed-more-button:hover,
   .claim-trigger:hover,
   .claim-form button:hover,
