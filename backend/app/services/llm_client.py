@@ -67,7 +67,7 @@ def build_chat_completion_payload(messages: list[dict], model_name: str) -> dict
 
 
 def iter_llm_models() -> list[str]:
-    if settings.bounty_pool_llm_model:
+    if _has_generic_llm_config():
         models = [settings.bounty_pool_llm_model]
         fallback_models = settings.bounty_pool_llm_fallback_models
     else:
@@ -83,8 +83,19 @@ def iter_llm_models() -> list[str]:
 
 
 def active_llm_api_key() -> str | None:
+    if _has_generic_llm_config():
+        return settings.bounty_pool_llm_api_key
     return settings.bounty_pool_llm_api_key or settings.bounty_pool_zhipu_api_key
 
 
 def active_llm_base_url() -> str:
     return settings.bounty_pool_llm_base_url or settings.bounty_pool_zhipu_base_url
+
+
+def _has_generic_llm_config() -> bool:
+    return bool(
+        settings.bounty_pool_llm_api_key
+        or settings.bounty_pool_llm_model
+        or settings.bounty_pool_llm_base_url
+        or settings.bounty_pool_llm_fallback_models
+    )

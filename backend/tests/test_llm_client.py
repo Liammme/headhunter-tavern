@@ -15,6 +15,16 @@ def test_generic_llm_config_overrides_zhipu_config(monkeypatch):
     assert iter_llm_models() == ["deepseek-chat", "deepseek-reasoner"]
 
 
+def test_generic_llm_config_requires_generic_key(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", "zhipu-key")
+    monkeypatch.setattr(settings, "bounty_pool_llm_api_key", "")
+    monkeypatch.setattr(settings, "bounty_pool_llm_model", "gpt-5.4-nano")
+    monkeypatch.setattr(settings, "bounty_pool_llm_base_url", "https://yunwu.ai/v1")
+
+    assert should_use_llm() is False
+
+
 def test_generic_llm_request_uses_generic_base_url_and_key(monkeypatch):
     monkeypatch.setattr(settings, "bounty_pool_llm_api_key", "generic-key")
     monkeypatch.setattr(settings, "bounty_pool_llm_base_url", "https://llm.example.com/v1")
