@@ -3,12 +3,12 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.models import Job
 from app.services.company_clue_context import build_company_clue_context, load_company_jobs_for_clue
 from app.services.company_clue_prompt import build_company_clue_messages, build_company_clue_rewrite_messages
 from app.services.company_clue_validator import parse_company_clue_response, validate_company_clue_response
 from app.services.intelligence import IntelligenceGenerationError, request_zhipu_structured_json
+from app.services.llm_client import should_use_llm
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ def _resolve_generated_at(jobs: list[Job], *, fallback: datetime) -> str:
 
 
 def _should_use_company_clue_llm() -> bool:
-    return settings.bounty_pool_intelligence_llm_enabled and bool(settings.bounty_pool_zhipu_api_key)
+    return should_use_llm()
 
 
 def _build_failure_response(*, company: str, generated_at: str, error_message: str, narrative: str) -> dict:

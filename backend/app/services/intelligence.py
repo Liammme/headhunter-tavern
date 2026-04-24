@@ -1,12 +1,15 @@
 import json
 import logging
 from collections import Counter
-from urllib import error, request
-
-from app.core.config import settings
 from app.models import Job
 from app.services.feed_snapshot import DayBucketSnapshot, FeedMetadata
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
+from app.services.llm_client import (
+    LlmClientError,
+    iter_llm_models,
+    request_chat_completion_with_model,
+    should_use_llm,
+)
 from app.services.scoring import score_job_v2
 
 
@@ -254,47 +257,10 @@ def _request_zhipu_chat_completion_with_retry(messages: list[dict]) -> str:
 
 
 def _request_zhipu_chat_completion_with_model(messages: list[dict], model_name: str) -> str:
-    payload = _build_zhipu_payload(messages, model_name)
-    endpoint = f"{settings.bounty_pool_zhipu_base_url.rstrip('/')}/chat/completions"
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    http_request = request.Request(
-        endpoint,
-        data=body,
-        headers={
-            "Authorization": f"Bearer {settings.bounty_pool_zhipu_api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
     try:
-        with request.urlopen(http_request, timeout=20) as response:
-            response_body = json.loads(response.read().decode("utf-8"))
-    except error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise IntelligenceGenerationError(f"LLM request failed with {exc.code}: {error_body}") from exc
-    except (error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise IntelligenceGenerationError("LLM request failed") from exc
-
-    try:
-        message_content = response_body["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise IntelligenceGenerationError("LLM response is missing content") from exc
-
-    if not isinstance(message_content, str):
-        raise IntelligenceGenerationError("LLM response content must be a string")
-
-    return message_content
-
-
-def _build_zhipu_payload(messages: list[dict], model_name: str) -> dict:
-    return {
-        "model": model_name,
-        "temperature": 0.55,
-        "messages": messages,
-        "response_format": {"type": "json_object"},
-    }
-
+        return request_chat_completion_with_model(messages, model_name)
+    except LlmClientError as exc:
+        raise IntelligenceGenerationError(str(exc)) from exc
 
 def build_intelligence_system_prompt() -> str:
     return (
@@ -425,23 +391,11 @@ def _strip_code_fence(content: str) -> str:
 
 
 def _should_use_llm() -> bool:
-    return settings.bounty_pool_intelligence_llm_enabled and bool(settings.bounty_pool_zhipu_api_key)
+    return should_use_llm()
 
 
 def _iter_zhipu_models() -> list[str]:
-    models = [settings.bounty_pool_zhipu_model]
-    models.extend(
-        item.strip()
-        for item in settings.bounty_pool_zhipu_fallback_models.split(",")
-        if item.strip()
-    )
-
-    deduped: list[str] = []
-    for item in models:
-        if item not in deduped:
-            deduped.append(item)
-    return deduped
-
+    return iter_llm_models()
 
 def collect_claimed_names(day_payloads: list[DayBucketSnapshot]) -> set[str]:
     claimed_names: set[str] = set()

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite+pysqlite:///{DEFAULT_SQLITE_PATH}"
     cors_origins: str = "http://localhost:3000"
     bounty_pool_intelligence_llm_enabled: bool = True
+    bounty_pool_llm_api_key: str | None = None
+    bounty_pool_llm_model: str | None = None
+    bounty_pool_llm_base_url: str | None = None
+    bounty_pool_llm_fallback_models: str = ""
     bounty_pool_zhipu_api_key: str | None = None
     bounty_pool_zhipu_model: str = "glm-4-flash-250414"
     bounty_pool_zhipu_base_url: str = "https://open.bigmodel.cn/api/paas/v4"

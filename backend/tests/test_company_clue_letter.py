@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 
+from app.core.config import settings
 from app.models import Job
 from app.services.company_clue_context import build_company_clue_context
-from app.services.company_clue_letter import generate_company_clue_letter
+from app.services.company_clue_letter import generate_company_clue_letter, _should_use_company_clue_llm
 from app.services.intelligence import IntelligenceGenerationError
 
 
@@ -50,6 +51,14 @@ def build_windowed_job(*, company: str, title: str, days_ago: int) -> Job:
             "company_url": f"https://{company.lower()}.example.com",
         },
     )
+
+
+def test_company_clue_llm_availability_accepts_generic_llm_key(monkeypatch):
+    monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", True)
+    monkeypatch.setattr(settings, "bounty_pool_zhipu_api_key", None)
+    monkeypatch.setattr(settings, "bounty_pool_llm_api_key", "generic-key")
+
+    assert _should_use_company_clue_llm() is True
 
 
 def test_generate_company_clue_letter_returns_success_contract(db_session, monkeypatch):
