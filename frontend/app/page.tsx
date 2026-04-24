@@ -1,5 +1,6 @@
 import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
+import { Typewriter } from "../components/ui/typewriter";
 import { fetchHomePayload } from "../lib/api";
 
 export default async function HomePage() {
@@ -14,7 +15,15 @@ export default async function HomePage() {
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
-          <h1 id="home-hero-title">猎头酒馆</h1>
+          <h1 id="home-hero-title" aria-label="Signal over noise. Talent over hype.">
+            <Typewriter
+              words={["Signal over noise. Talent over hype."]}
+              speed={58}
+              delayBetweenWords={2600}
+              cursor
+              cursorChar="|"
+            />
+          </h1>
         </header>
         <IntelligencePanel
           intelligence={payload.intelligence}
