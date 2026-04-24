@@ -9,9 +9,9 @@ URL_PATTERN = re.compile(r"https?://[^\s，。；,;）)\]]+")
 
 SECTION_KEYS = ("clue_1", "clue_2", "clue_3")
 SECTION_TITLES = {
-    "clue_1": "线索一：露出的口子",
-    "clue_2": "线索二：卡住的岗位",
-    "clue_3": "线索三：下手路径",
+    "clue_1": "线索一：需求信号",
+    "clue_2": "线索二：关键岗位",
+    "clue_3": "线索三：行动入口",
 }
 SECTION_KEY_ALIASES = {
     "clue_1": "clue_1",
@@ -20,6 +20,9 @@ SECTION_KEY_ALIASES = {
     "lead": "clue_1",
     "evidence": "clue_2",
     "next_move": "clue_3",
+    "线索一：需求信号": "clue_1",
+    "线索二：关键岗位": "clue_2",
+    "线索三：行动入口": "clue_3",
     "线索一：露出的口子": "clue_1",
     "线索二：卡住的岗位": "clue_2",
     "线索三：下手路径": "clue_3",

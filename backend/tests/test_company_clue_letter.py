@@ -408,9 +408,9 @@ def test_company_clue_endpoint_returns_service_contract(client, monkeypatch):
         "generated_at": "2026-04-22T09:00:00",
         "narrative": "James侦探留下了一封单公司线索来信。",
         "sections": [
-            {"key": "clue_1", "title": "线索一：露出的口子", "content": "测试内容"},
-            {"key": "clue_2", "title": "线索二：卡住的岗位", "content": "测试内容"},
-            {"key": "clue_3", "title": "线索三：下手路径", "content": "测试内容"},
+            {"key": "clue_1", "title": "线索一：需求信号", "content": "测试内容"},
+            {"key": "clue_2", "title": "线索二：关键岗位", "content": "测试内容"},
+            {"key": "clue_3", "title": "线索三：行动入口", "content": "测试内容"},
         ],
         "error_message": None,
     }

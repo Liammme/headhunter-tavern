@@ -26,6 +26,6 @@ def test_system_prompt_uses_detective_clue_sections():
     assert "clue_1" in prompt
     assert "clue_2" in prompt
     assert "clue_3" in prompt
-    assert "线索一：露出的口子" in prompt
-    assert "线索二：卡住的岗位" in prompt
-    assert "线索三：下手路径" in prompt
+    assert "线索一：需求信号" in prompt
+    assert "线索二：关键岗位" in prompt
+    assert "线索三：行动入口" in prompt
