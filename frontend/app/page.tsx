@@ -35,11 +35,7 @@ export default async function HomePage() {
         />
       </section>
 
-      <section className="feed-shell" aria-labelledby="leaderboard-start-title">
-        <header className="feed-shell-head">
-          <p className="eyebrow">公司猎单池</p>
-          <h2 id="leaderboard-start-title">从这里开始进入今天的公司档案卡。</h2>
-        </header>
+      <section className="feed-shell" aria-label="公司岗位列表">
         {hasDays ? (
           <CompanyFeedTimeline days={payload.days} />
         ) : (

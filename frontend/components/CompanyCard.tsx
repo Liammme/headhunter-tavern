@@ -7,7 +7,15 @@ import CompanyCluePanel from "./CompanyCluePanel";
 import { requestCompanyClueLetter } from "../lib/api";
 import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState, JobCardPayload } from "../lib/types";
 
-export default function CompanyCard({ company }: { company: CompanyCardPayload }) {
+export default function CompanyCard({
+  company,
+  defaultVisibleJobs = 3,
+  showJobExpand = true,
+}: {
+  company: CompanyCardPayload;
+  defaultVisibleJobs?: number;
+  showJobExpand?: boolean;
+}) {
   const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
   const [isClueOpen, setIsClueOpen] = useState(false);
@@ -24,8 +32,8 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
     if (expanded) {
       return companyState.jobs;
     }
-    return companyState.jobs.slice(0, 3);
-  }, [companyState.jobs, expanded]);
+    return companyState.jobs.slice(0, defaultVisibleJobs);
+  }, [companyState.jobs, defaultVisibleJobs, expanded]);
 
   function handleClaimCreated(jobId: number, claimerName: string) {
     setCompanyState((current) => {
@@ -177,7 +185,7 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
           </div>
         ))}
       </section>
-      {companyState.jobs.length > 3 ? (
+      {showJobExpand && companyState.jobs.length > defaultVisibleJobs ? (
         <div className="company-footer">
           <button type="button" onClick={() => setExpanded((value) => !value)}>
             {expanded ? "收起岗位" : "展开更多岗位"}
