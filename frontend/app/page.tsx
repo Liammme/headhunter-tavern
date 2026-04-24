@@ -15,6 +15,7 @@ export default async function HomePage() {
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
+          <img className="product-logo" src="/assets/product-logo.svg" alt="Talent Signal" />
           <h1 id="home-hero-title" aria-label="Signal over noise. Talent over hype.">
             <Typewriter
               words={["Signal over noise. Talent over hype."]}

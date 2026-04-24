@@ -118,6 +118,7 @@ h5,
 .home-hero-copy {
   width: 100%;
   display: grid;
+  gap: 10px;
   justify-items: center;
   text-align: center;
 }
@@ -136,6 +137,12 @@ h5,
   line-height: 1.02;
   color: var(--foreground);
   overflow-wrap: anywhere;
+}
+
+.product-logo {
+  width: min(228px, 54vw);
+  height: auto;
+  display: block;
 }
 
 .typewriter {
@@ -892,6 +899,10 @@ h5,
     font-size: clamp(22px, 6.2vw, 28px);
     line-height: 1.08;
     text-wrap: balance;
+  }
+
+  .product-logo {
+    width: min(190px, 58vw);
   }
 
   .home-hero-copy p {
