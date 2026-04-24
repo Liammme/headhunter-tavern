@@ -11,6 +11,8 @@ frontend/.next/
 frontend/.next-dev/
 frontend/.next-build/
 frontend/node_modules/
+backend/.server.*.log
+frontend/.server.*.log
 **/__pycache__/
 *.egg-info/
 *.db

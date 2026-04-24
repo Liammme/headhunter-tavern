@@ -171,10 +171,6 @@ export default function CompanyCard({ company }: { company: CompanyCardPayload }
                     </span>
                   ))}
                 </div>
-                <div className="job-claims">
-                  <span className="evidence-caption">证据备注：</span>
-                  <span>{job.claimed_names.length ? `岗位已有 ${job.claimed_names.join("、")} 跟进` : "可作为公司线索的佐证岗位"}</span>
-                </div>
               </div>
             </div>
             <div className="job-actions">

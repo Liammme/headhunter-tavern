@@ -19,6 +19,7 @@ export default function IntelligencePanel({
   const secondaryFindings = intelligence.findings.slice(1, 3);
   const leadAction = intelligence.actions[0];
   const secondaryActions = intelligence.actions.slice(1, 3);
+  const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
 
   return (
     <section className="intel-stage" aria-labelledby="intelligence-panel-title">
@@ -34,7 +35,11 @@ export default function IntelligencePanel({
               </h2>
               <div className="intel-paper-copy">
                 <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
-                <p className="intel-narrative">{intelligence.narrative}</p>
+                {narrativeParagraphs.map((paragraph, index) => (
+                  <p key={`${index}-${paragraph}`} className="intel-narrative">
+                    {paragraph}
+                  </p>
+                ))}
               </div>
             </article>
           </div>
@@ -130,4 +135,28 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
+}
+
+function splitNarrativeIntoParagraphs(narrative: string) {
+  const explicitParagraphs = narrative
+    .split(/\n\s*\n/g)
+    .map(collapseInlineWhitespace)
+    .filter(Boolean);
+
+  if (explicitParagraphs.length > 1) {
+    return explicitParagraphs;
+  }
+
+  const normalized = collapseInlineWhitespace(narrative);
+  if (!normalized) {
+    return [];
+  }
+
+  return normalized.match(/[^。！？!?]+[。！？!?]?/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [
+    normalized,
+  ];
+}
+
+function collapseInlineWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
 }

@@ -1,12 +1,17 @@
 import json
 import logging
 from collections import Counter
-from urllib import error, request
 
-from app.core.config import settings
 from app.models import Job
 from app.services.feed_snapshot import DayBucketSnapshot, FeedMetadata
+from app.services.intelligence_context import build_intelligence_change_context
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
+from app.services.llm_client import (
+    LlmClientError,
+    iter_llm_models,
+    request_chat_completion_with_model,
+    should_use_llm,
+)
 from app.services.scoring import score_job_v2
 
 
@@ -33,7 +38,7 @@ GENERIC_ACTION_PHRASES = (
 
 
 def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job] | None = None) -> dict:
-    fallback_snapshot = build_rule_intelligence_snapshot(day_payloads, meta)
+    fallback_snapshot = build_rule_intelligence_snapshot(day_payloads, meta, jobs=jobs)
     if not _should_use_llm():
         return fallback_snapshot
 
@@ -53,7 +58,13 @@ def build_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: Fee
     }
 
 
-def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata) -> dict:
+def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job] | None = None) -> dict:
+    if jobs and _has_window_feed_jobs(day_payloads):
+        change_context = build_intelligence_change_context(jobs=jobs, meta=meta)
+        change_snapshot = _build_rule_intelligence_snapshot_from_change_context(change_context, meta)
+        if change_snapshot is not None:
+            return change_snapshot
+
     companies = [company for day in day_payloads for company in day.companies]
     jobs = [job for company in companies for job in company.jobs]
     if not jobs:
@@ -119,6 +130,50 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
         actions=snapshot["actions"],
     )
     return snapshot
+
+
+def _has_window_feed_jobs(day_payloads: list[DayBucketSnapshot]) -> bool:
+    return any(company.jobs for day in day_payloads for company in day.companies)
+
+
+def _build_rule_intelligence_snapshot_from_change_context(change_context: dict, meta: FeedMetadata) -> dict | None:
+    representative_changes = change_context["representative_changes"]
+    first_change = representative_changes[0]
+    if first_change["change_type"] == "no_today_change":
+        headline = "James侦探把杯子往吧台边一推：今天暂时没有新的升温信号，先别把旧盘面说成新变化。"
+        summary = "今天没有可验证的新公司、新类目或新领域升温，情报降级为稳定提示。"
+        findings = ["你抬眼示意他继续，他只补了一句：今天的岗位池没有给出足够证据证明盘面发生了新变化。"]
+        actions = ["他最后留下一句：今天先复核既有重点公司和高赏金岗位，等新增信号出现后再切换主线。"]
+    else:
+        evidence = first_change["evidence"][0] if first_change["evidence"] else {}
+        company = evidence.get("company", "当前公司")
+        title = evidence.get("title", "核心岗位")
+        category = evidence.get("category", "核心")
+        domain = evidence.get("domain_tag", "重点领域")
+        headline = f"James侦探晃了晃杯底，低声说：今天先盯 {company} 带出来的 {domain} 变化。"
+        summary = f"今天真正变化的是 {first_change['summary']} 代表岗位是 {company} 的 {title}。"
+        findings = [
+            f"你抬眼示意他继续，他把话说透：这不是复述近14天总量，而是今天在 {category} / {domain} 上出现了可点名的新增或升温证据。"
+        ]
+        actions = [f"他把杯子推回来，只留一句：今天先盯 {company} 这类公司，以及 {category} 里的高赏金核心岗。"]
+
+    return {
+        "headline": headline,
+        "summary": summary,
+        "analysis_version": meta.analysis_version,
+        "rule_version": meta.rule_version,
+        "window_start": meta.window_start,
+        "window_end": meta.window_end,
+        "generated_at": meta.generated_at,
+        "findings": findings,
+        "actions": actions,
+        "narrative": build_narrative_from_fields(
+            headline=headline,
+            summary=summary,
+            findings=findings,
+            actions=actions,
+        ),
+    }
 
 
 def generate_llm_intelligence_fields(day_payloads: list[DayBucketSnapshot], meta: FeedMetadata, jobs: list[Job]) -> dict:
@@ -197,6 +252,7 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
         "top_tags": [{"tag": tag, "count": count} for tag, count in tag_counts.most_common(8)],
         "focus_companies": focus_companies,
         "representative_jobs": representative_jobs,
+        "change_context": build_intelligence_change_context(jobs=jobs, meta=meta),
         "job_fact_briefs": build_job_fact_briefs(jobs_by_id={job.id: job for job in jobs}, day_payloads=day_payloads),
     }
 
@@ -254,52 +310,17 @@ def _request_zhipu_chat_completion_with_retry(messages: list[dict]) -> str:
 
 
 def _request_zhipu_chat_completion_with_model(messages: list[dict], model_name: str) -> str:
-    payload = _build_zhipu_payload(messages, model_name)
-    endpoint = f"{settings.bounty_pool_zhipu_base_url.rstrip('/')}/chat/completions"
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    http_request = request.Request(
-        endpoint,
-        data=body,
-        headers={
-            "Authorization": f"Bearer {settings.bounty_pool_zhipu_api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
     try:
-        with request.urlopen(http_request, timeout=20) as response:
-            response_body = json.loads(response.read().decode("utf-8"))
-    except error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise IntelligenceGenerationError(f"LLM request failed with {exc.code}: {error_body}") from exc
-    except (error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise IntelligenceGenerationError("LLM request failed") from exc
-
-    try:
-        message_content = response_body["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise IntelligenceGenerationError("LLM response is missing content") from exc
-
-    if not isinstance(message_content, str):
-        raise IntelligenceGenerationError("LLM response content must be a string")
-
-    return message_content
-
-
-def _build_zhipu_payload(messages: list[dict], model_name: str) -> dict:
-    return {
-        "model": model_name,
-        "temperature": 0.55,
-        "messages": messages,
-        "response_format": {"type": "json_object"},
-    }
+        return request_chat_completion_with_model(messages, model_name)
+    except LlmClientError as exc:
+        raise IntelligenceGenerationError(str(exc)) from exc
 
 
 def build_intelligence_system_prompt() -> str:
     return (
         "你是 James侦探，常在猎头酒馆里低声递情报，但表达必须直接、清楚，不装神秘。"
         "你只能基于用户提供的结构化输入判断，不能臆造未提供的数据，也不能引用输入里不存在的公司、岗位、人物。"
+        "你只能根据 change_context 写今天真正变化的内容；overview、bucket_stats、top_tags 只能作为背景，不能作为主判断。"
         "请直接输出 JSON 对象，不要输出额外解释，不要输出 markdown。"
         "JSON 必须包含 narrative、headline、summary、findings、actions 五个字段。"
         "narrative、headline 和 summary 必须是字符串。findings 和 actions 必须是字符串数组，且各只写 1 条。"
@@ -325,7 +346,9 @@ def build_intelligence_system_prompt() -> str:
 def build_intelligence_user_prompt(llm_input: dict) -> str:
     return (
         "请基于下面的统一分析基线生成猎场情报。"
-        "优先使用 job_fact_briefs 解释今天相对近14天的变化，点名 1 到 3 个真正代表变化的公司或岗位方向即可。"
+        "必须优先使用 change_context 解释今天相对昨天和近14天基线的变化。"
+        "只能根据 change_context 写今天真正变化的是什么，点名 1 到 3 个真正代表变化的公司或岗位方向即可。"
+        "job_fact_briefs 只能用于补充证据，不得替代 change_context 做判断。"
         "不要做标签播报，不要写管理建议，不要写联系人动作。"
         "输出时先写好 narrative 这段完整短报，前端会直接显示 narrative 原文。"
         "headline、summary、findings、actions 只是兼容字段，内容必须与 narrative 对齐。"
@@ -425,22 +448,11 @@ def _strip_code_fence(content: str) -> str:
 
 
 def _should_use_llm() -> bool:
-    return settings.bounty_pool_intelligence_llm_enabled and bool(settings.bounty_pool_zhipu_api_key)
+    return should_use_llm()
 
 
 def _iter_zhipu_models() -> list[str]:
-    models = [settings.bounty_pool_zhipu_model]
-    models.extend(
-        item.strip()
-        for item in settings.bounty_pool_zhipu_fallback_models.split(",")
-        if item.strip()
-    )
-
-    deduped: list[str] = []
-    for item in models:
-        if item not in deduped:
-            deduped.append(item)
-    return deduped
+    return iter_llm_models()
 
 
 def collect_claimed_names(day_payloads: list[DayBucketSnapshot]) -> set[str]:
