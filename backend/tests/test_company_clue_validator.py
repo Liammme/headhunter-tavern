@@ -93,3 +93,70 @@ def test_parse_company_clue_response_requires_section_title_and_content():
             '{"key":"next_move","title":"你下一步先验证什么","content":"先查 https://jobs.example.com/1。"}'
             ']}'
         )
+
+
+def test_parse_company_clue_response_normalizes_section_object_shape():
+    payload = parse_company_clue_response(
+        '{"narrative":"Aijobs 的 SOL-1634 Senior Data Engineer 和 AI Engineer 都在窗口内。",'
+        '"sections":{'
+        '"lead":"SOL-1634 Senior Data Engineer 和 AI Engineer 同时出现。",'
+        '"evidence":"SOL-1634 Senior Data Engineer 指向数据工程，AI Engineer 指向算法需求。",'
+        '"next_move":"先查 https://jobs.example.com/1。"'
+        '}}'
+    )
+
+    assert [section["key"] for section in payload["sections"]] == ["lead", "evidence", "next_move"]
+    assert payload["sections"][0]["title"] == "为什么现在值得查"
+    assert payload["sections"][0]["content"] == "SOL-1634 Senior Data Engineer 和 AI Engineer 同时出现。"
+
+
+def test_parse_company_clue_response_normalizes_chinese_section_object_keys():
+    payload = parse_company_clue_response(
+        '{"narrative":"Aijobs 的 SOL-1634 Senior Data Engineer 和 AI Engineer 都在窗口内。",'
+        '"sections":{'
+        '"为什么现在值得查":"SOL-1634 Senior Data Engineer 和 AI Engineer 同时出现。",'
+        '"最能代表需求的岗位":"SOL-1634 Senior Data Engineer 指向数据工程，AI Engineer 指向算法需求。",'
+        '"你下一步先验证什么":"先查 https://jobs.example.com/1。"'
+        '}}'
+    )
+
+    assert [section["key"] for section in payload["sections"]] == ["lead", "evidence", "next_move"]
+    assert payload["sections"][2]["content"] == "先查 https://jobs.example.com/1。"
+
+
+def test_parse_company_clue_response_rejects_incomplete_section_object_shape():
+    with pytest.raises(IntelligenceGenerationError, match="three sections"):
+        parse_company_clue_response(
+            '{"narrative":"Aijobs 的岗位还在窗口内。",'
+            '"sections":{'
+            '"lead":"SOL-1634 Senior Data Engineer 还在窗口内。",'
+            '"evidence":"SOL-1634 Senior Data Engineer 指向数据工程。"}'
+            '}'
+        )
+
+
+def test_parse_company_clue_response_joins_section_object_list_content():
+    payload = parse_company_clue_response(
+        '{"narrative":"Aijobs 的 SOL-1634 Senior Data Engineer 和 AI Engineer 都在窗口内。",'
+        '"sections":{'
+        '"lead":"SOL-1634 Senior Data Engineer 和 AI Engineer 同时出现。",'
+        '"evidence":"SOL-1634 Senior Data Engineer 指向数据工程，AI Engineer 指向算法需求。",'
+        '"next_move":["先查 https://jobs.example.com/1。","再查 https://jobs.example.com/2。"]'
+        '}}'
+    )
+
+    assert payload["sections"][2]["key"] == "next_move"
+    assert payload["sections"][2]["content"] == "先查 https://jobs.example.com/1。\n再查 https://jobs.example.com/2。"
+
+
+def test_validate_company_clue_response_allows_markdown_link_for_approved_entry_point():
+    payload = parse_company_clue_response(
+        '{"narrative":"你现在该先查 OpenGradient，因为 Principal AI Engineer 和 Growth Engineer 两个岗位同时出现。",'
+        '"sections":['
+        '{"key":"lead","title":"为什么现在值得查","content":"Principal AI Engineer 和 Growth Engineer 同时挂出。"},'
+        '{"key":"evidence","title":"最能代表需求的岗位","content":"Principal AI Engineer 和 Growth Engineer 都是可验证岗位。"},'
+        '{"key":"next_move","title":"你下一步先验证什么","content":"先打开 [https://jobs.example.com/1](https://jobs.example.com/1) 核对职责。"}'
+        ']}'
+    )
+
+    validate_company_clue_response(payload, context=build_context())

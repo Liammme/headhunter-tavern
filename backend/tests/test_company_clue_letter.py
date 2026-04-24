@@ -363,9 +363,10 @@ def test_generate_company_clue_letter_does_not_rewrite_internal_parser_errors(db
     assert len(calls) == 1
 
 
-def test_generate_company_clue_letter_returns_failure_when_llm_is_unavailable(db_session):
+def test_generate_company_clue_letter_returns_failure_when_llm_is_unavailable(db_session, monkeypatch):
     db_session.add(build_job(company="OpenGradient", title="Principal AI Engineer", canonical_url="https://jobs.example.com/opengradient/1"))
     db_session.commit()
+    monkeypatch.setattr("app.services.company_clue_letter._should_use_company_clue_llm", lambda: False)
 
     result = generate_company_clue_letter(db_session, company="OpenGradient")
 

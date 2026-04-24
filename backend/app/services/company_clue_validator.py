@@ -5,7 +5,7 @@ from app.services.intelligence import IntelligenceGenerationError
 
 
 EMAIL_PATTERN = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
-URL_PATTERN = re.compile(r"https?://[^\s，。；,;）)]+")
+URL_PATTERN = re.compile(r"https?://[^\s，。；,;）)\]]+")
 
 GENERIC_PHRASES = (
     "表现突出",
@@ -26,7 +26,8 @@ def parse_company_clue_response(content: str) -> dict:
     sections = payload.get("sections")
     if not isinstance(narrative, str) or not narrative.strip():
         raise IntelligenceGenerationError("Company clue response is missing narrative")
-    if not isinstance(sections, list) or len(sections) != 3:
+    sections = _normalize_sections(sections)
+    if len(sections) != 3:
         raise IntelligenceGenerationError("Company clue response must contain three sections")
 
     normalized = []
@@ -47,6 +48,49 @@ def parse_company_clue_response(content: str) -> dict:
             }
         )
     return {"narrative": narrative.strip(), "sections": normalized}
+
+
+def _normalize_sections(sections) -> list:
+    if isinstance(sections, list):
+        return sections
+    if not isinstance(sections, dict):
+        raise IntelligenceGenerationError("Company clue response must contain three sections")
+
+    normalized = []
+    default_titles = {
+        "lead": "为什么现在值得查",
+        "evidence": "最能代表需求的岗位",
+        "next_move": "你下一步先验证什么",
+    }
+    section_key_aliases = {
+        "lead": "lead",
+        "evidence": "evidence",
+        "next_move": "next_move",
+        "为什么现在值得查": "lead",
+        "最能代表需求的岗位": "evidence",
+        "你下一步先验证什么": "next_move",
+    }
+    normalized_by_key: dict[str, object] = {}
+    for raw_key, value in sections.items():
+        normalized_key = section_key_aliases.get(raw_key)
+        if normalized_key is not None:
+            normalized_by_key[normalized_key] = value
+
+    for key in ("lead", "evidence", "next_move"):
+        value = normalized_by_key.get(key)
+        if isinstance(value, str):
+            normalized.append({"key": key, "title": default_titles[key], "content": value})
+        elif isinstance(value, list) and all(isinstance(item, str) for item in value):
+            normalized.append({"key": key, "title": default_titles[key], "content": "\n".join(value)})
+        elif isinstance(value, dict):
+            normalized.append(
+                {
+                    "key": key,
+                    "title": value.get("title", default_titles[key]),
+                    "content": value.get("content"),
+                }
+            )
+    return normalized
 
 
 def validate_company_clue_response(payload: dict, *, context: dict) -> None:
