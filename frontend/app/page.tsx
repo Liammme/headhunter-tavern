@@ -1,5 +1,6 @@
 import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
+import ASCIIText from "../components/ui/ascii-text";
 import { Typewriter } from "../components/ui/typewriter";
 import { fetchHomePayload } from "../lib/api";
 
@@ -13,7 +14,10 @@ export default async function HomePage() {
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
-          <img className="product-logo" src="/assets/product-logo.svg" alt="Talent Signal" />
+          <div className="product-logo-ascii" aria-label="TalentSignal">
+            <span className="product-logo-wordmark">TalentSignal</span>
+            <ASCIIText text="TalentSignal" enableWaves asciiFontSize={3} textFontSize={240} planeBaseHeight={9.5} />
+          </div>
           <h1 id="home-hero-title" aria-label="Signal over noise. Talent over hype.">
             <Typewriter
               words={["Signal over noise. Talent over hype."]}
