@@ -35,6 +35,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
+        dailyCaptureSummary="今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。"
         previewBucket="today"
         previewCompanies={[buildCompany(), buildCompany({ company: "Beta Labs", company_grade: "watch", total_jobs: 2 })]}
       />,
@@ -44,7 +45,8 @@ describe("IntelligencePanel", () => {
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
-    expect(within(paper).getByText(intelligence.narrative)).toBeInTheDocument();
+    expect(within(paper).getByText("今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。")).toBeInTheDocument();
+    expect(within(paper).queryByText(intelligence.narrative)).not.toBeInTheDocument();
     expect(within(paper).queryByText(intelligence.summary)).not.toBeInTheDocument();
     expect(screen.getByText(intelligence.summary)).toBeInTheDocument();
   });
@@ -59,6 +61,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/24"
+        dailyCaptureSummary="今日抓取 12 个岗位。分布来源：Aijobs。重点公司 2 家。"
         previewBucket="today"
         previewCompanies={[buildCompany()]}
       />,
@@ -67,9 +70,9 @@ describe("IntelligencePanel", () => {
     const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
 
     expect(narrativeParagraphs).toHaveLength(3);
-    expect(narrativeParagraphs[0]).toHaveTextContent("James侦探晃了晃杯底");
-    expect(narrativeParagraphs[1]).toHaveTextContent("今天真正冒头的不是热闹标签");
-    expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
+    expect(narrativeParagraphs[0]).toHaveTextContent("今日抓取 12 个岗位");
+    expect(narrativeParagraphs[1]).toHaveTextContent("分布来源：Aijobs");
+    expect(narrativeParagraphs[2]).toHaveTextContent("重点公司 2 家");
   });
 
   it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
@@ -79,6 +82,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
+        dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
         previewBucket="today"
         previewCompanies={[buildCompany()]}
       />,
@@ -105,6 +109,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
+        dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
         previewBucket="today"
         previewCompanies={[buildCompany()]}
       />,
@@ -113,6 +118,8 @@ describe("IntelligencePanel", () => {
     expect(screen.getAllByText(/榜单引导|露头信号/).length).toBeGreaterThan(0);
     expect(screen.getByText(intelligence.actions[0])).toBeInTheDocument();
     expect(screen.getByText(intelligence.actions[1])).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "今日招聘" })).toBeInTheDocument();
+    expect(screen.getByText("找找看有没有能BD的公司？")).toBeInTheDocument();
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
   });
 });

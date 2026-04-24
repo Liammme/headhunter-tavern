@@ -5,6 +5,7 @@ import type { CompanyCardPayload, DayBucketPayload, IntelligencePayload } from "
 type IntelligencePanelProps = {
   intelligence: IntelligencePayload;
   reportDateLabel: string;
+  dailyCaptureSummary: string;
   previewBucket: DayBucketPayload["bucket"] | null;
   previewCompanies: CompanyCardPayload[];
 };
@@ -12,6 +13,7 @@ type IntelligencePanelProps = {
 export default function IntelligencePanel({
   intelligence,
   reportDateLabel,
+  dailyCaptureSummary,
   previewBucket,
   previewCompanies,
 }: IntelligencePanelProps) {
@@ -19,7 +21,7 @@ export default function IntelligencePanel({
   const secondaryFindings = intelligence.findings.slice(1, 3);
   const leadAction = intelligence.actions[0];
   const secondaryActions = intelligence.actions.slice(1, 3);
-  const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
+  const narrativeParagraphs = splitNarrativeIntoParagraphs(dailyCaptureSummary);
 
   return (
     <section className="intel-stage" aria-labelledby="intelligence-panel-title">
@@ -49,12 +51,8 @@ export default function IntelligencePanel({
           <section className="intel-peek">
             <div className="intel-peek-copy">
               <p className="eyebrow">榜单露头</p>
-              <h3>
-                {previewBucket
-                  ? `${renderBucketTitle(previewBucket)}的公司猎单池已经露头`
-                  : "公司猎单池已经露头"}
-              </h3>
-              <p>下面就是今天的可操作机会池，往下滚就能直接进入公司档案卡。</p>
+              <h3>今日招聘</h3>
+              <p>找找看有没有能BD的公司？</p>
             </div>
             <div className="intel-peek-list">
               {previewCompanies.map((company) => (
@@ -115,16 +113,6 @@ export default function IntelligencePanel({
       </aside>
     </section>
   );
-}
-
-function renderBucketTitle(bucket: DayBucketPayload["bucket"]) {
-  if (bucket === "today") {
-    return "今天";
-  }
-  if (bucket === "yesterday") {
-    return "昨天";
-  }
-  return "更早";
 }
 
 function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {

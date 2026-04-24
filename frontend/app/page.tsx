@@ -8,17 +8,18 @@ export default async function HomePage() {
   const previewDay = payload.days[0];
   const previewCompanies = previewDay ? previewDay.companies.slice(0, 2) : [];
   const reportDateLabel = formatReportDate(new Date());
+  const dailyCaptureSummary = buildDailyCaptureSummary(payload.days);
 
   return (
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
           <h1 id="home-hero-title">猎头酒馆</h1>
-          <p>今天的判断、重点线索和可操作公司都在这一页里。</p>
         </header>
         <IntelligencePanel
           intelligence={payload.intelligence}
           reportDateLabel={reportDateLabel}
+          dailyCaptureSummary={dailyCaptureSummary}
           previewBucket={previewDay?.bucket ?? null}
           previewCompanies={previewCompanies}
         />
@@ -58,4 +59,15 @@ function formatReportDate(date: Date) {
   const day = parts.find((part) => part.type === "day")?.value ?? "";
 
   return `${year}/${month}/${day}`;
+}
+
+function buildDailyCaptureSummary(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
+  const today = days.find((day) => day.bucket === "today");
+  const companies = today?.companies ?? [];
+  const jobCount = companies.reduce((sum, company) => sum + company.total_jobs, 0);
+  const sourceNames = companies.map((company) => company.company).filter(Boolean);
+  const sourceSummary = sourceNames.length ? sourceNames.slice(0, 6).join("、") : "暂无公司来源";
+  const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
+
+  return `今日抓取 ${jobCount} 个岗位，分布来源：${sourceSummary}${overflow}。`;
 }
