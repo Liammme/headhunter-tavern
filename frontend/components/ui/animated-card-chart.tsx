@@ -63,13 +63,11 @@ export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b
       }
     >
       <div className="animated-chart-pills" aria-hidden="true">
-        <span>
+        <span data-value="+15.2%">
           <i />
-          +15.2%
         </span>
-        <span>
+        <span data-value="+18.7%">
           <i />
-          +18.7%
         </span>
       </div>
       <div className="animated-chart-tooltip" aria-hidden={!isActive}>

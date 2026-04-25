@@ -28,6 +28,13 @@ export default function IntelligencePanel({
 }: IntelligencePanelProps) {
   const [showIntelPaper, setShowIntelPaper] = useState(false);
   const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
+  const toggleIntelMode = () => setShowIntelPaper((value) => !value);
+  const handleIntelModeKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    toggleIntelMode();
+  };
 
   return (
     <section className="intel-stage" aria-labelledby="intelligence-panel-title">
@@ -35,7 +42,13 @@ export default function IntelligencePanel({
         <div className="intel-card">
           <div className="intel-body">
             {showIntelPaper ? (
-              <article className="intel-paper" aria-labelledby="intelligence-paper-title">
+              <article
+                className="intel-paper is-clickable"
+                aria-labelledby="intelligence-paper-title"
+                tabIndex={0}
+                onClick={toggleIntelMode}
+                onKeyDown={handleIntelModeKeyDown}
+              >
                 <div className="intel-paper-label-row">
                   <p className="eyebrow intel-paper-label">猎场控制台</p>
                 </div>
@@ -52,7 +65,14 @@ export default function IntelligencePanel({
                 </div>
               </article>
             ) : (
-              <AnimatedCard className="intel-chart-card" aria-labelledby="intelligence-panel-title">
+              <AnimatedCard
+                className="intel-chart-card is-clickable"
+                aria-label="打开猎场控制台"
+                aria-expanded={showIntelPaper}
+                tabIndex={0}
+                onClick={toggleIntelMode}
+                onKeyDown={handleIntelModeKeyDown}
+              >
                 <CardVisual>
                   <Visual3 data={collectionStats} mainColor="#75fb6e" secondaryColor="#26a17b" />
                 </CardVisual>
@@ -64,14 +84,6 @@ export default function IntelligencePanel({
             )}
           </div>
         </div>
-        <button
-          type="button"
-          className="intel-mode-toggle"
-          aria-expanded={showIntelPaper}
-          onClick={() => setShowIntelPaper((value) => !value)}
-        >
-          {showIntelPaper ? "返回岗位统计" : "查看猎场控制台"}
-        </button>
         <p className="intel-footnote">{dailyCaptureSummary}</p>
       </div>
     </section>

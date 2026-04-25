@@ -45,7 +45,8 @@ describe("IntelligencePanel", () => {
     expect(chartVisual).toHaveClass("is-active");
     expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "查看猎场控制台" }));
+    expect(screen.queryByRole("button", { name: "查看猎场控制台" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
 
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
@@ -74,7 +75,7 @@ describe("IntelligencePanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "查看猎场控制台" }));
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
 
     const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
 

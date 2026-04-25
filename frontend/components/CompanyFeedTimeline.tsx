@@ -47,6 +47,8 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
           tabs={FEED_TABS.map(({ label }) => ({ label }))}
           activeLabel={activeTab}
           ariaLabel="岗位时间筛选"
+          logoSrc="/q.svg"
+          logoAlt="赏金猎人"
           onChange={(label) => {
             setActiveTab(label as FeedTabLabel);
             setShowAllEarlier(false);

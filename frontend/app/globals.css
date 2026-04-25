@@ -117,7 +117,7 @@ h5,
 .home-hero-copy {
   width: 100%;
   display: grid;
-  gap: 20px;
+  gap: 14px;
   justify-items: center;
   text-align: center;
 }
@@ -136,6 +136,100 @@ h5,
   line-height: 1.02;
   color: var(--foreground);
   overflow-wrap: anywhere;
+}
+
+.hero-brand-focus {
+  width: 100%;
+  min-height: clamp(50px, 5.7vw, 80px);
+  display: grid;
+  place-items: center;
+}
+
+.hero-brand-focus-inner {
+  --focus-title-size: clamp(29px, 3.65vw, 52px);
+  max-width: min(380px, 42vw);
+}
+
+.focus-container {
+  position: relative;
+  display: flex;
+  gap: 0.56em;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  outline: none;
+  user-select: none;
+}
+
+.focus-word {
+  position: relative;
+  color: var(--foreground);
+  font-family: var(--font-heading-stack);
+  font-size: var(--focus-title-size, clamp(42px, 6vw, 84px));
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    filter 0.3s ease,
+    color 0.3s ease;
+  outline: none;
+  user-select: none;
+}
+
+.focus-word.active {
+  filter: blur(0);
+}
+
+.focus-word + .focus-word {
+  margin-left: 0.16em;
+}
+
+.focus-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  box-sizing: content-box;
+  border: none;
+}
+
+.corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-color, #6cff72);
+  filter: drop-shadow(0 0 4px var(--glow-color, rgba(108, 255, 114, 0.42)));
+  border-radius: 3px;
+  transition: none;
+}
+
+.top-left {
+  top: -9px;
+  left: -9px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.top-right {
+  top: -9px;
+  right: -9px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.bottom-left {
+  bottom: -9px;
+  left: -9px;
+  border-right: none;
+  border-top: none;
+}
+
+.bottom-right {
+  right: -9px;
+  bottom: -9px;
+  border-left: none;
+  border-top: none;
 }
 
 .typewriter {
@@ -282,6 +376,17 @@ h5,
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
+.intel-chart-card.is-clickable,
+.intel-paper.is-clickable {
+  cursor: pointer;
+}
+
+.intel-chart-card.is-clickable:focus-visible,
+.intel-paper.is-clickable:focus-visible {
+  outline: 2px solid rgba(117, 251, 110, 0.75);
+  outline-offset: 4px;
+}
+
 .animated-card-visual {
   position: relative;
   height: 180px;
@@ -349,6 +454,10 @@ h5,
   color: var(--foreground);
   font-size: 12px;
   backdrop-filter: blur(8px);
+}
+
+.animated-chart-pills span::after {
+  content: attr(data-value);
 }
 
 .animated-chart-pills i {
@@ -443,7 +552,7 @@ h5,
 .animated-chart-bar-button {
   position: relative;
   min-height: 0;
-  width: 15px;
+  width: 13px;
   height: 138px;
   display: flex;
   align-items: center;
@@ -463,8 +572,9 @@ h5,
 
 .animated-chart-bar {
   position: absolute;
-  left: 0;
+  left: 50%;
   width: 100%;
+  transform: translateX(-50%);
   border-radius: 3px;
   background: var(--chart-main);
   box-shadow: 0 10px 32px rgba(38, 161, 123, 0.24);
@@ -488,18 +598,6 @@ h5,
 .animated-chart-visual.is-active .animated-chart-bar {
   background: var(--chart-main);
   box-shadow: 0 12px 30px rgba(117, 251, 110, 0.24);
-}
-
-.intel-mode-toggle {
-  justify-self: center;
-  min-height: 34px;
-  padding: 7px 13px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--foreground);
-  color: var(--surface-raised);
-  font-weight: 650;
-  cursor: pointer;
 }
 
 .intel-notes {
@@ -585,8 +683,8 @@ h5,
 }
 
 .animated-tabs-logo {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -594,7 +692,7 @@ h5,
   padding: 10px;
   border-radius: 999px;
   background: var(--foreground);
-  box-shadow: 0 0 0 3px var(--foreground);
+  box-shadow: 0 0 0 2px var(--foreground);
   overflow: hidden;
 }
 
@@ -610,20 +708,21 @@ h5,
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: 3px;
+  gap: 2px;
+  margin-left: -2px;
   width: 100%;
   justify-content: center;
-  min-height: 48px;
-  padding: 3px;
-  border: 3px solid var(--foreground);
+  min-height: 46px;
+  padding: 2px;
+  border: 2px solid var(--foreground);
   border-radius: 999px;
   background: var(--foreground);
 }
 
 .animated-tab {
   position: relative;
-  height: 36px;
-  min-height: 36px;
+  height: 38px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1191,6 +1290,15 @@ h5,
     text-wrap: balance;
   }
 
+  .hero-brand-focus {
+    min-height: 35px;
+  }
+
+  .hero-brand-focus-inner {
+    --focus-title-size: clamp(17px, 6vw, 23px);
+    max-width: 47vw;
+  }
+
   .home-hero-copy p {
     font-size: 14px;
   }
@@ -1221,7 +1329,7 @@ h5,
 
   .animated-chart-bars {
     inset: 42px 18px 0;
-    gap: 4px;
+    gap: 6px;
   }
 
   .animated-chart-bar {
@@ -1229,7 +1337,7 @@ h5,
   }
 
   .animated-chart-bar-button {
-    width: 10px;
+    width: 9px;
   }
 
   .animated-chart-pills {

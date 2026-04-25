@@ -1,5 +1,6 @@
 import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
+import TrueFocus from "../components/ui/true-focus";
 import { Typewriter } from "../components/ui/typewriter";
 import { fetchHomePayload } from "../lib/api";
 
@@ -13,6 +14,17 @@ export default async function HomePage() {
     <main className="page-shell">
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
+          <div className="hero-brand-focus" aria-label="Talent Signal">
+            <TrueFocus
+              sentence="Talent Signal"
+              blurAmount={4}
+              borderColor="#6cff72"
+              glowColor="rgba(108, 255, 114, 0.42)"
+              animationDuration={0.75}
+              pauseBetweenAnimations={1.2}
+              className="hero-brand-focus-inner"
+            />
+          </div>
           <h1 id="home-hero-title" aria-label="Signal over noise. Talent over hype.">
             <Typewriter
               words={["Signal over noise. Talent over hype."]}
