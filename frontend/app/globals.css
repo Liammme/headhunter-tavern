@@ -48,11 +48,9 @@ body {
   min-width: 320px;
   color: var(--foreground);
   background:
-    linear-gradient(rgba(17, 17, 17, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(17, 17, 17, 0.045) 1px, transparent 1px),
     radial-gradient(circle at 50% 0%, rgba(117, 251, 110, 0.1), transparent 32%),
     var(--background);
-  background-size: 64px 64px, 64px 64px, cover, cover;
+  background-size: cover, cover;
   color: var(--foreground);
   font-family: var(--font-body-stack);
   font-size: 15px;
@@ -99,6 +97,7 @@ h5,
 }
 
 .page-shell {
+  position: relative;
   max-width: 100%;
   overflow-x: hidden;
   width: min(var(--page-width), calc(100vw - 36px));
@@ -106,6 +105,38 @@ h5,
   padding: 22px 0 56px;
   display: grid;
   gap: 30px;
+}
+
+.grid-pattern {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: rgba(117, 251, 110, 0.2);
+  stroke: rgba(12, 20, 13, 0.16);
+}
+
+.grid-pattern-squares {
+  overflow: visible;
+}
+
+.page-grid-pattern {
+  position: fixed;
+  z-index: 0;
+  inset: -18vh -18vw auto;
+  height: 118vh;
+  width: 136vw;
+  transform: skewY(12deg);
+  transform-origin: 50% 0;
+  opacity: 0.84;
+  mask-image: radial-gradient(880px circle at 50% 18%, white 0%, rgba(255, 255, 255, 0.78) 54%, transparent 88%);
+}
+
+.hero-shell,
+.feed-shell {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-shell {
@@ -1274,13 +1305,21 @@ h5,
 
 @media (max-width: 768px) {
   body {
-    background-size: 44px 44px, 44px 44px, cover, cover;
+    background-size: cover, cover;
   }
 
   .page-shell {
     width: min(100vw - 16px, var(--page-width));
     padding: 14px 0 38px;
     gap: 22px;
+  }
+
+  .page-grid-pattern {
+    inset: -12vh -42vw auto;
+    width: 184vw;
+    height: 108vh;
+    opacity: 0.84;
+    mask-image: radial-gradient(460px circle at 50% 10%, white 0%, rgba(255, 255, 255, 0.72) 54%, transparent 88%);
   }
 
   .home-hero-copy h1 {

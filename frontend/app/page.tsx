@@ -1,5 +1,6 @@
 import CompanyFeedTimeline from "../components/CompanyFeedTimeline";
 import IntelligencePanel from "../components/IntelligencePanel";
+import { GridPattern } from "../components/ui/grid-pattern";
 import TrueFocus from "../components/ui/true-focus";
 import { Typewriter } from "../components/ui/typewriter";
 import { fetchHomePayload } from "../lib/api";
@@ -12,6 +13,24 @@ export default async function HomePage() {
 
   return (
     <main className="page-shell">
+      <GridPattern
+        width={38}
+        height={38}
+        x={-1}
+        y={-1}
+        strokeDasharray="4 3"
+        squares={[
+          [4, 2],
+          [6, 5],
+          [9, 3],
+          [11, 8],
+          [14, 4],
+          [16, 10],
+          [19, 6],
+          [22, 12],
+        ]}
+        className="page-grid-pattern"
+      />
       <section className="hero-shell" aria-labelledby="home-hero-title">
         <header className="home-hero-copy">
           <div className="hero-brand-focus" aria-label="Talent Signal">

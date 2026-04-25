@@ -34,6 +34,11 @@ export function Typewriter({
 
     const isComplete = !isDeleting && charIndex === currentWord.length;
     const isDeleted = isDeleting && charIndex === 0;
+
+    if (isComplete && safeWords.length <= 1) {
+      return undefined;
+    }
+
     const timeoutDelay = isComplete ? delayBetweenWords : isDeleting ? speed / 2 : speed;
 
     const timeout = window.setTimeout(() => {
