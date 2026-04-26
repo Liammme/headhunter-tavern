@@ -67,6 +67,22 @@ def test_validate_market_intelligence_report_rejects_bounty_or_bd_language():
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
+def test_validate_market_intelligence_report_rejects_lowercase_bd_language():
+    report = _valid_report()
+    report["narrative"] = "30d demand mentions bd outreach."
+
+    with pytest.raises(MarketIntelligenceReportError, match="banned"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_rejects_english_source_or_link_language():
+    report = _valid_report()
+    report["narrative"] = "30d narrative mentions source and link details."
+
+    with pytest.raises(MarketIntelligenceReportError, match="banned"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
 def test_validate_market_intelligence_report_rejects_job_link_language():
     report = _valid_report()
     report["narrative"] = "30d narrative mentions 岗位链接."
@@ -102,6 +118,47 @@ def test_validate_market_intelligence_report_rejects_unanchored_evidence():
 
     with pytest.raises(MarketIntelligenceReportError, match="evidence"):
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_rejects_empty_perspective_evidence():
+    report = _valid_report()
+    report["perspectives"][0]["evidence"] = []
+
+    with pytest.raises(MarketIntelligenceReportError, match="evidence"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_rejects_empty_trend_evidence():
+    report = _valid_report()
+    report["trend_cards"][0]["evidence"] = []
+
+    with pytest.raises(MarketIntelligenceReportError, match="evidence"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_rejects_empty_trend_cards():
+    report = _valid_report()
+    report["trend_cards"] = []
+
+    with pytest.raises(MarketIntelligenceReportError, match="trend_cards"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_uses_boundaries_for_short_ascii_terms():
+    for evidence in ["plain signal", "ongoing hiring", "throughput hiring"]:
+        report = _valid_report()
+        report["perspectives"][0]["evidence"] = [evidence]
+
+        with pytest.raises(MarketIntelligenceReportError, match="evidence"):
+            validate_market_intelligence_report(report, allowed_terms={"AI", "Go", "HR"})
+
+    for evidence in ["AI signal", "Go hiring", "HR hiring"]:
+        report = _valid_report()
+        for perspective in report["perspectives"]:
+            perspective["evidence"] = [evidence]
+        report["trend_cards"][0]["evidence"] = [evidence]
+
+        validate_market_intelligence_report(report, allowed_terms={"AI", "Go", "HR"})
 
 
 def test_parse_market_intelligence_report_accepts_code_fence():
@@ -168,6 +225,13 @@ def test_build_market_intelligence_system_prompt_contains_quality_gate_instructi
     assert "30d" in prompt
     assert "90d" in prompt
     assert "primary judgment" in prompt
+    for lens in ["industry", "product_business", "organization_hiring"]:
+        assert lens in prompt
+    for enum_value in ["rising", "cooling", "shifting", "stable", "emerging"]:
+        assert enum_value in prompt
+    assert "watchlist max 3" in prompt
+    assert "trend cards max 4" in prompt
+    assert "representative sample company/title/domain" in prompt
 
 
 def test_build_market_intelligence_user_prompt_preserves_non_ascii_payload():
@@ -188,6 +252,23 @@ def test_generate_market_report_returns_rule_fallback_when_llm_disabled(monkeypa
     monkeypatch.setattr(market_intelligence_report, "should_use_llm", lambda: False)
 
     report = generate_market_report({})
+
+    validate_market_intelligence_report(report, allowed_terms=set())
+
+
+def test_generate_market_report_returns_rule_fallback_when_llm_has_no_anchors(monkeypatch):
+    monkeypatch.setattr(market_intelligence_report, "should_use_llm", lambda: True)
+
+    def fake_request_structured_json(messages):
+        raise AssertionError("LLM should not be called without representative sample anchors")
+
+    monkeypatch.setattr(
+        market_intelligence_report,
+        "request_structured_json",
+        fake_request_structured_json,
+    )
+
+    report = generate_market_report({"representative_samples": []})
 
     validate_market_intelligence_report(report, allowed_terms=set())
 
