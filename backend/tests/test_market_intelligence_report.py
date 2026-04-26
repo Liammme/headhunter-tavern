@@ -83,6 +83,15 @@ def test_validate_market_intelligence_report_rejects_english_source_or_link_lang
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
+def test_validate_market_intelligence_report_allows_non_leakage_source_or_link_words():
+    report = _valid_report()
+    report["narrative"] = (
+        "30d resource planning mentions open-source tooling and LinkedIn visibility."
+    )
+
+    validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
 def test_validate_market_intelligence_report_rejects_job_link_language():
     report = _valid_report()
     report["narrative"] = "30d narrative mentions 岗位链接."

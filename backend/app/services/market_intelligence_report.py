@@ -9,22 +9,20 @@ CONFIDENCE_VALUES = {"low", "medium", "high"}
 PERSPECTIVE_LENSES = {"industry", "product_business", "organization_hiring"}
 TREND_DIRECTIONS = {"rising", "cooling", "shifting", "stable", "emerging"}
 TREND_TIME_HORIZONS = {"7d", "30d", "90d"}
-BANNED_PHRASES = (
-    "BD",
+BANNED_DIRECT_PHRASES = (
     "猎头",
     "赏金",
     "认领",
     "客户开发",
     "岗位来源",
     "岗位链接",
-    "source",
-    "link",
     "canonical_url",
     "source_name",
     "根据数据分析可得",
     "综合来看",
     "建议持续关注",
 )
+BANNED_TOKEN_TERMS = ("bd", "source", "link")
 
 
 class MarketIntelligenceReportError(Exception):
@@ -209,9 +207,12 @@ def _allowed_terms(signal_payload: dict) -> set[str]:
 def _reject_banned_phrases(payload: dict) -> None:
     serialized = json.dumps(payload, ensure_ascii=False)
     normalized = serialized.lower()
-    for phrase in BANNED_PHRASES:
+    for phrase in BANNED_DIRECT_PHRASES:
         if phrase.lower() in normalized:
             raise MarketIntelligenceReportError(f"report contains banned phrase: {phrase}")
+    for term in BANNED_TOKEN_TERMS:
+        if _contains_ascii_token(normalized, term):
+            raise MarketIntelligenceReportError(f"report contains banned phrase: {term}")
 
 
 def _validate_evidence_terms(evidence: list[str], allowed_terms: set[str]) -> None:
@@ -227,8 +228,12 @@ def _evidence_contains_term(evidence: str, term: str) -> bool:
     normalized_term = term.lower()
     normalized_evidence = evidence.lower()
     if re.fullmatch(r"[a-z0-9]{1,3}", normalized_term):
-        return re.search(rf"\b{re.escape(normalized_term)}\b", normalized_evidence) is not None
+        return _contains_ascii_token(normalized_evidence, normalized_term)
     return normalized_term in normalized_evidence
+
+
+def _contains_ascii_token(text: str, token: str) -> bool:
+    return re.search(rf"(?<![a-z0-9-]){re.escape(token)}(?![a-z0-9-])", text) is not None
 
 
 def _require_dict(payload: dict, field: str) -> dict:
