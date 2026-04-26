@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.services.crawl_trigger_service import trigger_crawl
 from app.services.home_query_service import get_home_payload
+from app.services.market_intelligence_snapshot_service import generate_daily_market_intelligence_snapshot
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,16 @@ def run_daily_bounty_generation(
         crawl_result = trigger_crawl(db)
         errors = list(crawl_result.get("errors") or [])
         status = "completed_with_errors" if errors else "completed"
+        try:
+            snapshot_result = generate_daily_market_intelligence_snapshot(db)
+            if snapshot_result.get("status") == "failed":
+                errors.append(f"market_intelligence: {snapshot_result.get('error') or 'unknown error'}")
+                if status == "completed":
+                    status = "completed_with_errors"
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"market_intelligence: {exc}")
+            if status == "completed":
+                status = "completed_with_errors"
     except Exception as exc:  # noqa: BLE001
         errors = [f"daily_bounty: {exc}"]
         status = "failed"

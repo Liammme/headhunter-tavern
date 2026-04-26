@@ -23,6 +23,8 @@ def _home_payload(today_companies):
 
 
 def test_run_daily_bounty_generation_returns_crawl_and_today_summary(db_session, monkeypatch):
+    snapshot_calls = []
+
     def fake_trigger_crawl(db):
         assert db is db_session
         return {
@@ -42,8 +44,18 @@ def test_run_daily_bounty_generation_returns_crawl_and_today_summary(db_session,
             ]
         )
 
+    def fake_generate_daily_market_intelligence_snapshot(db):
+        assert db is db_session
+        snapshot_calls.append(db)
+        return {"status": "success", "snapshot_id": 1}
+
     monkeypatch.setattr("app.services.daily_bounty_service.trigger_crawl", fake_trigger_crawl)
     monkeypatch.setattr("app.services.daily_bounty_service.get_home_payload", fake_get_home_payload)
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        fake_generate_daily_market_intelligence_snapshot,
+        raising=False,
+    )
 
     summary = run_daily_bounty_generation(
         db_session,
@@ -61,6 +73,7 @@ def test_run_daily_bounty_generation_returns_crawl_and_today_summary(db_session,
         "today_company_count": 2,
         "today_job_count": 3,
     }
+    assert snapshot_calls == [db_session]
 
 
 def test_run_daily_bounty_generation_keeps_partial_failures_observable(db_session, monkeypatch):
@@ -78,6 +91,11 @@ def test_run_daily_bounty_generation_keeps_partial_failures_observable(db_sessio
         "app.services.daily_bounty_service.get_home_payload",
         lambda db: _home_payload([{"company": "OpenGradient", "total_jobs": 2, "jobs": [{}, {}]}]),
     )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        lambda db: {"status": "success", "snapshot_id": 1},
+        raising=False,
+    )
 
     summary = run_daily_bounty_generation(
         db_session,
@@ -91,11 +109,90 @@ def test_run_daily_bounty_generation_keeps_partial_failures_observable(db_sessio
     assert summary["today_job_count"] == 2
 
 
+def test_run_daily_bounty_generation_reports_market_snapshot_failure(db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.trigger_crawl",
+        lambda db: {
+            "status": "triggered",
+            "fetched_jobs": 2,
+            "new_jobs": 2,
+            "source_stats": {"greenhouse": 2},
+            "errors": [],
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        lambda db: {"status": "failed", "error": "model timed out"},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.get_home_payload",
+        lambda db: _home_payload([{"company": "OpenGradient", "total_jobs": 2, "jobs": [{}, {}]}]),
+    )
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 2)),
+    )
+
+    assert summary["status"] == "completed_with_errors"
+    assert summary["errors"] == ["market_intelligence: model timed out"]
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 2
+
+
+def test_run_daily_bounty_generation_reports_market_snapshot_exception(db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.trigger_crawl",
+        lambda db: {
+            "status": "triggered",
+            "fetched_jobs": 2,
+            "new_jobs": 2,
+            "source_stats": {"greenhouse": 2},
+            "errors": [],
+        },
+    )
+
+    def raise_snapshot_error(db):
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        raise_snapshot_error,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.get_home_payload",
+        lambda db: _home_payload([{"company": "OpenGradient", "total_jobs": 2, "jobs": [{}, {}]}]),
+    )
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 2)),
+    )
+
+    assert summary["status"] == "completed_with_errors"
+    assert summary["errors"] == ["market_intelligence: provider unavailable"]
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 2
+
+
 def test_run_daily_bounty_generation_reports_failure_without_hiding_existing_home(db_session, monkeypatch):
+    snapshot_calls = []
+
     def fake_trigger_crawl(db):
         raise RuntimeError("network unavailable")
 
+    def fake_generate_daily_market_intelligence_snapshot(db):
+        snapshot_calls.append(db)
+        return {"status": "success", "snapshot_id": 1}
+
     monkeypatch.setattr("app.services.daily_bounty_service.trigger_crawl", fake_trigger_crawl)
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        fake_generate_daily_market_intelligence_snapshot,
+        raising=False,
+    )
     monkeypatch.setattr(
         "app.services.daily_bounty_service.get_home_payload",
         lambda db: _home_payload([{"company": "ExistingCo", "total_jobs": 4, "jobs": [{}, {}, {}, {}]}]),
@@ -113,3 +210,4 @@ def test_run_daily_bounty_generation_reports_failure_without_hiding_existing_hom
     assert summary["errors"] == ["daily_bounty: network unavailable"]
     assert summary["today_company_count"] == 1
     assert summary["today_job_count"] == 4
+    assert snapshot_calls == []
