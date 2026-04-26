@@ -111,18 +111,47 @@ curl https://api.talentsignal.cloud/health
 2. 没有把 `.env`、密钥、数据库密码提交到 Git
 3. 没有改坏 `deploy/` 模板和路径假设
 
-### 4.2 拉新代码
+### 4.2 推荐方式：执行后端部署脚本
+
+代码已经合并并 push 到 `master` 后，优先用脚本发后端：
 
 ```bash
-sudo -u bounty -H bash
+ssh deploy@43.163.127.112
+bash /opt/bounty-pool/app/deploy/backend-deploy.sh
+```
+
+脚本会执行：
+
+1. 确认 `/opt/bounty-pool/app` 是 Git safe directory
+2. 检查 tracked 文件是否有本地改动
+3. 拉取 `origin/master`
+4. 重启 `bounty-pool`
+5. 验证本机和公网 `/health`
+
+脚本不会执行：
+
+1. 安装 Python 依赖
+2. 数据库迁移
+3. 修改 `.env`
+4. 修改 nginx、cron 或 systemd 配置
+
+如果本次后端依赖、数据库、nginx、cron 或 systemd 有变化，不要只跑脚本，先按对应变更类型做额外检查。
+
+### 4.3 手动方式：拉新代码
+
+```bash
 cd /opt/bounty-pool/app
-git fetch --all
-git pull --ff-only
+git config --global --add safe.directory /opt/bounty-pool/app
+git status --short --branch
+git fetch origin
+git checkout master
+git pull --ff-only origin master
+git rev-parse HEAD
 ```
 
 如果线上不是直接跟主分支，要按实际分支替换。
 
-### 4.3 更新依赖
+### 4.4 更新依赖
 
 如果本次有 Python 依赖变化，执行：
 
@@ -132,22 +161,23 @@ git pull --ff-only
 
 如果没有依赖变化，也可以跳过。
 
-### 4.4 重启服务
+### 4.5 重启服务
 
 ```bash
+cd /opt/bounty-pool/app/backend
 sudo systemctl restart bounty-pool
 sudo systemctl status bounty-pool --no-pager
 journalctl -u bounty-pool -n 100 --no-pager
 ```
 
-### 4.5 发版后验收
+### 4.6 发版后验收
 
 至少做这三步：
 
 ```bash
 curl http://127.0.0.1:8000/health
 curl https://api.talentsignal.cloud/health
-tail -n 50 /var/log/bounty-pool/daily-bounty.log
+curl https://api.talentsignal.cloud/api/v1/home
 ```
 
 再打开前端确认首页接口可用。

@@ -9,6 +9,8 @@ This directory contains the minimum production artifacts for the recommended bac
   - Proxies `api.your-domain.com` to the local FastAPI process
 - `cron/daily-bounty.cron`
   - Runs `python -m app.cli.daily_bounty` every day at 08:00
+- `backend-deploy.sh`
+  - Pulls the latest `master`, restarts the backend service, and runs health checks
 - `tencent-cloud-postgres.md`
   - Beginner-friendly deployment guide for Tencent Cloud CVM + Postgres + systemd + nginx + cron
 - `ops-runbook.md`
@@ -20,6 +22,14 @@ Recommended usage order:
 2. Copy `systemd/bounty-pool.service` to `/etc/systemd/system/` and adjust paths.
 3. Copy `nginx/bounty-pool.conf` to `/etc/nginx/sites-available/` and adjust the domain.
 4. Install `cron/daily-bounty.cron` after `daily_bounty` has been verified manually once.
-5. Use `ops-runbook.md` as the default manual for restarts, log checks, daily inspection, and release steps.
+5. Use `backend-deploy.sh` for routine backend releases after code is merged to `master`.
+6. Use `ops-runbook.md` as the default manual for restarts, log checks, daily inspection, and release steps.
+
+Routine backend release:
+
+```bash
+ssh deploy@43.163.127.112
+bash /opt/bounty-pool/app/deploy/backend-deploy.sh
+```
 
 Adjust paths, domain names, database credentials, and API keys before using them on the server.
