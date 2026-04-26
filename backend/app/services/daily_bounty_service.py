@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -8,6 +9,21 @@ from sqlalchemy.orm import Session
 from app.services.crawl_trigger_service import trigger_crawl
 from app.services.home_query_service import get_home_payload
 from app.services.market_intelligence_snapshot_service import generate_daily_market_intelligence_snapshot
+
+
+DB_CREDENTIAL_URL_PATTERN = re.compile(
+    r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
+    re.IGNORECASE,
+)
+OPENAI_KEY_PATTERN = re.compile(r"sk-[^\s,;]+", re.IGNORECASE)
+KEY_VALUE_SECRET_PATTERN = re.compile(
+    r"\b([a-z0-9_]*(?:api_key|token|password))\s*([=:])\s*([^\s,;]+)",
+    re.IGNORECASE,
+)
+AUTHORIZATION_BEARER_PATTERN = re.compile(
+    r"\bAuthorization\s*:\s*Bearer\s+[^\s,;]+",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -43,11 +59,13 @@ def run_daily_bounty_generation(
         try:
             snapshot_result = generate_daily_market_intelligence_snapshot(db)
             if snapshot_result.get("status") == "failed":
-                errors.append(f"market_intelligence: {snapshot_result.get('error') or 'unknown error'}")
+                error = _sanitize_error_message(snapshot_result.get("error") or "unknown error")
+                errors.append(f"market_intelligence: {error}")
                 if status == "completed":
                     status = "completed_with_errors"
         except Exception as exc:  # noqa: BLE001
-            errors.append(f"market_intelligence: {exc}")
+            db.rollback()
+            errors.append(f"market_intelligence: {_sanitize_error_message(exc)}")
             if status == "completed":
                 status = "completed_with_errors"
     except Exception as exc:  # noqa: BLE001
@@ -93,3 +111,19 @@ def _company_job_count(company: dict[str, Any]) -> int:
 
 def _isoformat(value: datetime) -> str:
     return value.replace(microsecond=0).isoformat()
+
+
+def _sanitize_error_message(error: Any) -> str:
+    message = str(error) or error.__class__.__name__
+    message = DB_CREDENTIAL_URL_PATTERN.sub("[redacted]", message)
+    message = AUTHORIZATION_BEARER_PATTERN.sub("Authorization: Bearer [redacted]", message)
+    message = OPENAI_KEY_PATTERN.sub("[redacted]", message)
+    message = KEY_VALUE_SECRET_PATTERN.sub(_redact_key_value_secret, message)
+    return message
+
+
+def _redact_key_value_secret(match: re.Match) -> str:
+    separator = match.group(2)
+    if separator == ":":
+        return f"{match.group(1)}: [redacted]"
+    return f"{match.group(1)}=[redacted]"
