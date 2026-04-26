@@ -4,6 +4,7 @@ from app.services import market_intelligence_report
 from app.services.market_intelligence_report import (
     MarketIntelligenceReportError,
     build_market_intelligence_system_prompt,
+    build_market_intelligence_user_prompt,
     build_rule_market_report,
     generate_market_report,
     parse_market_intelligence_report,
@@ -74,6 +75,19 @@ def test_validate_market_intelligence_report_requires_all_perspectives():
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
+def test_validate_market_intelligence_report_allows_extra_perspective_lens():
+    report = _valid_report()
+    report["perspectives"].append(
+        {
+            "lens": "capital_market",
+            "judgment": "Funding context can be watched separately from hiring demand.",
+            "evidence": ["30d signal"],
+        }
+    )
+
+    validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
 def test_parse_market_intelligence_report_accepts_code_fence():
     content = """```json
 {"headline": "AI infra", "narrative": "30d and 90d signal"}
@@ -126,6 +140,14 @@ def test_build_market_intelligence_system_prompt_contains_quality_gate_instructi
     assert "30d" in prompt
     assert "90d" in prompt
     assert "primary judgment" in prompt
+
+
+def test_build_market_intelligence_user_prompt_preserves_non_ascii_payload():
+    prompt = build_market_intelligence_user_prompt({"主题": "AI 基础设施"})
+
+    assert "主题" in prompt
+    assert "AI 基础设施" in prompt
+    assert "\\u4e3b\\u9898" not in prompt
 
 
 def test_build_rule_market_report_passes_validation():

@@ -103,7 +103,7 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
         lenses.add(lens)
         _require_str(item, "judgment")
         _require_str_list(item, "evidence")
-    if lenses != PERSPECTIVE_LENSES:
+    if not PERSPECTIVE_LENSES.issubset(lenses):
         raise MarketIntelligenceReportError("perspectives must include all required lenses")
 
     trend_cards = _require_list(payload, "trend_cards")
