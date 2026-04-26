@@ -23,7 +23,8 @@ BANNED_DIRECT_PHRASES = (
     "建议持续关注",
 )
 BANNED_TOKEN_TERMS = ("bd", "source", "link", "bounty", "bounties", "claim", "claims", "claimed")
-BANNED_RIGHT_HYPHEN_TOKEN_TERMS = {"bounty", "bounties", "claim", "claims", "claimed"}
+BANNED_RIGHT_HYPHEN_TOKEN_TERMS = {"bd", "source", "link"}
+BANNED_LEFT_OR_RIGHT_HYPHEN_TOKEN_TERMS = {"bounty", "bounties", "claim", "claims", "claimed"}
 
 
 class MarketIntelligenceReportError(Exception):
@@ -257,6 +258,8 @@ def _contains_ascii_token(text: str, token: str) -> bool:
 
 
 def _contains_banned_token(text: str, token: str) -> bool:
+    if token in BANNED_LEFT_OR_RIGHT_HYPHEN_TOKEN_TERMS:
+        return re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", text) is not None
     if token in BANNED_RIGHT_HYPHEN_TOKEN_TERMS:
         return re.search(rf"(?<![a-z0-9-]){re.escape(token)}(?![a-z0-9])", text) is not None
     return _contains_ascii_token(text, token)

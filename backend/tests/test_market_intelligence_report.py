@@ -102,7 +102,15 @@ def test_validate_market_intelligence_report_rejects_english_bounty_claim_terms(
 
 
 def test_validate_market_intelligence_report_rejects_hyphenated_banned_terms_everywhere():
-    for term in ["bounty-grade", "claim-status", "claimed-role"]:
+    for term in [
+        "bounty-grade",
+        "claim-status",
+        "claimed-role",
+        "BD-led",
+        "source-led",
+        "link-based",
+        "customer-claim",
+    ]:
         for field in ["narrative", "evidence", "watchlist"]:
             report = _valid_report()
             if field == "narrative":
