@@ -49,9 +49,6 @@ export default function IntelligencePanel({
                 onClick={toggleIntelMode}
                 onKeyDown={handleIntelModeKeyDown}
               >
-                <div className="intel-paper-label-row">
-                  <p className="eyebrow intel-paper-label">猎场控制台</p>
-                </div>
                 <h2 id="intelligence-panel-title" className="intel-preview">
                   {intelligence.headline}
                 </h2>
