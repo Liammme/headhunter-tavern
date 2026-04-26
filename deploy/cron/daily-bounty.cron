@@ -1,1 +1,1 @@
-0 8 * * * cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.daily_bounty >> /var/log/bounty-pool/daily-bounty.log 2>&1
+0 8,14 * * * cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.daily_bounty >> /var/log/bounty-pool/daily-bounty.log 2>&1

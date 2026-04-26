@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from html import unescape
+import re
 from urllib.parse import urljoin
 
 from app.crawlers.base import NormalizedJob
@@ -34,6 +35,7 @@ class Web3CareerAdapter(SourceAdapter):
         html = fetch_html(listing_url)
         soup, _ = soup_links(html)
         jobs: list[NormalizedJob] = []
+        listing_links = _build_listing_links(soup)
 
         for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
             raw = script.get_text(strip=True)
@@ -82,7 +84,7 @@ class Web3CareerAdapter(SourceAdapter):
                 if canonical_url:
                     canonical_url = urljoin("https://web3.career", canonical_url)
                 else:
-                    canonical_url = "https://web3.career/"
+                    canonical_url = _resolve_listing_url(listing_links, title=title, company=company)
 
                 jobs.append(
                     NormalizedJob(
@@ -100,3 +102,35 @@ class Web3CareerAdapter(SourceAdapter):
                 )
 
         return jobs[:80]
+
+
+def _build_listing_links(soup) -> list[tuple[str, str]]:
+    links: list[tuple[str, str]] = []
+    for anchor in soup.select("a[href]"):
+        href = str(anchor.get("href") or "").strip()
+        if not re.search(r"/\d+$", href):
+            continue
+
+        text = " ".join(anchor.get_text(" ", strip=True).split())
+        if not text:
+            continue
+
+        canonical_url = urljoin("https://web3.career", href)
+        links.append((_normalize_listing_text(text), canonical_url))
+    return links
+
+
+def _resolve_listing_url(listing_links: list[tuple[str, str]], *, title: str, company: str) -> str:
+    normalized_title = _normalize_listing_text(title)
+    normalized_company = _normalize_listing_text(company)
+    for text, canonical_url in listing_links:
+        if not text.startswith(normalized_title):
+            continue
+        if normalized_company and normalized_company not in text:
+            continue
+        return canonical_url
+    return "https://web3.career/"
+
+
+def _normalize_listing_text(value: str) -> str:
+    return " ".join(value.lower().split())
