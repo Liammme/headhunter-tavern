@@ -63,3 +63,10 @@ def test_settings_support_estimated_bounty_rollout_flags():
     assert rollout_settings.bounty_pool_estimated_bounty_read_enabled is True
     assert rollout_settings.bounty_pool_estimated_bounty_startup_audit_enabled is True
     assert rollout_settings.bounty_pool_estimated_bounty_audit_window_days == 21
+
+
+def test_estimated_bounty_read_and_write_are_enabled_by_default():
+    rollout_settings = Settings(_env_file=None)
+
+    assert rollout_settings.bounty_pool_estimated_bounty_live_write_enabled is True
+    assert rollout_settings.bounty_pool_estimated_bounty_read_enabled is True

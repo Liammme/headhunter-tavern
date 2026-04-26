@@ -251,21 +251,21 @@ def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present
     ]
     jobs[0].signal_tags.update(
         {
-            "estimated_bounty_amount": 1500,
-            "estimated_bounty_label": "¥1,500",
-            "estimated_bounty_min": 1200,
-            "estimated_bounty_max": 1800,
-            "estimated_bounty_rate_pct": 12,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
+            "estimated_bounty_amount": 12600,
+            "estimated_bounty_label": "¥7,200-¥18,000",
+            "estimated_bounty_min": 7200,
+            "estimated_bounty_max": 18000,
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
+            "estimated_bounty_confidence": "high",
         }
     )
 
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount == 1500
-    assert company.estimated_bounty_label == "¥1,500"
+    assert company.estimated_bounty_amount == 12600
+    assert company.estimated_bounty_label == "¥7,200-¥18,000"
 
 
 def test_build_day_payloads_keeps_persisted_estimated_bounty_values(monkeypatch):
@@ -282,21 +282,21 @@ def test_build_day_payloads_keeps_persisted_estimated_bounty_values(monkeypatch)
     ]
     jobs[0].signal_tags.update(
         {
-            "estimated_bounty_amount": 150000,
-            "estimated_bounty_label": "¥120,000-¥180,000",
-            "estimated_bounty_min": 120000,
-            "estimated_bounty_max": 180000,
-            "estimated_bounty_rate_pct": 20,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
+            "estimated_bounty_amount": 12600,
+            "estimated_bounty_label": "¥7,200-¥18,000",
+            "estimated_bounty_min": 7200,
+            "estimated_bounty_max": 18000,
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
+            "estimated_bounty_confidence": "high",
         }
     )
 
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount == 150000
-    assert company.estimated_bounty_label == "¥120,000-¥180,000"
+    assert company.estimated_bounty_amount == 12600
+    assert company.estimated_bounty_label == "¥7,200-¥18,000"
 
 
 def test_build_day_payloads_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
@@ -356,24 +356,24 @@ def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card(monkey
     ]
     jobs[0].signal_tags.update(
         {
-            "estimated_bounty_amount": 24000,
-            "estimated_bounty_label": "¥19,200-¥28,800",
-            "estimated_bounty_min": 19200,
-            "estimated_bounty_max": 28800,
-            "estimated_bounty_rate_pct": 12,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
+            "estimated_bounty_amount": 6000,
+            "estimated_bounty_label": "¥4,000-¥8,000",
+            "estimated_bounty_min": 4000,
+            "estimated_bounty_max": 8000,
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
+            "estimated_bounty_confidence": "high",
         }
     )
     jobs[1].signal_tags.update(
         {
-            "estimated_bounty_amount": 150000,
-            "estimated_bounty_label": "¥120,000-¥180,000",
-            "estimated_bounty_min": 120000,
-            "estimated_bounty_max": 180000,
-            "estimated_bounty_rate_pct": 20,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
+            "estimated_bounty_amount": 12600,
+            "estimated_bounty_label": "¥7,200-¥18,000",
+            "estimated_bounty_min": 7200,
+            "estimated_bounty_max": 18000,
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
+            "estimated_bounty_confidence": "high",
         }
     )
 
@@ -381,8 +381,8 @@ def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card(monkey
 
     company = payloads[0].companies[0]
     assert [job.id for job in company.jobs] == [2, 1]
-    assert company.estimated_bounty_amount == 150000
-    assert company.estimated_bounty_label == "¥120,000-¥180,000"
+    assert company.estimated_bounty_amount == 12600
+    assert company.estimated_bounty_label == "¥7,200-¥18,000"
 
 
 def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():

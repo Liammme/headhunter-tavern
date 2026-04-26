@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     database_url: str = f"sqlite+pysqlite:///{DEFAULT_SQLITE_PATH}"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
-    bounty_pool_estimated_bounty_live_write_enabled: bool = False
-    bounty_pool_estimated_bounty_read_enabled: bool = False
+    bounty_pool_estimated_bounty_live_write_enabled: bool = True
+    bounty_pool_estimated_bounty_read_enabled: bool = True
     bounty_pool_estimated_bounty_startup_audit_enabled: bool = False
     bounty_pool_estimated_bounty_audit_window_days: int = 14
     bounty_pool_intelligence_llm_enabled: bool = True

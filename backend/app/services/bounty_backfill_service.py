@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Job
 from app.services.bounty_estimation import (
+    ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS,
     build_bounty_estimate_input_from_facts,
     classify_bounty_signal_tags,
     estimate_bounty,
@@ -23,6 +24,16 @@ def backfill_estimated_bounties(db: Session) -> dict[str, int]:
 
         facts = extract_job_facts(_build_standardized_job_input(job), now=job.collected_at)
         estimate = estimate_bounty(build_bounty_estimate_input_from_facts(facts))
+        if estimate is None:
+            if not any(key in signal_tags for key in ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS):
+                skipped_jobs += 1
+                continue
+            for key in ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS:
+                signal_tags.pop(key, None)
+            job.signal_tags = signal_tags
+            updated_jobs += 1
+            continue
+
         signal_tags.update(estimate.to_signal_tags())
         job.signal_tags = signal_tags
         updated_jobs += 1

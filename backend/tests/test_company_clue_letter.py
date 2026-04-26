@@ -194,13 +194,13 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
                 "display_tags": ["AI"],
                 "company_url": "https://opengradient.ai",
                 "apply_url": "https://opengradient.ai/careers",
-                "estimated_bounty_amount": 1500,
-                "estimated_bounty_label": "¥1,500",
-                "estimated_bounty_min": 1200,
-                "estimated_bounty_max": 1800,
-                "estimated_bounty_rate_pct": 12,
-                "estimated_bounty_rule_version": "bounty-rule-v1",
-                "estimated_bounty_confidence": "medium",
+                "estimated_bounty_amount": 12600,
+                "estimated_bounty_label": "¥7,200-¥18,000",
+                "estimated_bounty_min": 7200,
+                "estimated_bounty_max": 18000,
+                "estimated_bounty_rate_pct": 10,
+                "estimated_bounty_rule_version": "bounty-rule-v2",
+                "estimated_bounty_confidence": "high",
             },
         )
     )
@@ -233,7 +233,7 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     llm_input = captured_context[0]
     assert set(llm_input.keys()) == {"company", "window", "summary", "role_clusters", "evidence_cards", "entry_points"}
     assert llm_input["window"]["window_days"] == 14
-    assert llm_input["summary"]["estimated_bounty"]["amount"] == 1500
+    assert llm_input["summary"]["estimated_bounty"]["amount"] == 12600
     assert llm_input["evidence_cards"][0]["entry_points"]["company_url"] == "https://opengradient.ai"
     assert llm_input["evidence_cards"][0]["entry_points"]["hiring_page"] == "https://opengradient.ai/careers"
     assert llm_input["evidence_cards"][0]["entry_points"]["email"] == "careers@opengradient.ai"
@@ -253,13 +253,13 @@ def test_build_company_clue_context_uses_first_complete_estimate_in_summary(monk
             signal_tags={
                 "display_tags": ["运营"],
                 "company_url": "https://opengradient.ai",
-                "estimated_bounty_amount": 24000,
-                "estimated_bounty_label": "¥19,200-¥28,800",
-                "estimated_bounty_min": 19200,
-                "estimated_bounty_max": 28800,
-                "estimated_bounty_rate_pct": 12,
-                "estimated_bounty_rule_version": "bounty-rule-v1",
-                "estimated_bounty_confidence": "medium",
+                "estimated_bounty_amount": 6000,
+                "estimated_bounty_label": "¥4,000-¥8,000",
+                "estimated_bounty_min": 4000,
+                "estimated_bounty_max": 8000,
+                "estimated_bounty_rate_pct": 10,
+                "estimated_bounty_rule_version": "bounty-rule-v2",
+                "estimated_bounty_confidence": "high",
             },
         ),
         build_job(
@@ -271,21 +271,21 @@ def test_build_company_clue_context_uses_first_complete_estimate_in_summary(monk
             signal_tags={
                 "display_tags": ["AI"],
                 "company_url": "https://opengradient.ai",
-                "estimated_bounty_amount": 150000,
-                "estimated_bounty_label": "¥120,000-¥180,000",
-                "estimated_bounty_min": 120000,
-                "estimated_bounty_max": 180000,
-                "estimated_bounty_rate_pct": 20,
-                "estimated_bounty_rule_version": "bounty-rule-v1",
-                "estimated_bounty_confidence": "medium",
+                "estimated_bounty_amount": 12600,
+                "estimated_bounty_label": "¥7,200-¥18,000",
+                "estimated_bounty_min": 7200,
+                "estimated_bounty_max": 18000,
+                "estimated_bounty_rate_pct": 10,
+                "estimated_bounty_rule_version": "bounty-rule-v2",
+                "estimated_bounty_confidence": "high",
             },
         ),
     ]
 
     llm_input = build_company_clue_context(company="OpenGradient", jobs=jobs, today=datetime(2026, 4, 23).date())
 
-    assert llm_input["summary"]["estimated_bounty"]["amount"] == 24000
-    assert llm_input["summary"]["estimated_bounty"]["label"] == "¥19,200-¥28,800"
+    assert llm_input["summary"]["estimated_bounty"]["amount"] == 6000
+    assert llm_input["summary"]["estimated_bounty"]["label"] == "¥4,000-¥8,000"
 
 
 def test_build_company_clue_context_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
@@ -364,7 +364,7 @@ def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_sessi
     assert captured_context[0]["summary"]["estimated_bounty"] is None
 
 
-def test_generate_company_clue_letter_returns_failure_when_llm_generation_fails(db_session, monkeypatch):
+def test_generate_company_clue_letter_falls_back_to_rule_clue_when_llm_generation_fails(db_session, monkeypatch):
     db_session.add(build_job(company="OpenGradient", title="Principal AI Engineer", canonical_url="https://jobs.example.com/opengradient/1"))
     db_session.commit()
 
@@ -376,14 +376,15 @@ def test_generate_company_clue_letter_returns_failure_when_llm_generation_fails(
 
     result = generate_company_clue_letter(db_session, company="OpenGradient")
 
-    assert result["status"] == "failure"
+    assert result["status"] == "success"
     assert result["company"] == "OpenGradient"
-    assert result["sections"] == []
-    assert result["error_message"] == "Company clue generation failed"
-    assert "失败" in result["narrative"]
+    assert [section["key"] for section in result["sections"]] == ["clue_1", "clue_2", "clue_3"]
+    assert result["error_message"] is None
+    assert "Principal AI Engineer" in result["narrative"]
+    assert "https://jobs.example.com/opengradient/1" in result["sections"][2]["content"]
 
 
-def test_generate_company_clue_letter_does_not_rewrite_internal_parser_errors(db_session, monkeypatch):
+def test_generate_company_clue_letter_falls_back_when_internal_parser_errors(db_session, monkeypatch):
     db_session.add(build_job(company="OpenGradient", title="Principal AI Engineer", canonical_url="https://jobs.example.com/opengradient/1"))
     db_session.commit()
 
@@ -408,21 +409,23 @@ def test_generate_company_clue_letter_does_not_rewrite_internal_parser_errors(db
 
     result = generate_company_clue_letter(db_session, company="OpenGradient")
 
-    assert result["status"] == "failure"
-    assert result["error_message"] == "Company clue generation failed"
+    assert result["status"] == "success"
+    assert result["error_message"] is None
+    assert result["sections"]
     assert len(calls) == 1
 
 
-def test_generate_company_clue_letter_returns_failure_when_llm_is_unavailable(db_session, monkeypatch):
+def test_generate_company_clue_letter_uses_rule_clue_when_llm_is_unavailable(db_session, monkeypatch):
     db_session.add(build_job(company="OpenGradient", title="Principal AI Engineer", canonical_url="https://jobs.example.com/opengradient/1"))
     db_session.commit()
     monkeypatch.setattr("app.services.company_clue_letter._should_use_company_clue_llm", lambda: False)
 
     result = generate_company_clue_letter(db_session, company="OpenGradient")
 
-    assert result["status"] == "failure"
-    assert result["sections"] == []
-    assert result["error_message"] == "Company clue generation unavailable"
+    assert result["status"] == "success"
+    assert result["sections"]
+    assert result["error_message"] is None
+    assert "Principal AI Engineer" in result["narrative"]
 
 
 def test_generate_company_clue_letter_returns_failure_contract_when_company_missing(db_session):

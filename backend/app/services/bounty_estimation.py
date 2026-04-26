@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import Literal, Mapping, Protocol
 
 
-RULE_VERSION = "bounty-rule-v1"
+RULE_VERSION = "bounty-rule-v2"
+BD_FEE_SHARE_PCT = 10
+HEADHUNTER_FEE_RATE_RANGE = (20, 30)
 ESTIMATED_BOUNTY_SIGNAL_TAG_KEYS = (
     "estimated_bounty_amount",
     "estimated_bounty_label",
@@ -30,6 +32,7 @@ class BountyEstimateInput:
     compensation_signal: str
     company_signal: str
     time_pressure_signals: tuple[str, ...]
+    annual_salary_range: tuple[int, int] | None = None
 
 
 class SupportsBountyEstimateFacts(Protocol):
@@ -44,6 +47,7 @@ class SupportsBountyEstimateFacts(Protocol):
     compensation_signal: str
     company_signal: str
     time_pressure_signals: tuple[str, ...]
+    annual_salary_range: tuple[int, int] | None
 
 
 @dataclass(frozen=True)
@@ -96,105 +100,20 @@ class BountyEstimate:
         )
 
 
-DEFAULT_ANNUAL_SALARY_BANDS = {
-    "AI/算法": {
-        "none": (240_000, 360_000),
-        "senior": (360_000, 520_000),
-        "staff": (500_000, 720_000),
-        "principal": (600_000, 900_000),
-        "lead": (480_000, 680_000),
-        "architect": (550_000, 820_000),
-        "director": (700_000, 1_100_000),
-        "head": (780_000, 1_200_000),
-        "vp": (900_000, 1_500_000),
-        "founding": (650_000, 1_000_000),
-    },
-    "技术": {
-        "none": (220_000, 320_000),
-        "senior": (320_000, 460_000),
-        "staff": (460_000, 680_000),
-        "principal": (560_000, 820_000),
-        "lead": (420_000, 620_000),
-        "architect": (500_000, 760_000),
-        "director": (650_000, 980_000),
-        "head": (720_000, 1_080_000),
-        "vp": (850_000, 1_350_000),
-        "founding": (600_000, 900_000),
-    },
-    "数据": {
-        "none": (200_000, 300_000),
-        "senior": (300_000, 420_000),
-        "staff": (420_000, 600_000),
-        "principal": (520_000, 760_000),
-        "lead": (400_000, 560_000),
-        "architect": (460_000, 680_000),
-        "director": (600_000, 900_000),
-        "head": (680_000, 1_000_000),
-        "vp": (780_000, 1_200_000),
-        "founding": (560_000, 820_000),
-    },
-    "产品": {
-        "none": (220_000, 320_000),
-        "senior": (320_000, 460_000),
-        "staff": (420_000, 620_000),
-        "principal": (500_000, 760_000),
-        "lead": (420_000, 620_000),
-        "architect": (500_000, 760_000),
-        "director": (620_000, 920_000),
-        "head": (700_000, 1_000_000),
-        "vp": (820_000, 1_260_000),
-        "founding": (560_000, 820_000),
-    },
-    "增长": {
-        "none": (180_000, 260_000),
-        "senior": (260_000, 380_000),
-        "staff": (320_000, 480_000),
-        "principal": (380_000, 560_000),
-        "lead": (340_000, 500_000),
-        "architect": (380_000, 560_000),
-        "director": (480_000, 720_000),
-        "head": (560_000, 820_000),
-        "vp": (680_000, 1_000_000),
-        "founding": (420_000, 620_000),
-    },
-    "商务": {
-        "none": (180_000, 260_000),
-        "senior": (260_000, 380_000),
-        "staff": (320_000, 480_000),
-        "principal": (380_000, 560_000),
-        "lead": (340_000, 500_000),
-        "architect": (380_000, 560_000),
-        "director": (480_000, 720_000),
-        "head": (560_000, 820_000),
-        "vp": (680_000, 1_000_000),
-        "founding": (420_000, 620_000),
-    },
-    "运营": {
-        "none": (160_000, 240_000),
-        "senior": (220_000, 320_000),
-        "staff": (280_000, 400_000),
-        "principal": (320_000, 460_000),
-        "lead": (300_000, 440_000),
-        "architect": (320_000, 460_000),
-        "director": (420_000, 620_000),
-        "head": (500_000, 720_000),
-        "vp": (620_000, 920_000),
-        "founding": (360_000, 520_000),
-    },
-}
+def estimate_bounty(input: BountyEstimateInput) -> BountyEstimate | None:
+    if input.annual_salary_range is None:
+        return None
 
-
-def estimate_bounty(input: BountyEstimateInput) -> BountyEstimate:
-    annual_min, annual_max = _resolve_salary_band(input.category, input.seniority)
-    rate_pct = _resolve_fee_rate_pct(input)
-    min_amount = int(annual_min * rate_pct / 100)
-    max_amount = int(annual_max * rate_pct / 100)
+    annual_min, annual_max = _normalize_salary_range_for_estimation(input.annual_salary_range)
+    headhunter_min_pct, headhunter_max_pct = HEADHUNTER_FEE_RATE_RANGE
+    min_amount = int(annual_min * headhunter_min_pct / 100 * BD_FEE_SHARE_PCT / 100)
+    max_amount = int(annual_max * headhunter_max_pct / 100 * BD_FEE_SHARE_PCT / 100)
     amount = int((min_amount + max_amount) / 2)
     return BountyEstimate(
         amount=amount,
         min_amount=min_amount,
         max_amount=max_amount,
-        rate_pct=rate_pct,
+        rate_pct=BD_FEE_SHARE_PCT,
         label=f"¥{min_amount:,.0f}-¥{max_amount:,.0f}",
         confidence=_resolve_confidence(input.compensation_signal),
         rule_version=RULE_VERSION,
@@ -214,6 +133,7 @@ def build_bounty_estimate_input_from_facts(facts: SupportsBountyEstimateFacts) -
         compensation_signal=facts.compensation_signal,
         company_signal=facts.company_signal,
         time_pressure_signals=facts.time_pressure_signals,
+        annual_salary_range=facts.annual_salary_range,
     )
 
 
@@ -236,38 +156,22 @@ def read_bounty_estimate_from_signal_tags(signal_tags: Mapping[str, object] | No
         return None
     if estimate.min_amount > estimate.amount or estimate.amount > estimate.max_amount:
         return None
-    if estimate.rate_pct < 10 or estimate.rate_pct > 20:
+    if estimate.rate_pct != BD_FEE_SHARE_PCT:
         return None
     if estimate.confidence not in ALLOWED_BOUNTY_CONFIDENCE_VALUES:
         return None
     return estimate
 
 
-def _resolve_salary_band(category: str, seniority: str) -> tuple[int, int]:
-    category_bands = DEFAULT_ANNUAL_SALARY_BANDS.get(category) or DEFAULT_ANNUAL_SALARY_BANDS["技术"]
-    return category_bands.get(seniority) or category_bands["none"]
-
-
-def _resolve_fee_rate_pct(input: BountyEstimateInput) -> int:
-    rate = 12
-    if input.hard_to_fill:
-        rate += 3
-    if input.critical:
-        rate += 2
-    if input.role_complexity == "high":
-        rate += 1
-    if input.business_criticality == "high":
-        rate += 1
-    if input.urgent:
-        rate += 1
-    if "long_running" in input.time_pressure_signals:
-        rate += 1
-    if input.company_signal == "hot":
-        rate += 1
-    return max(10, min(rate, 20))
-
-
 def _resolve_confidence(compensation_signal: str) -> str:
     if compensation_signal == "strong":
         return "high"
     return "medium"
+
+
+def _normalize_salary_range_for_estimation(annual_salary_range: tuple[int, int]) -> tuple[int, int]:
+    annual_min, annual_max = annual_salary_range
+    if annual_min <= 0 < annual_max:
+        midpoint = int((annual_min + annual_max) / 2)
+        return (midpoint, midpoint)
+    return annual_min, annual_max

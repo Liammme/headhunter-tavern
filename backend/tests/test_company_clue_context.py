@@ -77,13 +77,13 @@ def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch)
                 "display_tags": ["AI", "Senior", "核心岗位"],
                 "company_url": "https://opengradient.ai",
                 "apply_url": "https://opengradient.ai/careers",
-                "estimated_bounty_amount": 150000,
-                "estimated_bounty_label": "¥120,000-¥180,000",
-                "estimated_bounty_min": 120000,
-                "estimated_bounty_max": 180000,
-                "estimated_bounty_rate_pct": 20,
-                "estimated_bounty_rule_version": "bounty-rule-v1",
-                "estimated_bounty_confidence": "medium",
+                "estimated_bounty_amount": 12600,
+                "estimated_bounty_label": "¥7,200-¥18,000",
+                "estimated_bounty_min": 7200,
+                "estimated_bounty_max": 18000,
+                "estimated_bounty_rate_pct": 10,
+                "estimated_bounty_rule_version": "bounty-rule-v2",
+                "estimated_bounty_confidence": "high",
             },
         )
     ]
@@ -96,7 +96,7 @@ def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch)
 
     assert context["window"]["window_days"] == 14
     assert context["summary"]["total_jobs"] == 1
-    assert context["summary"]["estimated_bounty"]["amount"] == 150000
+    assert context["summary"]["estimated_bounty"]["amount"] == 12600
     assert context["evidence_cards"][0]["title"] == "Principal AI Engineer"
     assert context["evidence_cards"][0]["entry_points"]["hiring_page"] == "https://opengradient.ai/careers"
     assert context["evidence_cards"][0]["evidence_snippets"]

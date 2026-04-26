@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+import re
 
 from app.crawlers.base import NormalizedJob
 from app.services.scoring import JobScoreInput, JobScoreV2Input
@@ -35,6 +36,7 @@ class JobFacts:
     compensation_signal: str
     company_signal: str
     time_pressure_signals: tuple[str, ...]
+    annual_salary_range: tuple[int, int] | None = None
 
 
 def standardize_job_input(job: NormalizedJob, *, now: datetime | None = None) -> StandardizedJobInput:
@@ -108,6 +110,7 @@ def extract_job_facts(job: StandardizedJobInput, *, now: datetime | None = None)
         compensation_signal=classify_compensation_signal(text),
         company_signal=classify_company_signal(domain_tag, text),
         time_pressure_signals=tuple(time_pressure_signals),
+        annual_salary_range=parse_annual_salary_range(text),
     )
 
 
@@ -271,9 +274,53 @@ def classify_business_criticality(text: str, *, category: str) -> str:
 
 
 def classify_compensation_signal(text: str) -> str:
+    if parse_annual_salary_range(text) is not None:
+        return "strong"
     if has_any_keyword(text, ("k/月", "k per month", "$", "usd", "rmb", "salary", "compensation")):
         return "strong"
     return "unknown"
+
+
+def parse_annual_salary_range(text: str) -> tuple[int, int] | None:
+    normalized = text.lower().replace(",", "")
+    monthly = _parse_salary_range(
+        normalized,
+        (
+            r"(?:¥|rmb|cny)?\s*(\d+(?:\.\d+)?)\s*k\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*k?\s*(?:/|per\s*)?(?:month|月|monthly)",
+            r"(?:salary\s*range[:：]?\s*)?(?:¥|rmb|cny)?\s*(\d+(?:\.\d+)?)\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*k\s*(?:/|per\s*)?(?:month|月|monthly)",
+        ),
+        multiplier=12_000,
+    )
+    if monthly is not None:
+        return monthly
+
+    annual = _parse_salary_range(
+        normalized,
+        (
+            r"(?:¥|rmb|cny)?\s*(\d+(?:\.\d+)?)\s*k\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*k?\s*(?:/|per\s*)?(?:year|annual|annually|年|yearly)",
+        ),
+        multiplier=1_000,
+    )
+    if annual is not None:
+        return annual
+
+    annual_wan = _parse_salary_range(
+        normalized,
+        (r"(?:年薪|annual\s+salary)\s*(?:¥|rmb|cny)?\s*(\d+(?:\.\d+)?)\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*万",),
+        multiplier=10_000,
+    )
+    return annual_wan
+
+
+def _parse_salary_range(text: str, patterns: tuple[str, ...], *, multiplier: int) -> tuple[int, int] | None:
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+        low = int(float(match.group(1)) * multiplier)
+        high = int(float(match.group(2)) * multiplier)
+        return (min(low, high), max(low, high))
+    return None
 
 
 def classify_company_signal(domain_tag: str, text: str) -> str:

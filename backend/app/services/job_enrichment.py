@@ -91,6 +91,9 @@ def _append_estimated_bounty_signal_tags(signal_tags: dict, facts: JobFacts) -> 
         logger.warning("Failed to estimate bounty for %s / %s", facts.company_signal, facts.category, exc_info=True)
         return
 
+    if bounty_estimate is None:
+        return
+
     signal_tags.update(bounty_estimate.to_signal_tags())
 
 

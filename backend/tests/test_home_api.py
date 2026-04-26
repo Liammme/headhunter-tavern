@@ -74,13 +74,13 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
         bounty_grade="medium",
         signal_tags={
             "display_tags": ["AI", "Senior", "核心岗位"],
-            "estimated_bounty_amount": 150000,
-            "estimated_bounty_label": "¥120,000-¥180,000",
-            "estimated_bounty_min": 120000,
-            "estimated_bounty_max": 180000,
-            "estimated_bounty_rate_pct": 20,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
+            "estimated_bounty_amount": 12600,
+            "estimated_bounty_label": "¥7,200-¥18,000",
+            "estimated_bounty_min": 7200,
+            "estimated_bounty_max": 18000,
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
+            "estimated_bounty_confidence": "high",
         },
     )
     db_session.add(job)
@@ -90,8 +90,8 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
 
     assert response.status_code == 200
     company = response.json()["days"][0]["companies"][0]
-    assert company["estimated_bounty_amount"] == 150000
-    assert company["estimated_bounty_label"] == "¥120,000-¥180,000"
+    assert company["estimated_bounty_amount"] == 12600
+    assert company["estimated_bounty_label"] == "¥7,200-¥18,000"
 
 
 def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):

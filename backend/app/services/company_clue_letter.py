@@ -27,24 +27,31 @@ def generate_company_clue_letter(db: Session, *, company: str) -> dict:
         )
 
     if not _should_use_company_clue_llm():
-        return _build_failure_response(
-            company=company,
-            generated_at=generated_at,
-            error_message="Company clue generation unavailable",
-            narrative=f"{company} 的单公司线索来信当前不可用，请稍后再试。",
-        )
+        context = build_company_clue_context(company=company, jobs=jobs, today=now.date())
+        payload = _build_rule_company_clue_payload(context)
+        return {
+            "status": "success",
+            "company": company,
+            "generated_at": generated_at,
+            "narrative": payload["narrative"],
+            "sections": payload["sections"],
+            "error_message": None,
+        }
 
     context = build_company_clue_context(company=company, jobs=jobs, today=now.date())
     try:
         payload = _request_and_validate(context)
     except Exception as exc:
         logger.warning("Failed to generate company clue letter for %s: %s", company, exc)
-        return _build_failure_response(
-            company=company,
-            generated_at=generated_at,
-            error_message="Company clue generation failed",
-            narrative=f"{company} 的单公司线索来信生成失败，请稍后重试。",
-        )
+        payload = _build_rule_company_clue_payload(context)
+        return {
+            "status": "success",
+            "company": company,
+            "generated_at": generated_at,
+            "narrative": payload["narrative"],
+            "sections": payload["sections"],
+            "error_message": None,
+        }
 
     return {
         "status": "success",
@@ -84,6 +91,56 @@ def _resolve_generated_at(jobs: list[Job], *, fallback: datetime) -> str:
 
 def _should_use_company_clue_llm() -> bool:
     return should_use_llm()
+
+
+def _build_rule_company_clue_payload(context: dict) -> dict:
+    company = context["company"]
+    summary = context.get("summary", {})
+    evidence_cards = list(context.get("evidence_cards") or [])
+    entry_points = context.get("entry_points") or {}
+    titles = [card["title"] for card in evidence_cards if card.get("title")]
+    title_text = "、".join(titles[:3]) if titles else "当前岗位"
+    top_categories = "、".join(summary.get("top_categories") or []) or "核心"
+    top_domains = "、".join(summary.get("top_domains") or []) or "重点领域"
+    first_entry = _first_entry_point(entry_points)
+
+    narrative = (
+        f"{company} 在当前 14 天窗口内有 {summary.get('total_jobs', len(evidence_cards))} 个岗位，"
+        f"主要集中在 {top_categories} / {top_domains}。"
+        f"其中 {title_text} 是最直接的岗位证据，说明这家公司当前至少有一条可追踪的招聘入口。"
+        f"下一步先回到真实岗位入口核对职责、发布时间和团队方向，再决定是否优先摸排。"
+    )
+    return {
+        "narrative": narrative,
+        "sections": [
+            {
+                "key": "clue_1",
+                "title": "线索一：需求信号",
+                "content": (
+                    f"{company} 当前窗口内共有 {summary.get('total_jobs', len(evidence_cards))} 个岗位，"
+                    f"集中在 {top_categories} / {top_domains}，说明需求不是完全零散出现。"
+                ),
+            },
+            {
+                "key": "clue_2",
+                "title": "线索二：关键岗位",
+                "content": f"{title_text} 是当前最值得先核对的岗位证据。",
+            },
+            {
+                "key": "clue_3",
+                "title": "线索三：行动入口",
+                "content": f"先回到 {first_entry} 核对岗位职责、发布时间和团队方向，再判断是否优先切入。",
+            },
+        ],
+    }
+
+
+def _first_entry_point(entry_points: dict) -> str:
+    for key in ("job_posts", "hiring_pages", "company_urls", "emails"):
+        values = entry_points.get(key) or []
+        if values:
+            return values[0]
+    return "当前公司公开岗位入口"
 
 
 def _build_failure_response(*, company: str, generated_at: str, error_message: str, narrative: str) -> dict:

@@ -65,6 +65,30 @@ def test_build_job_payload_adds_estimated_bounty_signal_tags(monkeypatch):
         location="Remote",
         remote_type="remote",
         employment_type="full-time",
+        description="Salary range: ¥30k-50k/month. Build LLM platform and hiring roadmap.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board"},
+    )
+
+    payload = build_job_payload(job)
+
+    assert payload["signal_tags"]["estimated_bounty_amount"] == 12600
+    assert payload["signal_tags"]["estimated_bounty_label"] == "¥7,200-¥18,000"
+    assert payload["signal_tags"]["estimated_bounty_rate_pct"] == 10
+    assert payload["signal_tags"]["estimated_bounty_rule_version"] == "bounty-rule-v2"
+    assert payload["signal_tags"]["estimated_bounty_confidence"] == "high"
+
+
+def test_build_job_payload_does_not_add_estimated_bounty_without_salary(monkeypatch):
+    enable_estimated_bounty_write(monkeypatch)
+    job = NormalizedJob(
+        source_job_id="founding-ai",
+        canonical_url="https://open-gradient.ai/careers/principal-ai-engineer",
+        title="Principal AI Engineer",
+        company="Open Gradient",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
         description="Build LLM platform and hiring roadmap.",
         posted_at=datetime.now().replace(microsecond=0),
         raw_payload={"site": "demo-board"},
@@ -72,11 +96,8 @@ def test_build_job_payload_adds_estimated_bounty_signal_tags(monkeypatch):
 
     payload = build_job_payload(job)
 
-    assert payload["signal_tags"]["estimated_bounty_amount"] == 150000
-    assert payload["signal_tags"]["estimated_bounty_label"] == "¥120,000-¥180,000"
-    assert payload["signal_tags"]["estimated_bounty_rate_pct"] == 20
-    assert payload["signal_tags"]["estimated_bounty_rule_version"] == "bounty-rule-v1"
-    assert payload["signal_tags"]["estimated_bounty_confidence"] == "medium"
+    assert "estimated_bounty_amount" not in payload["signal_tags"]
+    assert "estimated_bounty_label" not in payload["signal_tags"]
 
 
 def test_build_job_payload_skips_estimated_bounty_tags_when_live_write_flag_disabled(monkeypatch):

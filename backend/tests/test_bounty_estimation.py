@@ -9,7 +9,7 @@ from app.services.bounty_estimation import (
 )
 
 
-def test_estimate_bounty_returns_high_end_range_for_ai_principal():
+def test_estimate_bounty_uses_job_salary_to_calculate_bd_earning():
     estimate = estimate_bounty(
         BountyEstimateInput(
             category="AI/算法",
@@ -23,18 +23,20 @@ def test_estimate_bounty_returns_high_end_range_for_ai_principal():
             compensation_signal="unknown",
             company_signal="hot",
             time_pressure_signals=("urgent", "long_running"),
+            annual_salary_range=(360000, 600000),
         )
     )
 
-    assert estimate.amount == 150000
-    assert estimate.min_amount == 120000
-    assert estimate.max_amount == 180000
-    assert estimate.rate_pct == 20
-    assert estimate.label == "¥120,000-¥180,000"
-    assert estimate.rule_version == "bounty-rule-v1"
+    assert estimate is not None
+    assert estimate.amount == 12600
+    assert estimate.min_amount == 7200
+    assert estimate.max_amount == 18000
+    assert estimate.rate_pct == 10
+    assert estimate.label == "¥7,200-¥18,000"
+    assert estimate.rule_version == "bounty-rule-v2"
 
 
-def test_estimate_bounty_keeps_low_complexity_ops_roles_near_floor():
+def test_estimate_bounty_returns_none_without_job_salary():
     estimate = estimate_bounty(
         BountyEstimateInput(
             category="运营",
@@ -51,11 +53,32 @@ def test_estimate_bounty_keeps_low_complexity_ops_roles_near_floor():
         )
     )
 
-    assert estimate.amount == 24000
-    assert estimate.min_amount == 19200
-    assert estimate.max_amount == 28800
-    assert estimate.rate_pct == 12
-    assert estimate.label == "¥19,200-¥28,800"
+    assert estimate is None
+
+
+def test_estimate_bounty_uses_salary_midpoint_for_zero_floor_ranges():
+    estimate = estimate_bounty(
+        BountyEstimateInput(
+            category="技术",
+            seniority="senior",
+            domain_tag="工具/SaaS",
+            urgent=False,
+            critical=False,
+            hard_to_fill=False,
+            role_complexity="medium",
+            business_criticality="medium",
+            compensation_signal="strong",
+            company_signal="neutral",
+            time_pressure_signals=(),
+            annual_salary_range=(0, 2_400_000),
+        )
+    )
+
+    assert estimate is not None
+    assert estimate.amount == 30000
+    assert estimate.min_amount == 24000
+    assert estimate.max_amount == 36000
+    assert estimate.label == "¥24,000-¥36,000"
 
 
 def test_bounty_estimate_round_trips_through_signal_tags_as_analysis_snapshot():
@@ -63,10 +86,10 @@ def test_bounty_estimate_round_trips_through_signal_tags_as_analysis_snapshot():
         amount=150000,
         min_amount=120000,
         max_amount=180000,
-        rate_pct=20,
+        rate_pct=10,
         label="¥120,000-¥180,000",
         confidence="medium",
-        rule_version="bounty-rule-v1",
+        rule_version="bounty-rule-v2",
     )
 
     restored = BountyEstimate.from_signal_tags(estimate.to_signal_tags())
@@ -92,8 +115,8 @@ def test_classify_bounty_signal_tags_marks_complete_snapshot():
             "estimated_bounty_label": "¥120,000-¥180,000",
             "estimated_bounty_min": 120000,
             "estimated_bounty_max": 180000,
-            "estimated_bounty_rate_pct": 20,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
+            "estimated_bounty_rate_pct": 10,
+            "estimated_bounty_rule_version": "bounty-rule-v2",
             "estimated_bounty_confidence": "medium",
         }
     ) == "complete"
@@ -139,6 +162,7 @@ class StubBountyFacts:
     compensation_signal: str
     company_signal: str
     time_pressure_signals: tuple[str, ...]
+    annual_salary_range: tuple[int, int] | None = None
 
 
 def test_build_bounty_estimate_input_from_facts_maps_all_fields():
@@ -154,6 +178,7 @@ def test_build_bounty_estimate_input_from_facts_maps_all_fields():
         compensation_signal="strong",
         company_signal="hot",
         time_pressure_signals=("urgent", "long_running"),
+        annual_salary_range=(360000, 600000),
     )
 
     estimate_input = build_bounty_estimate_input_from_facts(facts)
@@ -170,4 +195,5 @@ def test_build_bounty_estimate_input_from_facts_maps_all_fields():
         compensation_signal="strong",
         company_signal="hot",
         time_pressure_signals=("urgent", "long_running"),
+        annual_salary_range=(360000, 600000),
     )
