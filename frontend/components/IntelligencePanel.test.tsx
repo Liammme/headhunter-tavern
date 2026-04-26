@@ -85,6 +85,38 @@ describe("IntelligencePanel", () => {
     expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
   });
 
+  it("renders every paragraph from a long intelligence narrative inside the paper copy", () => {
+    const longNarrativeSections = [
+      "第一段：James先把今天新增岗位按公司聚在一起，提醒你不要被单个高薪标题带偏。",
+      "第二段：AI 工具链公司在过去 14 天里连续露头，但真正值得先看的，是同一团队反复补算法和后端的位置。",
+      "第三段：企业服务方向的增长岗位开始回暖，尤其是同时出现销售运营、数据分析和产品经理的公司。",
+      "第四段：重复 JD 不是噪音，它可能说明招聘团队在多个渠道试水，也可能说明岗位描述还没被业务方校准。",
+      "第五段：今天的行动顺序应该先看连续发布动作，再看赏金金额，最后才回头补齐公司背景。",
+      "第六段：如果你只能处理三家公司，优先选择新岗位多、岗位族稳定、且最近两天都在更新的团队。",
+    ];
+    const intelligence = buildIntelligence({
+      narrative: longNarrativeSections.join("\n\n"),
+    });
+
+    const { container } = render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/25"
+        dailyCaptureSummary="今日抓取 18 个岗位，分布来源：Aijobs、RemoteHub。"
+        collectionStats={collectionStats}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
+
+    const paperCopy = container.querySelector(".intel-paper-copy");
+
+    expect(paperCopy).toBeInTheDocument();
+    longNarrativeSections.forEach((section) => {
+      expect(within(paperCopy as HTMLElement).getByText(section)).toBeInTheDocument();
+    });
+  });
+
   it("does not render the secondary intelligence note cards", () => {
     const intelligence = buildIntelligence();
 
