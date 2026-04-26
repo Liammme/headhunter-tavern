@@ -84,6 +84,52 @@ def test_extract_job_facts_preserves_zero_floor_salary_range_for_midpoint_estima
     assert facts.compensation_signal == "strong"
 
 
+def test_extract_job_facts_parses_aijobs_cny_annual_salary_range():
+    from app.services.job_facts import extract_job_facts, standardize_job_input
+
+    job = NormalizedJob(
+        source_job_id="aijobs-cny-role",
+        canonical_url="https://aijobs.net/job/aiml-101519/",
+        title="Ai/Ml系统工程师",
+        company="Aijobs",
+        location="China",
+        remote_type="unknown",
+        employment_type="full-time",
+        description="CNY 180K-360K | Control Systems | Deep learning | Mid-level | Full Time",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={},
+    )
+
+    standardized = standardize_job_input(job, now=datetime(2026, 4, 26, 9, 0, 0))
+    facts = extract_job_facts(standardized, now=datetime(2026, 4, 26, 9, 0, 0))
+
+    assert facts.annual_salary_range == (180000, 360000)
+    assert facts.compensation_signal == "strong"
+
+
+def test_extract_job_facts_converts_aijobs_usd_annual_salary_range_to_cny():
+    from app.services.job_facts import extract_job_facts, standardize_job_input
+
+    job = NormalizedJob(
+        source_job_id="aijobs-usd-role",
+        canonical_url="https://aijobs.net/job/data-scientist-101476/",
+        title="Data Scientist",
+        company="Aijobs",
+        location="United States",
+        remote_type="unknown",
+        employment_type="full-time",
+        description="USD 135K-165K | Big Data | Cloud Computing | Mid-level | Full Time",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={},
+    )
+
+    standardized = standardize_job_input(job, now=datetime(2026, 4, 26, 9, 0, 0))
+    facts = extract_job_facts(standardized, now=datetime(2026, 4, 26, 9, 0, 0))
+
+    assert facts.annual_salary_range == (972000, 1188000)
+    assert facts.compensation_signal == "strong"
+
+
 def test_build_score_inputs_from_same_facts_supports_v1_and_v2():
     from app.services.job_facts import (
         build_v1_score_input,

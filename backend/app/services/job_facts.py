@@ -6,6 +6,18 @@ from app.crawlers.base import NormalizedJob
 from app.services.scoring import JobScoreInput, JobScoreV2Input
 
 LONG_RUNNING_DAYS = 7
+CURRENCY_TO_CNY_RATE = {
+    "cny": 1.0,
+    "rmb": 1.0,
+    "usd": 7.2,
+    "cad": 5.2,
+    "eur": 7.8,
+    "gbp": 9.1,
+    "inr": 0.086,
+    "thb": 0.20,
+    "czk": 0.31,
+    "brl": 1.3,
+}
 
 
 @dataclass(frozen=True)
@@ -309,7 +321,10 @@ def parse_annual_salary_range(text: str) -> tuple[int, int] | None:
         (r"(?:年薪|annual\s+salary)\s*(?:¥|rmb|cny)?\s*(\d+(?:\.\d+)?)\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*万",),
         multiplier=10_000,
     )
-    return annual_wan
+    if annual_wan is not None:
+        return annual_wan
+
+    return _parse_currency_annual_salary_range(normalized)
 
 
 def _parse_salary_range(text: str, patterns: tuple[str, ...], *, multiplier: int) -> tuple[int, int] | None:
@@ -321,6 +336,20 @@ def _parse_salary_range(text: str, patterns: tuple[str, ...], *, multiplier: int
         high = int(float(match.group(2)) * multiplier)
         return (min(low, high), max(low, high))
     return None
+
+
+def _parse_currency_annual_salary_range(text: str) -> tuple[int, int] | None:
+    match = re.search(
+        r"\b(cny|rmb|usd|cad|eur|gbp|inr|thb|czk|brl)\s+(\d+(?:\.\d+)?)\s*k\s*[-~－到]\s*(\d+(?:\.\d+)?)\s*k\b",
+        text,
+    )
+    if match is None:
+        return None
+
+    rate = CURRENCY_TO_CNY_RATE[match.group(1)]
+    low = int(float(match.group(2)) * 1_000 * rate)
+    high = int(float(match.group(3)) * 1_000 * rate)
+    return (min(low, high), max(low, high))
 
 
 def classify_company_signal(domain_tag: str, text: str) -> str:
