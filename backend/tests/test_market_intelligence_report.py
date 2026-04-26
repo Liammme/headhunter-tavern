@@ -101,6 +101,24 @@ def test_validate_market_intelligence_report_rejects_english_bounty_claim_terms(
             )
 
 
+def test_validate_market_intelligence_report_rejects_hyphenated_banned_terms_everywhere():
+    for term in ["bounty-grade", "claim-status", "claimed-role"]:
+        for field in ["narrative", "evidence", "watchlist"]:
+            report = _valid_report()
+            if field == "narrative":
+                report["narrative"] = f"30d demand contains {term} phrasing."
+            elif field == "evidence":
+                report["perspectives"][0]["evidence"] = [f"OpenGradient mentions {term}"]
+            else:
+                report["watchlist"] = [term]
+
+            with pytest.raises(MarketIntelligenceReportError, match="banned"):
+                validate_market_intelligence_report(
+                    report,
+                    allowed_terms={"AI infra", "OpenGradient"},
+                )
+
+
 def test_validate_market_intelligence_report_allows_non_leakage_source_or_link_words():
     report = _valid_report()
     report["narrative"] = (

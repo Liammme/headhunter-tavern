@@ -54,7 +54,7 @@ def run_daily_bounty_generation(
 
     try:
         crawl_result = trigger_crawl(db)
-        errors = list(crawl_result.get("errors") or [])
+        errors = [_sanitize_error_message(error) for error in crawl_result.get("errors") or []]
         status = "completed_with_errors" if errors else "completed"
         try:
             snapshot_result = generate_daily_market_intelligence_snapshot(db)

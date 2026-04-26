@@ -122,6 +122,53 @@ def test_run_daily_bounty_generation_keeps_partial_failures_observable(db_sessio
     assert summary["today_job_count"] == 2
 
 
+def test_run_daily_bounty_generation_redacts_trigger_crawl_result_error_secrets(db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.trigger_crawl",
+        lambda db: {
+            "status": "triggered",
+            "fetched_jobs": 2,
+            "new_jobs": 1,
+            "source_stats": {"greenhouse": 2},
+            "errors": [
+                "adapter failed: "
+                "OPENAI_API_KEY=env-openai-secret "
+                "token: crawl-token-secret "
+                "Authorization: Bearer crawl-bearer-secret "
+                "postgresql://user:crawl-db-secret@example.com:5432/app"
+            ],
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.get_home_payload",
+        lambda db: _home_payload([{"company": "OpenGradient", "total_jobs": 2, "jobs": [{}, {}]}]),
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        lambda db: {"status": "success", "snapshot_id": 1},
+        raising=False,
+    )
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 2)),
+    )
+
+    error_text = "\n".join(summary["errors"])
+    assert summary["status"] == "completed_with_errors"
+    assert "[redacted]" in error_text
+    assert "OPENAI_API_KEY=[redacted]" in error_text
+    assert "token: [redacted]" in error_text
+    assert "Authorization: Bearer [redacted]" in error_text
+    assert "env-openai-secret" not in error_text
+    assert "crawl-token-secret" not in error_text
+    assert "crawl-bearer-secret" not in error_text
+    assert "crawl-db-secret" not in error_text
+    assert "postgresql://user:crawl-db-secret" not in error_text
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 2
+
+
 def test_run_daily_bounty_generation_reports_market_snapshot_failure(db_session, monkeypatch):
     monkeypatch.setattr(
         "app.services.daily_bounty_service.trigger_crawl",

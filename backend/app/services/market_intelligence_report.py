@@ -23,6 +23,7 @@ BANNED_DIRECT_PHRASES = (
     "建议持续关注",
 )
 BANNED_TOKEN_TERMS = ("bd", "source", "link", "bounty", "bounties", "claim", "claims", "claimed")
+BANNED_RIGHT_HYPHEN_TOKEN_TERMS = {"bounty", "bounties", "claim", "claims", "claimed"}
 
 
 class MarketIntelligenceReportError(Exception):
@@ -213,7 +214,7 @@ def _reject_banned_phrases(payload: dict) -> None:
     for text in _iter_token_check_texts(payload):
         normalized_text = text.lower()
         for term in BANNED_TOKEN_TERMS:
-            if _contains_ascii_token(normalized_text, term):
+            if _contains_banned_token(normalized_text, term):
                 raise MarketIntelligenceReportError(f"report contains banned phrase: {term}")
 
 
@@ -253,6 +254,12 @@ def _iter_token_check_texts(value: Any):
 
 def _contains_ascii_token(text: str, token: str) -> bool:
     return re.search(rf"(?<![a-z0-9-]){re.escape(token)}(?![a-z0-9-])", text) is not None
+
+
+def _contains_banned_token(text: str, token: str) -> bool:
+    if token in BANNED_RIGHT_HYPHEN_TOKEN_TERMS:
+        return re.search(rf"(?<![a-z0-9-]){re.escape(token)}(?![a-z0-9])", text) is not None
+    return _contains_ascii_token(text, token)
 
 
 def _require_dict(payload: dict, field: str) -> dict:
