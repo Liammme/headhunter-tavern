@@ -22,7 +22,7 @@ BANNED_DIRECT_PHRASES = (
     "综合来看",
     "建议持续关注",
 )
-BANNED_TOKEN_TERMS = ("bd", "source", "link")
+BANNED_TOKEN_TERMS = ("bd", "source", "link", "bounty", "bounties", "claim", "claims", "claimed")
 
 
 class MarketIntelligenceReportError(Exception):
@@ -40,7 +40,7 @@ def build_market_intelligence_system_prompt() -> str:
         "Use watchlist max 3 and trend cards max 4. "
         "Evidence must quote or contain a representative sample company/title/domain. "
         "Include a primary judgment, and make the narrative explicitly reference 30d or 90d. "
-        "Never mention BD, 猎头, 赏金, 认领, 客户开发, 岗位来源, or 岗位链接. "
+        "Never mention BD, bounty, claim, claimed, 猎头, 赏金, 认领, 客户开发, 岗位来源, or 岗位链接. "
         "Do not expose source fields such as canonical_url or source_name."
     )
 
@@ -210,9 +210,11 @@ def _reject_banned_phrases(payload: dict) -> None:
     for phrase in BANNED_DIRECT_PHRASES:
         if phrase.lower() in normalized:
             raise MarketIntelligenceReportError(f"report contains banned phrase: {phrase}")
-    for term in BANNED_TOKEN_TERMS:
-        if _contains_ascii_token(normalized, term):
-            raise MarketIntelligenceReportError(f"report contains banned phrase: {term}")
+    for text in _iter_token_check_texts(payload):
+        normalized_text = text.lower()
+        for term in BANNED_TOKEN_TERMS:
+            if _contains_ascii_token(normalized_text, term):
+                raise MarketIntelligenceReportError(f"report contains banned phrase: {term}")
 
 
 def _validate_evidence_terms(evidence: list[str], allowed_terms: set[str]) -> None:
@@ -230,6 +232,23 @@ def _evidence_contains_term(evidence: str, term: str) -> bool:
     if re.fullmatch(r"[a-z0-9]{1,3}", normalized_term):
         return _contains_ascii_token(normalized_evidence, normalized_term)
     return normalized_term in normalized_evidence
+
+
+def _iter_token_check_texts(value: Any):
+    if isinstance(value, str):
+        yield value
+        return
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(key, str) and key != "claim":
+                yield key
+            yield from _iter_token_check_texts(item)
+        return
+
+    if isinstance(value, list):
+        for item in value:
+            yield from _iter_token_check_texts(item)
 
 
 def _contains_ascii_token(text: str, token: str) -> bool:

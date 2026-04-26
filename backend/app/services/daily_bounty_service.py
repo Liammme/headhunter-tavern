@@ -69,7 +69,8 @@ def run_daily_bounty_generation(
             if status == "completed":
                 status = "completed_with_errors"
     except Exception as exc:  # noqa: BLE001
-        errors = [f"daily_bounty: {exc}"]
+        db.rollback()
+        errors = [f"daily_bounty: {_sanitize_error_message(exc)}"]
         status = "failed"
 
     home_payload = get_home_payload(db)

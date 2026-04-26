@@ -83,10 +83,29 @@ def test_validate_market_intelligence_report_rejects_english_source_or_link_lang
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
+def test_validate_market_intelligence_report_rejects_english_bounty_claim_terms():
+    cases = [
+        ("narrative", "30d demand describes a high bounty."),
+        ("headline", "Customer claim pressure is rising"),
+        ("watchlist", ["claimed roles"]),
+    ]
+
+    for field, value in cases:
+        report = _valid_report()
+        report[field] = value
+
+        with pytest.raises(MarketIntelligenceReportError, match="banned"):
+            validate_market_intelligence_report(
+                report,
+                allowed_terms={"AI infra", "OpenGradient"},
+            )
+
+
 def test_validate_market_intelligence_report_allows_non_leakage_source_or_link_words():
     report = _valid_report()
     report["narrative"] = (
-        "30d resource planning mentions open-source tooling and LinkedIn visibility."
+        "30d resource planning mentions open-source tooling, LinkedIn visibility, "
+        "and reclaimed capacity."
     )
 
     validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})

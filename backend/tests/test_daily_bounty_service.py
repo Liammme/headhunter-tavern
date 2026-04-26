@@ -261,6 +261,68 @@ def test_run_daily_bounty_generation_redacts_market_snapshot_exception_secrets(d
     assert summary["today_job_count"] == 2
 
 
+def test_run_daily_bounty_generation_redacts_trigger_crawl_exception_secrets(
+    db_session,
+    monkeypatch,
+):
+    def raise_secret_error(db):
+        raise RuntimeError(
+            "crawl failed: "
+            "OPENAI_API_KEY=env-openai-secret "
+            "token: crawl-token-secret "
+            "Authorization: Bearer crawl-bearer-secret "
+            "postgresql://user:crawl-db-secret@example.com:5432/app"
+        )
+
+    monkeypatch.setattr("app.services.daily_bounty_service.trigger_crawl", raise_secret_error)
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.get_home_payload",
+        lambda db: _home_payload([{"company": "ExistingCo", "total_jobs": 4, "jobs": [{}, {}, {}, {}]}]),
+    )
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 3)),
+    )
+
+    error_text = "\n".join(summary["errors"])
+    assert summary["status"] == "failed"
+    assert "daily_bounty: crawl failed:" in error_text
+    assert "OPENAI_API_KEY=[redacted]" in error_text
+    assert "token: [redacted]" in error_text
+    assert "Authorization: Bearer [redacted]" in error_text
+    assert "env-openai-secret" not in error_text
+    assert "crawl-token-secret" not in error_text
+    assert "crawl-bearer-secret" not in error_text
+    assert "crawl-db-secret" not in error_text
+    assert "postgresql://user:crawl-db-secret" not in error_text
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 4
+
+
+def test_run_daily_bounty_generation_rolls_back_trigger_crawl_db_error(db_session, monkeypatch):
+    def fail_trigger_with_db_error(db):
+        db.add(_job("https://example.com/jobs/trigger-rollback"))
+        db.commit()
+        db.add(_job("https://example.com/jobs/trigger-rollback", company="DuplicateCo"))
+        try:
+            db.flush()
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError("crawl db write failed") from exc
+
+    monkeypatch.setattr("app.services.daily_bounty_service.trigger_crawl", fail_trigger_with_db_error)
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 3)),
+    )
+
+    assert summary["status"] == "failed"
+    assert summary["errors"] == ["daily_bounty: crawl db write failed"]
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 1
+
+
 def test_run_daily_bounty_generation_rolls_back_market_snapshot_db_error(db_session, monkeypatch):
     def fake_trigger_crawl(db):
         db.add(_job("https://example.com/jobs/1"))
