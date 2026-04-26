@@ -8,6 +8,7 @@ from app.services.feed_snapshot import build_feed_metadata
 from app.services.home_feed_aggregation import build_day_payloads
 from app.services.home_feed_assembler import assemble_home_payload
 from app.services.intelligence import build_intelligence_snapshot
+from app.services.market_intelligence_read_service import load_latest_market_intelligence_for_home
 
 
 def build_home_payload(db: Session) -> dict:
@@ -16,8 +17,11 @@ def build_home_payload(db: Session) -> dict:
     claims = db.execute(select(JobClaim).order_by(JobClaim.created_at.asc(), JobClaim.id.asc())).scalars().all()
     day_payloads = build_day_payloads(jobs, claims, today=now.date())
     meta = build_feed_metadata(now, generated_at=_resolve_feed_generated_at(jobs, fallback=now))
+    intelligence = load_latest_market_intelligence_for_home(db)
+    if intelligence is None:
+        intelligence = build_intelligence_snapshot(day_payloads, meta, jobs=jobs)
     return assemble_home_payload(
-        intelligence=build_intelligence_snapshot(day_payloads, meta, jobs=jobs),
+        intelligence=intelligence,
         day_payloads=day_payloads,
         meta=meta,
     )

@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from importlib import reload
 
-from app.models import Job
+from app.models import Job, MarketIntelligenceSnapshot
 from app.services.home_feed import build_home_payload
 
 
@@ -26,6 +26,50 @@ def test_build_home_payload_uses_latest_job_collection_time_as_generated_at(db_s
 
     assert payload["meta"]["generated_at"] == "2026-04-22T14:32:21"
     assert payload["intelligence"]["generated_at"] == "2026-04-22T14:32:21"
+
+
+def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_session):
+    db_session.add(
+        Job(
+            canonical_url="https://jobs.example.com/opengradient/staff-ai-engineer",
+            source_name="test",
+            title="Staff AI Engineer",
+            company="OpenGradient",
+            company_normalized="opengradient",
+            description="test",
+            posted_at=datetime(2026, 4, 26, 9, 0, 0),
+            collected_at=datetime(2026, 4, 26, 14, 32, 21),
+            bounty_grade="high",
+            signal_tags={"display_tags": ["AI", "Senior"]},
+        )
+    )
+    db_session.add(
+        MarketIntelligenceSnapshot(
+            snapshot_date=date(2026, 4, 25),
+            generated_at=datetime(2026, 4, 26, 15, 0, 0),
+            window_days=90,
+            market_signal_payload={},
+            report_payload={
+                "headline": "Market snapshot headline",
+                "narrative": "Market snapshot narrative",
+                "primary_judgment": {"claim": "Market snapshot summary"},
+                "trend_cards": [{"judgment": "Market snapshot finding"}],
+                "watchlist": ["Market snapshot action"],
+            },
+            model_name=None,
+            status="success",
+            error_message=None,
+        )
+    )
+    db_session.commit()
+
+    payload = build_home_payload(db_session)
+
+    assert payload["intelligence"]["headline"] == "Market snapshot headline"
+    assert payload["intelligence"]["summary"] == "Market snapshot summary"
+    assert payload["intelligence"]["generated_at"] == "2026-04-26T15:00:00"
+    assert payload["meta"]["generated_at"] == "2026-04-26T14:32:21"
+    assert payload["days"][0]["companies"][0]["company"] == "OpenGradient"
 
 
 def test_settings_default_database_url_points_to_backend_db(monkeypatch):
