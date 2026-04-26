@@ -126,7 +126,11 @@ def test_generate_daily_market_intelligence_snapshot_redacts_secrets_from_errors
             "provider failed: sk-test-redact-me "
             "api_key=plain-api-secret token=plain-token-secret "
             "password=plain-password-secret "
-            "postgresql://user:db-password-secret@example.com:5432/app"
+            "api_key: colon-api-secret token: colon-token-secret "
+            "password: colon-password-secret "
+            "postgresql://user:db-password-secret@example.com:5432/app "
+            "postgres://user:postgres-password-secret@example.com:5432/app "
+            "mysql://user:mysql-password-secret@example.com:3306/app"
         )
 
     monkeypatch.setattr(service, "generate_market_report", raise_secret_error)
@@ -145,5 +149,12 @@ def test_generate_daily_market_intelligence_snapshot_redacts_secrets_from_errors
     assert "plain-api-secret" not in combined
     assert "plain-token-secret" not in combined
     assert "plain-password-secret" not in combined
+    assert "colon-api-secret" not in combined
+    assert "colon-token-secret" not in combined
+    assert "colon-password-secret" not in combined
     assert "db-password-secret" not in combined
+    assert "postgres-password-secret" not in combined
+    assert "mysql-password-secret" not in combined
     assert "postgresql://user:db-password-secret" not in combined
+    assert "postgres://user:postgres-password-secret" not in combined
+    assert "mysql://user:mysql-password-secret" not in combined

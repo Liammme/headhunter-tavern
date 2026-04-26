@@ -11,10 +11,14 @@ from app.services.market_signal_builder import build_market_signal_payload
 
 
 ERROR_MESSAGE_LIMIT = 500
-SECRET_PATTERNS = (
-    re.compile(r"postgresql(?:\+\w+)?://[^\s]+:[^@\s]+@[^\s]+", re.IGNORECASE),
-    re.compile(r"sk-[^\s,;]+", re.IGNORECASE),
-    re.compile(r"\b(api_key|token|password)=([^\s,;]+)", re.IGNORECASE),
+DB_CREDENTIAL_URL_PATTERN = re.compile(
+    r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
+    re.IGNORECASE,
+)
+OPENAI_KEY_PATTERN = re.compile(r"sk-[^\s,;]+", re.IGNORECASE)
+KEY_VALUE_SECRET_PATTERN = re.compile(
+    r"\b(api_key|token|password)\s*([=:])\s*([^\s,;]+)",
+    re.IGNORECASE,
 )
 
 
@@ -65,9 +69,14 @@ def generate_daily_market_intelligence_snapshot(
 
 def _sanitize_error_message(exc: Exception) -> str:
     message = str(exc) or exc.__class__.__name__
-    for pattern in SECRET_PATTERNS:
-        if pattern.pattern.startswith("\\b("):
-            message = pattern.sub(lambda match: f"{match.group(1)}=[redacted]", message)
-        else:
-            message = pattern.sub("[redacted]", message)
+    message = DB_CREDENTIAL_URL_PATTERN.sub("[redacted]", message)
+    message = OPENAI_KEY_PATTERN.sub("[redacted]", message)
+    message = KEY_VALUE_SECRET_PATTERN.sub(_redact_key_value_secret, message)
     return message[:ERROR_MESSAGE_LIMIT]
+
+
+def _redact_key_value_secret(match: re.Match) -> str:
+    separator = match.group(2)
+    if separator == ":":
+        return f"{match.group(1)}: [redacted]"
+    return f"{match.group(1)}=[redacted]"
