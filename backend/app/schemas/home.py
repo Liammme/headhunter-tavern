@@ -34,7 +34,7 @@ class IntelligenceOut(BaseModel):
     summary: str
     analysis_version: str
     rule_version: str
-    window_start: str
+    window_start: str | None
     window_end: str
     generated_at: str
     findings: list[str]
