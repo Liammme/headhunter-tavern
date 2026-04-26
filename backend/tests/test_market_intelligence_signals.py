@@ -19,13 +19,23 @@ def build_job(
     company: str = "OpenGradient",
     description: str = FULL_DESCRIPTION,
     days_ago: int = 0,
+    posted_days_ago: int | None = None,
+    collected_days_ago: int | None = None,
+    missing_timestamps: bool = False,
     job_category: str = "技术",
     domain_tag: str = "AI",
 ) -> Job:
     snapshot_date = date(2026, 4, 26)
-    collected_at = datetime.combine(snapshot_date, datetime.min.time()) - timedelta(
-        days=days_ago
+    base_time = datetime.combine(snapshot_date, datetime.min.time())
+    posted_at = base_time - timedelta(
+        days=days_ago if posted_days_ago is None else posted_days_ago
     )
+    collected_at = base_time - timedelta(
+        days=days_ago if collected_days_ago is None else collected_days_ago
+    )
+    if missing_timestamps:
+        posted_at = None
+        collected_at = None
     return Job(
         id=job_id,
         canonical_url=f"https://jobs.example.com/{job_id}",
@@ -34,7 +44,7 @@ def build_job(
         company=company,
         company_normalized=company.lower(),
         description=description,
-        posted_at=collected_at,
+        posted_at=posted_at,
         collected_at=collected_at,
         job_category=job_category,
         domain_tag=domain_tag,
@@ -88,6 +98,77 @@ def test_build_market_signal_payload_counts_jobs_by_windows():
     assert payload["windows"]["7d"]["job_count"] == 2
     assert payload["windows"]["30d"]["job_count"] == 3
     assert payload["windows"]["90d"]["job_count"] == 4
+
+
+def test_build_market_signal_payload_prefers_posted_at_over_collected_at():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(
+                job_id=1,
+                title="Old AI Engineer",
+                posted_days_ago=120,
+                collected_days_ago=0,
+            )
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    assert payload["windows"]["1d"]["job_count"] == 0
+    assert payload["windows"]["90d"]["job_count"] == 0
+    assert payload["representative_samples"] == []
+
+
+def test_build_market_signal_payload_excludes_jobs_with_missing_timestamps_from_samples():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(
+                job_id=1,
+                title="Undated AI Engineer",
+                missing_timestamps=True,
+            )
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    assert payload["windows"]["90d"]["job_count"] == 0
+    assert payload["representative_samples"] == []
+
+
+def test_build_market_signal_payload_excludes_future_dated_jobs():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(
+                job_id=1,
+                title="Future AI Engineer",
+                days_ago=-1,
+            )
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    assert payload["windows"]["1d"]["job_count"] == 0
+    assert payload["windows"]["7d"]["job_count"] == 0
+    assert payload["windows"]["30d"]["job_count"] == 0
+    assert payload["windows"]["90d"]["job_count"] == 0
+    assert payload["representative_samples"] == []
+
+
+def test_build_market_signal_payload_excludes_exact_window_boundaries():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(job_id=1, title="One Day Boundary", days_ago=1),
+            build_job(job_id=2, title="Seven Day Boundary", days_ago=7),
+            build_job(job_id=3, title="Thirty Day Boundary", days_ago=30),
+            build_job(job_id=4, title="Ninety Day Boundary", days_ago=90),
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    assert payload["windows"]["1d"]["job_count"] == 0
+    assert payload["windows"]["7d"]["job_count"] == 1
+    assert payload["windows"]["30d"]["job_count"] == 2
+    assert payload["windows"]["90d"]["job_count"] == 3
+    assert len(payload["representative_samples"]) == 3
 
 
 def test_classify_market_theme_uses_first_matching_theme_keyword():

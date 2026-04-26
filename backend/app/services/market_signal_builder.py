@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import date, datetime, time
+from datetime import date, datetime
 
 from app.models import Job
 from app.services.market_theme_classifier import classify_market_theme
@@ -61,7 +61,10 @@ def build_market_signal_payload(*, jobs: list[Job], snapshot_date: date) -> dict
         "snapshot_date": snapshot_date.isoformat(),
         "windows": windows,
         "representative_samples": [
-            _build_sample(job) for job in _sorted_jobs(jobs)[:12]
+            _build_sample(job)
+            for job in _sorted_jobs(
+                _window_jobs(jobs=jobs, snapshot_date=snapshot_date, days=90)
+            )[:12]
         ],
         "historical_comparison": {
             "continuing_signals": [],
@@ -72,7 +75,7 @@ def build_market_signal_payload(*, jobs: list[Job], snapshot_date: date) -> dict
 
 
 def _build_window(*, jobs: list[Job], snapshot_date: date, days: int) -> dict:
-    included = [job for job in jobs if _days_ago(job, snapshot_date) < days]
+    included = _window_jobs(jobs=jobs, snapshot_date=snapshot_date, days=days)
     theme_counts = Counter(_domain(job) for job in included)
     function_counts = Counter(_function(job) for job in included)
     return {
@@ -80,6 +83,15 @@ def _build_window(*, jobs: list[Job], snapshot_date: date, days: int) -> dict:
         "theme_counts": dict(theme_counts),
         "function_counts": dict(function_counts),
     }
+
+
+def _window_jobs(*, jobs: list[Job], snapshot_date: date, days: int) -> list[Job]:
+    included = []
+    for job in jobs:
+        days_ago = _days_ago(job, snapshot_date)
+        if days_ago is not None and 0 <= days_ago < days:
+            included.append(job)
+    return included
 
 
 def _build_sample(job: Job) -> dict:
@@ -101,18 +113,18 @@ def _build_sample(job: Job) -> dict:
 
 
 def _sorted_jobs(jobs: list[Job]) -> list[Job]:
-    return sorted(jobs, key=lambda job: _time_basis(job), reverse=True)
+    return sorted(jobs, key=lambda job: _time_basis(job) or datetime.min, reverse=True)
 
 
-def _days_ago(job: Job, snapshot_date: date) -> int:
-    return (snapshot_date - _time_basis(job).date()).days
-
-
-def _time_basis(job: Job) -> datetime:
-    value = job.collected_at or job.posted_at
+def _days_ago(job: Job, snapshot_date: date) -> int | None:
+    value = _time_basis(job)
     if value is None:
-        return datetime.combine(date.min, time.min)
-    return value
+        return None
+    return (snapshot_date - value.date()).days
+
+
+def _time_basis(job: Job) -> datetime | None:
+    return job.posted_at or job.collected_at
 
 
 def _domain(job: Job) -> str:
