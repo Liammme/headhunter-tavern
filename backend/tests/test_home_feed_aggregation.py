@@ -130,7 +130,15 @@ def test_build_day_payloads_filters_jobs_outside_window():
     assert [company.company for company in payloads[0].companies] == ["OpenGradient"]
 
 
-def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
+def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades(monkeypatch):
+    posted_at = datetime(2026, 4, 18, 9, 0, 0)
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls):
+            return posted_at
+
+    monkeypatch.setattr("app.services.job_facts.datetime", FixedDatetime)
     normalized_jobs = [
         NormalizedJob(
             source_job_id="principal-1",
@@ -141,7 +149,7 @@ def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
             remote_type="remote",
             employment_type="full-time",
             description="Build LLM platform and hiring roadmap.",
-            posted_at=datetime(2026, 4, 18, 9, 0, 0),
+            posted_at=posted_at,
             raw_payload={"site": "test-board"},
         ),
         NormalizedJob(
@@ -153,7 +161,7 @@ def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
             remote_type="remote",
             employment_type="full-time",
             description="Build LLM platform and hiring roadmap.",
-            posted_at=datetime(2026, 4, 18, 9, 0, 0),
+            posted_at=posted_at,
             raw_payload={"site": "test-board"},
         ),
         NormalizedJob(
@@ -165,7 +173,7 @@ def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
             remote_type="remote",
             employment_type="full-time",
             description="Support internal operations.",
-            posted_at=datetime(2026, 4, 18, 9, 0, 0),
+            posted_at=posted_at,
             raw_payload={"site": "test-board"},
         ),
     ]
@@ -175,7 +183,7 @@ def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades():
         payload = build_job_payload(normalized_job)
         jobs.append(Job(id=idx, **payload))
 
-    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+    payloads = build_day_payloads(jobs, [], today=posted_at.date())
 
     assert payloads[0].companies[0].company_grade == "watch"
     assert [job.bounty_grade for job in payloads[0].companies[0].jobs] == ["medium", "medium", "low"]
