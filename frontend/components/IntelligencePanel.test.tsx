@@ -1,8 +1,8 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import IntelligencePanel from "./IntelligencePanel";
-import type { CompanyCardPayload, IntelligencePayload } from "../lib/types";
+import type { IntelligencePayload } from "../lib/types";
 
 function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): IntelligencePayload {
   return {
@@ -15,19 +15,14 @@ function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): Intell
   };
 }
 
-function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardPayload {
-  return {
-    company: "OpenGradient",
-    company_grade: "focus",
-    total_jobs: 3,
-    claimed_names: [],
-    jobs: [],
-    ...overrides,
-  };
-}
-
 describe("IntelligencePanel", () => {
-  it("renders the primary intelligence content above the fold", () => {
+  const collectionStats = [
+    { label: "今天", value: 5 },
+    { label: "昨天", value: 3 },
+    { label: "更早", value: 12 },
+  ];
+
+  it("shows the collection chart by default and reveals intelligence on demand", () => {
     const intelligence = buildIntelligence();
     const reportDateLabel = "2026/4/23";
 
@@ -36,12 +31,23 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
         dailyCaptureSummary="今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。"
-        previewBucket="today"
-        previewCompanies={[buildCompany(), buildCompany({ company: "Beta Labs", company_grade: "watch", total_jobs: 2 })]}
+        collectionStats={collectionStats}
       />,
     );
 
-    expect(screen.getByText("猎场情报")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "每日岗位收集数量" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "今天，5 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.getByText("Daily Capture Signal")).toBeInTheDocument();
+    const chartVisual = container.querySelector(".animated-chart-visual");
+    expect(chartVisual).not.toHaveClass("is-active");
+    fireEvent.mouseEnter(chartVisual as Element);
+    expect(chartVisual).toHaveClass("is-active");
+    expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
+
+    expect(screen.queryByRole("button", { name: "查看猎场控制台" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
+
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
@@ -65,10 +71,11 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/24"
         dailyCaptureSummary="今日抓取 12 个岗位。分布来源：Aijobs。重点公司 2 家。"
-        previewBucket="today"
-        previewCompanies={[buildCompany()]}
+        collectionStats={collectionStats}
       />,
     );
+
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
 
     const narrativeParagraphs = container.querySelectorAll(".intel-narrative");
 
@@ -78,7 +85,7 @@ describe("IntelligencePanel", () => {
     expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
   });
 
-  it("keeps secondary intelligence grouped in sidebar sections instead of flattening all fields equally", () => {
+  it("does not render the secondary intelligence note cards", () => {
     const intelligence = buildIntelligence();
 
     render(
@@ -86,26 +93,20 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
         dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
-        previewBucket="today"
-        previewCompanies={[buildCompany()]}
+        collectionStats={collectionStats}
       />,
     );
 
-    const notes = screen.getByRole("complementary", { name: "侧栏注记" });
-
-    expect(within(notes).queryByText("今天怎么跟")).not.toBeInTheDocument();
-    expect(within(notes).queryByText("把今天最值得跟的两条线索贴出来，再进入行动。")).not.toBeInTheDocument();
-    expect(within(notes).getByRole("heading", { level: 4, name: "情报发现" })).toBeInTheDocument();
-    expect(within(notes).getByRole("heading", { level: 4, name: "跟进动作" })).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.findings[0])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.findings[1])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.actions[0])).toBeInTheDocument();
-    expect(within(notes).getByText(intelligence.actions[1])).toBeInTheDocument();
-    expect(within(notes).queryByText(intelligence.summary)).not.toBeInTheDocument();
-    expect(within(notes).queryByText(intelligence.narrative)).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "今日行动信号" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 4, name: "情报发现" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 4, name: "跟进动作" })).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.findings[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.findings[1])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[1])).not.toBeInTheDocument();
   });
 
-  it("renders ranking guidance or early-signal cues on first paint", () => {
+  it("does not render ranking guidance or the removed peek block", () => {
     const intelligence = buildIntelligence();
 
     render(
@@ -113,16 +114,15 @@ describe("IntelligencePanel", () => {
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
         dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
-        previewBucket="today"
-        previewCompanies={[buildCompany()]}
+        collectionStats={collectionStats}
       />,
     );
 
-    expect(screen.getAllByText(/榜单引导|露头信号/).length).toBeGreaterThan(0);
-    expect(screen.getByText(intelligence.actions[0])).toBeInTheDocument();
-    expect(screen.getByText(intelligence.actions[1])).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "今日招聘" })).toBeInTheDocument();
-    expect(screen.getByText("找找看有没有能BD的公司？")).toBeInTheDocument();
-    expect(screen.getByText("OpenGradient")).toBeInTheDocument();
+    expect(screen.queryByText(/榜单引导|露头信号/)).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[0])).not.toBeInTheDocument();
+    expect(screen.queryByText(intelligence.actions[1])).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3, name: "今日机会雷达" })).not.toBeInTheDocument();
+    expect(screen.queryByText("榜单露头")).not.toBeInTheDocument();
+    expect(screen.queryByText("找找看有没有能BD的公司？")).not.toBeInTheDocument();
   });
 });

@@ -89,6 +89,7 @@ def test_build_score_inputs_from_same_facts_supports_v1_and_v2():
 def test_extract_job_facts_marks_long_running_role_as_anomaly_without_fake_bd_entry():
     from app.services.job_facts import extract_job_facts, standardize_job_input
 
+    now = datetime(2026, 4, 21, 9, 0, 0)
     job = NormalizedJob(
         source_job_id="backend-role",
         canonical_url="https://example.com/careers/backend-engineer",
@@ -98,12 +99,12 @@ def test_extract_job_facts_marks_long_running_role_as_anomaly_without_fake_bd_en
         remote_type="remote",
         employment_type="full-time",
         description="Build internal tools and platform services.",
-        posted_at=datetime.now().replace(microsecond=0) - timedelta(days=10),
+        posted_at=now - timedelta(days=10),
         raw_payload={},
     )
 
-    standardized = standardize_job_input(job, now=datetime(2026, 4, 21, 9, 0, 0))
-    facts = extract_job_facts(standardized, now=datetime(2026, 4, 21, 9, 0, 0))
+    standardized = standardize_job_input(job, now=now)
+    facts = extract_job_facts(standardized, now=now)
 
     assert facts.bd_entry is False
     assert facts.urgent is False

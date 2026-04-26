@@ -24,7 +24,7 @@ export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: 
       {isClaimed ? (
         <>
           <div className="seal-mark" aria-hidden="true">
-            <span>SEALED</span>
+            <span>OWNER</span>
           </div>
           <dl className="seal-details">
             <div>

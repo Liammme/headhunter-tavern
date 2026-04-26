@@ -77,11 +77,11 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkey
         ),
     )
 
-    assert snapshot["headline"] == "James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。"
+    assert snapshot["headline"] == "今日重点：AI 核心岗位仍是当前窗口内最明确的主线。"
     assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。"
-    assert snapshot["narrative"].startswith("James侦探")
+    assert not snapshot["narrative"].startswith("James侦探")
     assert snapshot["summary"] not in snapshot["narrative"]
-    assert "你抬眼示意他继续" in snapshot["narrative"]
+    assert "AI 相关岗位仍是当前窗口内最强主线。" in snapshot["narrative"]
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
     assert "重点公司 1 家，优先顺着公司卡往下打。" in snapshot["findings"]
@@ -91,14 +91,15 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkey
 
 def test_build_narrative_from_fields_excludes_summary_text():
     narrative = build_narrative_from_fields(
-        headline="James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。",
+        headline="今日重点：AI 核心岗位仍是当前窗口内最明确的主线。",
         summary="基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。",
         findings=["重点公司 1 家，优先顺着公司卡往下打。"],
         actions=["先看重点公司，再优先认领其中的高赏金岗位。"],
     )
 
     assert "基于近 14 天统一聚合结果生成" not in narrative
-    assert "你抬眼示意他继续" in narrative
+    assert "你抬眼示意他继续" not in narrative
+    assert not narrative.startswith("James侦探")
     assert "先看重点公司，再优先认领其中的高赏金岗位。" in narrative
 
 
@@ -116,8 +117,8 @@ def test_build_intelligence_snapshot_handles_empty_day_payloads(monkeypatch):
     )
 
     assert snapshot == {
-        "narrative": "近 14 天岗位池暂无新增信号，建议先触发抓取更新。当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。你抬眼示意他继续，吧台另一头只回了一句：首页和情报当前共享同一聚合基线，因此这里为空时首页列表也应为空。最后只剩一句落在桌面上：先触发抓取，等统一聚合结果生成后再判断主线方向。",
-        "headline": "James侦探把杯子往吧台边一推：近 14 天岗位池暂时没起风，先把抓取拉起来再看下一步。",
+        "narrative": "近 14 天岗位池暂无新增信号，建议先触发抓取更新。当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。首页和情报当前共享同一聚合基线，因此这里为空时首页列表也应为空。下一步先触发抓取，等统一聚合结果生成后再判断主线方向。",
+        "headline": "近 14 天岗位池暂无新增信号，建议先触发抓取更新。",
         "summary": "当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。",
         "analysis_version": "feed-v1",
         "rule_version": "score-v2",
@@ -163,7 +164,7 @@ def test_build_intelligence_snapshot_keeps_empty_fallback_when_only_stale_jobs_e
         jobs=[stale_job],
     )
 
-    assert snapshot["headline"] == "James侦探把杯子往吧台边一推：近 14 天岗位池暂时没起风，先把抓取拉起来再看下一步。"
+    assert snapshot["headline"] == "近 14 天岗位池暂无新增信号，建议先触发抓取更新。"
     assert snapshot["summary"] == "当前情报基于统一聚合结果生成，但窗口内还没有可展示的公司与岗位。"
     assert snapshot["actions"] == ["先触发抓取，等统一聚合结果生成后再判断主线方向。"]
 
@@ -183,7 +184,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
         captured["meta"] = meta
         captured["jobs"] = jobs
         return {
-            "narrative": "James侦探把杯子往桌上一放，说今天先盯 AI 核心产研。你抬眼示意他继续，他说重点公司里高赏金岗位又在往前顶。",
+            "narrative": "今天先盯 AI 核心产研。重点公司里的高赏金岗位正在重新往前顶，说明企业更急着补卡业务节奏的关键岗位。",
             "headline": "LLM 判断今天先打 AI 核心产研。",
             "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。",
             "findings": ["AI 主线继续增强。"],
@@ -229,7 +230,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
     assert captured["day_payloads"] == day_payloads
     assert captured["meta"] == meta
     assert captured["jobs"] == []
-    assert snapshot["narrative"].startswith("James侦探")
+    assert not snapshot["narrative"].startswith("James侦探")
     assert snapshot["headline"] == "LLM 判断今天先打 AI 核心产研。"
     assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。"
     assert snapshot["findings"] == ["AI 主线继续增强。"]
@@ -281,7 +282,7 @@ def test_build_intelligence_snapshot_falls_back_when_llm_fails(monkeypatch):
         ),
     )
 
-    assert snapshot["headline"] == "James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。"
+    assert snapshot["headline"] == "今日重点：AI 核心岗位仍是当前窗口内最明确的主线。"
     assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：1 家公司，1 个岗位，1 个高赏金岗位。"
 
 
@@ -378,11 +379,11 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
         if model_name == "broken-model":
             raise RuntimeError("bad request")
         return (
-            '{"narrative":"James侦探把杯子往吧台边一推：今天先盯高赏金产研岗。你示意他继续，他低声补了一句：今天冒头的不是散岗，而是往重点公司收拢的核心岗位。他临走前只留一句：今天先盯重点公司里的高赏金技术、AI和产品岗。",'
-            '"headline":"James侦探把杯子往吧台边一推：今天先盯高赏金产研岗。",'
-            '"summary":"他说今天冒头的不是散岗，而是往重点公司收拢的核心岗位。",'
-            '"findings":["你示意他继续，他低声补了一句：这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。"],'
-            '"actions":["他临走前只留一句：今天先盯重点公司里的高赏金技术、AI和产品岗。"]}'
+            '{"narrative":"今天先盯高赏金产研岗。今天冒头的不是散岗，而是往重点公司收拢的核心岗位。这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。下一步先盯重点公司里的高赏金技术、AI和产品岗。",'
+            '"headline":"今天先盯高赏金产研岗。",'
+            '"summary":"今天冒头的不是散岗，而是往重点公司收拢的核心岗位。",'
+            '"findings":["这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。"],'
+            '"actions":["今天先盯重点公司里的高赏金技术、AI和产品岗。"]}'
         )
 
     monkeypatch.setattr(
@@ -425,7 +426,38 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
     )
 
     assert called_models == ["broken-model", "glm-4-flash-250414"]
-    assert snapshot["headline"] == "James侦探把杯子往吧台边一推：今天先盯高赏金产研岗。"
+    assert snapshot["headline"] == "今天先盯高赏金产研岗。"
+
+
+def test_request_retry_retries_transient_rate_limit_errors(monkeypatch):
+    import app.services.intelligence as intelligence_module
+
+    _request_zhipu_chat_completion_with_retry = intelligence_module._request_zhipu_chat_completion_with_retry
+
+    called_models = []
+    sleep_calls = []
+    responses = [
+        RuntimeError('LLM request failed with 429: {"error":{"code":"1305","message":"该模型当前访问量过大，请您稍后再试"}}'),
+        '{"narrative":"今天AI/算法岗位数量显著增加，Aijobs平台成为主要贡献者。","headline":"今天AI/算法岗位数量显著增加。","summary":"今天AI/算法方向出现明显升温。","findings":["Aijobs平台贡献了多条AI岗位。"],"actions":["优先筛查AI/算法方向里的高赏金岗位。"]}',
+    ]
+
+    monkeypatch.setattr("app.services.intelligence._iter_zhipu_models", lambda: ["glm-4-flash-250414"])
+
+    def fake_request(_messages, model_name):
+        called_models.append(model_name)
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr("app.services.intelligence._request_zhipu_chat_completion_with_model", fake_request)
+    monkeypatch.setattr(intelligence_module.time, "sleep", lambda seconds: sleep_calls.append(seconds))
+
+    result = _request_zhipu_chat_completion_with_retry([{"role": "user", "content": "test"}])
+
+    assert result.startswith('{"narrative"')
+    assert called_models == ["glm-4-flash-250414", "glm-4-flash-250414"]
+    assert sleep_calls == [1]
 
 
 def test_build_llm_intelligence_input_uses_fact_briefs_instead_of_raw_description():
@@ -551,30 +583,30 @@ def test_build_llm_intelligence_input_includes_change_context():
     assert llm_input["change_context"]["representative_changes"][0]["evidence"][0]["canonical_url"] == "https://example.com/1"
 
 
-def test_intelligence_prompts_include_james_style_and_banned_rules():
+def test_intelligence_prompts_use_plain_business_style_and_banned_rules():
     system_prompt = build_intelligence_system_prompt()
     user_prompt = build_intelligence_user_prompt({"overview": {"job_count": 1}})
 
-    assert "James侦探" in system_prompt
+    assert "James侦探" not in system_prompt
+    assert "酒馆" not in system_prompt
     assert "narrative" in system_prompt
-    assert "250 到 400 字" in system_prompt
     assert "认领人只表示内部占坑状态" in system_prompt
     assert "禁止纯统计播报" in system_prompt
     assert "禁止空泛建议" in system_prompt
-    assert "你示意他继续" in system_prompt or "你抬眼示意他继续" in system_prompt
     assert "只能根据 change_context" in system_prompt
-    assert "第三段必须写出你追问或示意他继续" in user_prompt
+    assert "追问" not in user_prompt
+    assert "示意他继续" not in user_prompt
     assert "change_context" in user_prompt
     assert "不要做标签播报" in user_prompt
 
 
 def test_validate_llm_intelligence_fields_rejects_claimed_names():
     payload = {
-        "narrative": "James侦探把杯子往吧台边一推。你示意他继续，他低声补了一句：验收测试员已经认领了这条线。",
-        "headline": "James侦探把杯子往吧台边一推：今天先盯高赏金产研岗。",
+        "narrative": "今天先看高赏金产研岗。验收测试员已经认领了这条线。",
+        "headline": "今天先盯高赏金产研岗。",
         "summary": "他说今天真正冒头的是高赏金核心岗。",
-        "findings": ["你示意他继续，他低声补了一句：验收测试员已经认领了这条线。"],
-        "actions": ["他最后只留一句：先盯重点公司。"],
+        "findings": ["验收测试员已经认领了这条线。"],
+        "actions": ["先盯重点公司。"],
     }
 
     try:
@@ -587,11 +619,11 @@ def test_validate_llm_intelligence_fields_rejects_claimed_names():
 
 def test_validate_llm_intelligence_fields_rejects_stat_broadcast():
     payload = {
-        "narrative": "James侦探把杯子往吧台边一推：今天先盯 AI 主线。你示意他继续，他只回了一句：AI标签出现很多次，Web3标签达25次。他最后只留一句：先盯重点公司里的高赏金产研岗。",
-        "headline": "James侦探把杯子往吧台边一推：今天先盯 AI 主线。",
+        "narrative": "今天先盯 AI 主线。AI标签出现很多次，Web3标签达25次。先盯重点公司里的高赏金产研岗。",
+        "headline": "今天先盯 AI 主线。",
         "summary": "他说今天变化不在噪音，在高赏金岗位开始往重点公司收拢。",
-        "findings": ["你示意他继续，他只回了一句：AI标签出现很多次，Web3标签达25次。"],
-        "actions": ["他最后只留一句：先盯重点公司里的高赏金产研岗。"],
+        "findings": ["AI标签出现很多次，Web3标签达25次。"],
+        "actions": ["先盯重点公司里的高赏金产研岗。"],
     }
 
     try:
@@ -602,21 +634,16 @@ def test_validate_llm_intelligence_fields_rejects_stat_broadcast():
         raise AssertionError("expected stat broadcast validation failure")
 
 
-def test_validate_llm_intelligence_fields_requires_follow_up_beat():
+def test_validate_llm_intelligence_fields_accepts_plain_business_brief():
     payload = {
-        "narrative": "James侦探把杯子往吧台边一推：今天先盯 AI 主线。他说今天变化不在噪音，在高赏金岗位开始往重点公司收拢。这说明真正往前顶的是卡业务节奏的技术和产品岗。他最后只留一句：先盯重点公司里的高赏金产研岗。",
-        "headline": "James侦探把杯子往吧台边一推：今天先盯 AI 主线。",
-        "summary": "他说今天变化不在噪音，在高赏金岗位开始往重点公司收拢。",
+        "narrative": "今天先盯 AI 主线。今天变化不在噪音，而在高赏金岗位开始往重点公司收拢。这说明真正往前顶的是卡业务节奏的技术和产品岗。下一步先盯重点公司里的高赏金产研岗。",
+        "headline": "今天先盯 AI 主线。",
+        "summary": "今天变化不在噪音，而在高赏金岗位开始往重点公司收拢。",
         "findings": ["这说明真正往前顶的是卡业务节奏的技术和产品岗。"],
-        "actions": ["他最后只留一句：先盯重点公司里的高赏金产研岗。"],
+        "actions": ["先盯重点公司里的高赏金产研岗。"],
     }
 
-    try:
-        validate_llm_intelligence_fields(payload, banned_names=set())
-    except Exception as exc:
-        assert "follow-up beat" in str(exc)
-    else:
-        raise AssertionError("expected follow-up beat validation failure")
+    validate_llm_intelligence_fields(payload, banned_names=set())
 
 
 def test_build_intelligence_snapshot_falls_back_when_output_uses_claimed_name(monkeypatch):
@@ -662,7 +689,7 @@ def test_build_intelligence_snapshot_falls_back_when_output_uses_claimed_name(mo
         ),
     )
 
-    assert snapshot["headline"] == "James侦探晃了晃杯底，低声说：今天先盯那些把AI核心岗位重新往前顶的公司。"
+    assert snapshot["headline"] == "今日重点：AI 核心岗位仍是当前窗口内最明确的主线。"
 
 
 def test_generate_llm_intelligence_fields_repairs_invalid_first_draft(monkeypatch):
@@ -670,11 +697,11 @@ def test_generate_llm_intelligence_fields_repairs_invalid_first_draft(monkeypatc
 
     first = '{"narrative":"分析报告。本周市场动态显示 AI标签出现很多次。","headline":"分析报告","summary":"本周市场动态显示 AI标签出现很多次。","findings":["AI标签很多。"],"actions":["制定专项方案。"]}'
     repaired = (
-        '{"narrative":"James侦探晃了晃杯底：今天先盯重点公司里重新抬头的高赏金产研岗。他说，和近14天摊开的盘子比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。你示意他继续，他把话说透：这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。他把杯子推回来，只留一句：今天先盯重点公司和持续招不动的团队，优先抢技术、AI、产品里的高赏金核心岗。",'
-        '"headline":"James侦探晃了晃杯底：今天先盯重点公司里重新抬头的高赏金产研岗。",'
-        '"summary":"他说，和近14天摊开的盘子比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。",'
-        '"findings":["你示意他继续，他把话说透：这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。"],'
-        '"actions":["他把杯子推回来，只留一句：今天先盯重点公司和持续招不动的团队，优先抢技术、AI、产品里的高赏金核心岗。"]}'
+        '{"narrative":"今天先盯重点公司里重新抬头的高赏金产研岗。和近14天基线相比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。",'
+        '"headline":"今天先盯重点公司里重新抬头的高赏金产研岗。",'
+        '"summary":"和近14天基线相比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。",'
+        '"findings":["这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。"],'
+        '"actions":["下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。"]}'
     )
     responses = [first, repaired]
 
@@ -718,5 +745,5 @@ def test_generate_llm_intelligence_fields_repairs_invalid_first_draft(monkeypatc
         jobs=[],
     )
 
-    assert result["headline"].startswith("James侦探")
-    assert result["narrative"].startswith("James侦探")
+    assert not result["headline"].startswith("James侦探")
+    assert not result["narrative"].startswith("James侦探")
