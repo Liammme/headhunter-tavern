@@ -37,6 +37,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
         for key, value in payload.items():
             setattr(existing, key, value)
 
+    db.flush()
     delete_out_of_window_jobs(db)
     db.commit()
     return new_jobs

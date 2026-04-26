@@ -118,7 +118,7 @@ def test_delete_out_of_window_jobs_keeps_jobs_collected_within_30_days(db_sessio
 
     class FrozenDateTime(datetime):
         @classmethod
-        def now(cls):
+        def now(cls, tz=None):
             return fixed_now
 
     monkeypatch.setattr(job_upsert_service, "datetime", FrozenDateTime)
@@ -141,20 +141,80 @@ def test_delete_out_of_window_jobs_keeps_jobs_collected_within_30_days(db_sessio
         description="fresh",
         collected_at=fixed_now - timedelta(days=29),
     )
-    db_session.add_all([stale_job, fresh_job])
+    boundary_job = Job(
+        canonical_url="https://jobs.example.com/acme/boundary-role",
+        source_name="test",
+        title="Boundary Role",
+        company="Acme",
+        company_normalized="acme",
+        description="boundary",
+        collected_at=fixed_now - timedelta(days=30),
+    )
+    db_session.add_all([stale_job, fresh_job, boundary_job])
     db_session.commit()
 
     stale_claim = JobClaim(job_id=stale_job.id, claimer_name="Liam")
     fresh_claim = JobClaim(job_id=fresh_job.id, claimer_name="Mia")
-    db_session.add_all([stale_claim, fresh_claim])
+    boundary_claim = JobClaim(job_id=boundary_job.id, claimer_name="Noah")
+    db_session.add_all([stale_claim, fresh_claim, boundary_claim])
     db_session.commit()
     fresh_job_url = fresh_job.canonical_url
     fresh_job_id = fresh_job.id
+    boundary_job_url = boundary_job.canonical_url
+    boundary_job_id = boundary_job.id
 
     delete_out_of_window_jobs(db_session)
 
     remaining_jobs = db_session.execute(select(Job).order_by(Job.canonical_url.asc())).scalars().all()
     remaining_claims = db_session.execute(select(JobClaim).order_by(JobClaim.claimer_name.asc())).scalars().all()
 
-    assert [job.canonical_url for job in remaining_jobs] == [fresh_job_url]
-    assert [claim.job_id for claim in remaining_claims] == [fresh_job_id]
+    assert [job.canonical_url for job in remaining_jobs] == [boundary_job_url, fresh_job_url]
+    assert [claim.job_id for claim in remaining_claims] == [fresh_job_id, boundary_job_id]
+
+
+def test_upsert_jobs_flushes_existing_job_updates_before_retention_cleanup(db_session, monkeypatch):
+    fixed_now = datetime(2026, 4, 26, 12, 0, 0)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now
+
+    monkeypatch.setattr(job_upsert_service, "datetime", FrozenDateTime)
+
+    existing = Job(
+        canonical_url="https://jobs.example.com/acme/senior-engineer",
+        source_name="old",
+        title="Old title",
+        company="Acme",
+        company_normalized="acme",
+        description="old description",
+        collected_at=fixed_now - timedelta(days=31),
+    )
+    db_session.add(existing)
+    db_session.commit()
+
+    claim = JobClaim(job_id=existing.id, claimer_name="Liam")
+    db_session.add(claim)
+    db_session.commit()
+
+    new_jobs = upsert_jobs(
+        db_session,
+        [
+            build_normalized_job(
+                canonical_url=existing.canonical_url,
+                title="Senior Engineer",
+                company="Acme",
+                description="fresh description",
+            )
+        ],
+    )
+
+    stored_job = db_session.execute(select(Job)).scalars().one()
+    stored_claim = db_session.execute(select(JobClaim)).scalars().one()
+
+    assert new_jobs == 0
+    assert stored_job.title == "Senior Engineer"
+    assert stored_job.description == "fresh description"
+    assert stored_job.collected_at >= fixed_now - timedelta(days=30)
+    assert stored_claim.job_id == stored_job.id
