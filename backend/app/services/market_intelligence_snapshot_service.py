@@ -17,7 +17,11 @@ DB_CREDENTIAL_URL_PATTERN = re.compile(
 )
 OPENAI_KEY_PATTERN = re.compile(r"sk-[^\s,;]+", re.IGNORECASE)
 KEY_VALUE_SECRET_PATTERN = re.compile(
-    r"\b(api_key|token|password)\s*([=:])\s*([^\s,;]+)",
+    r"\b([a-z0-9_]*(?:api_key|token|password))\s*([=:])\s*([^\s,;]+)",
+    re.IGNORECASE,
+)
+AUTHORIZATION_BEARER_PATTERN = re.compile(
+    r"\bAuthorization\s*:\s*Bearer\s+[^\s,;]+",
     re.IGNORECASE,
 )
 
@@ -32,6 +36,8 @@ def generate_daily_market_intelligence_snapshot(
     target_date = snapshot_date or generated_at.date()
     jobs = list(db.execute(select(Job)).scalars().all())
     signal_payload = build_market_signal_payload(jobs=jobs, snapshot_date=target_date)
+    if db.in_transaction():
+        db.commit()
 
     try:
         report_payload = generate_market_report(signal_payload)
@@ -70,6 +76,7 @@ def generate_daily_market_intelligence_snapshot(
 def _sanitize_error_message(exc: Exception) -> str:
     message = str(exc) or exc.__class__.__name__
     message = DB_CREDENTIAL_URL_PATTERN.sub("[redacted]", message)
+    message = AUTHORIZATION_BEARER_PATTERN.sub("Authorization: Bearer [redacted]", message)
     message = OPENAI_KEY_PATTERN.sub("[redacted]", message)
     message = KEY_VALUE_SECRET_PATTERN.sub(_redact_key_value_secret, message)
     return message[:ERROR_MESSAGE_LIMIT]

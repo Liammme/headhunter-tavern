@@ -57,7 +57,12 @@ def test_generate_daily_market_intelligence_snapshot_persists_success_snapshot(
         "headline": "AI infra demand is broadening",
         "narrative": "30d demand remains visible in the 90d window.",
     }
-    monkeypatch.setattr(service, "generate_market_report", lambda signal: report_payload)
+
+    def fake_generate_market_report(signal_payload):
+        assert db_session.in_transaction() is False
+        return report_payload
+
+    monkeypatch.setattr(service, "generate_market_report", fake_generate_market_report)
 
     result = service.generate_daily_market_intelligence_snapshot(
         db_session,
@@ -128,6 +133,10 @@ def test_generate_daily_market_intelligence_snapshot_redacts_secrets_from_errors
             "password=plain-password-secret "
             "api_key: colon-api-secret token: colon-token-secret "
             "password: colon-password-secret "
+            "OPENAI_API_KEY=env-openai-secret "
+            "BOUNTY_POOL_ZHIPU_API_KEY=env-zhipu-secret "
+            "access_token=env-access-token-secret "
+            "Authorization: Bearer bearer-token-secret "
             "postgresql://user:db-password-secret@example.com:5432/app "
             "postgres://user:postgres-password-secret@example.com:5432/app "
             "mysql://user:mysql-password-secret@example.com:3306/app"
@@ -152,6 +161,10 @@ def test_generate_daily_market_intelligence_snapshot_redacts_secrets_from_errors
     assert "colon-api-secret" not in combined
     assert "colon-token-secret" not in combined
     assert "colon-password-secret" not in combined
+    assert "env-openai-secret" not in combined
+    assert "env-zhipu-secret" not in combined
+    assert "env-access-token-secret" not in combined
+    assert "bearer-token-secret" not in combined
     assert "db-password-secret" not in combined
     assert "postgres-password-secret" not in combined
     assert "mysql-password-secret" not in combined
