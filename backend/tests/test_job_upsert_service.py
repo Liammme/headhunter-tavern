@@ -4,7 +4,8 @@ from sqlalchemy import select
 
 from app.crawlers.base import NormalizedJob
 from app.models import Job, JobClaim
-from app.services.job_upsert_service import purge_demo_jobs, upsert_jobs
+from app.services import job_upsert_service
+from app.services.job_upsert_service import delete_out_of_window_jobs, purge_demo_jobs, upsert_jobs
 
 
 def build_normalized_job(*, canonical_url: str, title: str, company: str, description: str) -> NormalizedJob:
@@ -110,3 +111,50 @@ def test_purge_demo_jobs_removes_demo_jobs_and_claims(db_session):
 
     assert db_session.execute(select(Job)).scalars().all() == []
     assert db_session.execute(select(JobClaim)).scalars().all() == []
+
+
+def test_delete_out_of_window_jobs_keeps_jobs_collected_within_30_days(db_session, monkeypatch):
+    fixed_now = datetime(2026, 4, 26, 12, 0, 0)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls):
+            return fixed_now
+
+    monkeypatch.setattr(job_upsert_service, "datetime", FrozenDateTime)
+
+    stale_job = Job(
+        canonical_url="https://jobs.example.com/acme/stale-role",
+        source_name="test",
+        title="Stale Role",
+        company="Acme",
+        company_normalized="acme",
+        description="stale",
+        collected_at=fixed_now - timedelta(days=31),
+    )
+    fresh_job = Job(
+        canonical_url="https://jobs.example.com/acme/fresh-role",
+        source_name="test",
+        title="Fresh Role",
+        company="Acme",
+        company_normalized="acme",
+        description="fresh",
+        collected_at=fixed_now - timedelta(days=29),
+    )
+    db_session.add_all([stale_job, fresh_job])
+    db_session.commit()
+
+    stale_claim = JobClaim(job_id=stale_job.id, claimer_name="Liam")
+    fresh_claim = JobClaim(job_id=fresh_job.id, claimer_name="Mia")
+    db_session.add_all([stale_claim, fresh_claim])
+    db_session.commit()
+    fresh_job_url = fresh_job.canonical_url
+    fresh_job_id = fresh_job.id
+
+    delete_out_of_window_jobs(db_session)
+
+    remaining_jobs = db_session.execute(select(Job).order_by(Job.canonical_url.asc())).scalars().all()
+    remaining_claims = db_session.execute(select(JobClaim).order_by(JobClaim.claimer_name.asc())).scalars().all()
+
+    assert [job.canonical_url for job in remaining_jobs] == [fresh_job_url]
+    assert [claim.job_id for claim in remaining_claims] == [fresh_job_id]
