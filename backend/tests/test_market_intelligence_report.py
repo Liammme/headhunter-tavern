@@ -30,12 +30,12 @@ def _valid_report() -> dict:
             {
                 "lens": "product_business",
                 "judgment": "Teams are connecting infrastructure work to production product outcomes.",
-                "evidence": ["Product-facing platform roles are present"],
+                "evidence": ["AI infra product-facing platform roles are present"],
             },
             {
                 "lens": "organization_hiring",
                 "judgment": "Hiring suggests practical buildout rather than pure research expansion.",
-                "evidence": ["Engineering ownership language is visible"],
+                "evidence": ["OpenGradient engineering ownership language is visible"],
             },
         ],
         "trend_cards": [
@@ -67,6 +67,14 @@ def test_validate_market_intelligence_report_rejects_bounty_or_bd_language():
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
+def test_validate_market_intelligence_report_rejects_job_link_language():
+    report = _valid_report()
+    report["narrative"] = "30d narrative mentions 岗位链接."
+
+    with pytest.raises(MarketIntelligenceReportError, match="banned"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
 def test_validate_market_intelligence_report_requires_all_perspectives():
     report = _valid_report()
     report["perspectives"] = report["perspectives"][:2]
@@ -81,11 +89,19 @@ def test_validate_market_intelligence_report_allows_extra_perspective_lens():
         {
             "lens": "capital_market",
             "judgment": "Funding context can be watched separately from hiring demand.",
-            "evidence": ["30d signal"],
+            "evidence": ["AI infra 30d signal"],
         }
     )
 
     validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_rejects_unanchored_evidence():
+    report = _valid_report()
+    report["perspectives"][0]["evidence"] = ["UnknownCorp expanded hiring"]
+
+    with pytest.raises(MarketIntelligenceReportError, match="evidence"):
+        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
 def test_parse_market_intelligence_report_accepts_code_fence():
@@ -136,6 +152,18 @@ def test_build_market_intelligence_system_prompt_contains_quality_gate_instructi
 
     for phrase in ["BD", "猎头", "赏金", "认领", "客户开发", "岗位来源", "岗位链接"]:
         assert phrase in prompt
+    for field in [
+        "headline",
+        "narrative",
+        "primary_judgment",
+        "perspectives",
+        "trend_cards",
+        "watchlist",
+        "confidence",
+        "direction",
+        "time_horizon",
+    ]:
+        assert field in prompt
     assert "JSON" in prompt
     assert "30d" in prompt
     assert "90d" in prompt
@@ -190,12 +218,12 @@ def test_generate_market_report_uses_llm_payload_when_enabled(monkeypatch):
     {
       "lens": "product_business",
       "judgment": "Teams are connecting infrastructure work to production product outcomes.",
-      "evidence": ["Product-facing platform roles are present"]
+      "evidence": ["AI infra product-facing platform roles are present"]
     },
     {
       "lens": "organization_hiring",
       "judgment": "Hiring suggests practical buildout rather than pure research expansion.",
-      "evidence": ["Engineering ownership language is visible"]
+      "evidence": ["OpenGradient engineering ownership language is visible"]
     }
   ],
   "trend_cards": [
@@ -218,7 +246,17 @@ def test_generate_market_report_uses_llm_payload_when_enabled(monkeypatch):
         fake_request_structured_json,
     )
 
-    report = generate_market_report({"theme": "AI infra"})
+    report = generate_market_report(
+        {
+            "representative_samples": [
+                {
+                    "company": "OpenGradient",
+                    "title": "AI Infrastructure Engineer",
+                    "domain": "AI infra",
+                }
+            ]
+        }
+    )
 
     assert report == expected
     assert calls

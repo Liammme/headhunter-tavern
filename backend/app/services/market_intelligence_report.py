@@ -16,6 +16,7 @@ BANNED_PHRASES = (
     "认领",
     "客户开发",
     "岗位来源",
+    "岗位链接",
     "canonical_url",
     "source_name",
     "根据数据分析可得",
@@ -31,8 +32,10 @@ class MarketIntelligenceReportError(Exception):
 def build_market_intelligence_system_prompt() -> str:
     return (
         "You write market intelligence reports from sanitized hiring signals. "
-        "Return only a JSON object matching the requested schema. Include a primary judgment, "
-        "and make the narrative explicitly reference 30d or 90d. "
+        "Return only a JSON object with fields: headline, narrative, primary_judgment, "
+        "perspectives, trend_cards, and watchlist. primary_judgment must include confidence. "
+        "Each trend card must include direction, time_horizon, and confidence. "
+        "Include a primary judgment, and make the narrative explicitly reference 30d or 90d. "
         "Never mention BD, 猎头, 赏金, 认领, 客户开发, 岗位来源, or 岗位链接. "
         "Do not expose source fields such as canonical_url or source_name."
     )
@@ -57,7 +60,7 @@ def generate_market_report(signal_payload: dict) -> dict:
         ]
     )
     report = parse_market_intelligence_report(content)
-    validate_market_intelligence_report(report, allowed_terms=set())
+    validate_market_intelligence_report(report, allowed_terms=_allowed_terms(signal_payload))
     return report
 
 
@@ -102,7 +105,8 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
         lens = _require_str(item, "lens")
         lenses.add(lens)
         _require_str(item, "judgment")
-        _require_str_list(item, "evidence")
+        evidence = _require_str_list(item, "evidence")
+        _validate_evidence_terms(evidence, allowed_terms)
     if not PERSPECTIVE_LENSES.issubset(lenses):
         raise MarketIntelligenceReportError("perspectives must include all required lenses")
 
@@ -120,7 +124,8 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
         if time_horizon not in TREND_TIME_HORIZONS:
             raise MarketIntelligenceReportError("trend card time_horizon is invalid")
         _require_str(card, "judgment")
-        _require_str_list(card, "evidence")
+        evidence = _require_str_list(card, "evidence")
+        _validate_evidence_terms(evidence, allowed_terms)
         card_confidence = _require_str(card, "confidence")
         if card_confidence not in CONFIDENCE_VALUES:
             raise MarketIntelligenceReportError("trend card confidence is invalid")
@@ -175,11 +180,38 @@ def build_rule_market_report(signal_payload: dict) -> dict:
     }
 
 
+def _allowed_terms(signal_payload: dict) -> set[str]:
+    terms: set[str] = set()
+    representative_samples = signal_payload.get("representative_samples")
+    if not isinstance(representative_samples, list):
+        return terms
+
+    for sample in representative_samples:
+        if not isinstance(sample, dict):
+            continue
+        for field in ("company", "title", "domain"):
+            value = sample.get(field)
+            if isinstance(value, str) and value.strip():
+                terms.add(value.strip())
+    return terms
+
+
 def _reject_banned_phrases(payload: dict) -> None:
     serialized = json.dumps(payload, ensure_ascii=False)
     for phrase in BANNED_PHRASES:
         if phrase in serialized:
             raise MarketIntelligenceReportError(f"report contains banned phrase: {phrase}")
+
+
+def _validate_evidence_terms(evidence: list[str], allowed_terms: set[str]) -> None:
+    if not allowed_terms:
+        return
+
+    normalized_terms = [term.lower() for term in allowed_terms]
+    for item in evidence:
+        normalized_item = item.lower()
+        if not any(term in normalized_item for term in normalized_terms):
+            raise MarketIntelligenceReportError("evidence must contain an allowed term")
 
 
 def _require_dict(payload: dict, field: str) -> dict:
