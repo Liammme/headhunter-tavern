@@ -32,4 +32,20 @@ ssh deploy@43.163.127.112
 bash /opt/bounty-pool/app/deploy/backend-deploy.sh
 ```
 
+Schema-changing backend release:
+
+`deploy/backend-deploy.sh` only pulls code, restarts `bounty-pool`, and checks `/health`. It does not initialize or migrate the database, so do not use the script alone for a release that adds schema.
+
+The market intelligence layer release adds one PostgreSQL table: `market_intelligence_snapshots`. This is a new table and does not ALTER existing tables. Before or during production release, run this on the server:
+
+```bash
+cd /opt/bounty-pool/app/backend
+source /opt/bounty-pool/venv/bin/activate
+python -c "from app.db.init_db import init_db; init_db()"
+```
+
+After the schema step, restart `bounty-pool`, run health checks, manually run `python -m app.cli.daily_bounty`, curl `/api/v1/home`, and confirm the returned `intelligence` text does not include source/link/full JD/bounty/claim/BD language. If market intelligence generation fails, keep the service online and fall back to the old home logic or latest successful snapshot; do not delete `market_intelligence_snapshots` during an incident.
+
+For local development, prefer local PostgreSQL and never point local `DATABASE_URL` at production. SQLite can stay in pytest fixtures, but do a local PostgreSQL smoke test before release. If there are no Python or Node dependency changes, skip extra `pip` or `npm` install steps; install dependencies only when `pyproject` or package files change.
+
 Adjust paths, domain names, database credentials, and API keys before using them on the server.
