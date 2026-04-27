@@ -27,7 +27,7 @@ def generate_living_market_report(
 ) -> dict:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
-    previous_snapshot = _load_latest_success_living_snapshot(db)
+    previous_snapshot = load_latest_success_living_snapshot(db)
     resolved_mode = "baseline" if mode == "auto" and previous_snapshot is None else mode
     if resolved_mode == "auto":
         resolved_mode = "update"
@@ -101,7 +101,7 @@ def _compat_report_payload(living_report: dict) -> dict:
     }
 
 
-def _load_latest_success_living_snapshot(db: Session) -> MarketIntelligenceSnapshot | None:
+def load_latest_success_living_snapshot(db: Session) -> MarketIntelligenceSnapshot | None:
     snapshots = (
         db.execute(
             select(MarketIntelligenceSnapshot)

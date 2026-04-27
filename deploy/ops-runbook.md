@@ -17,7 +17,7 @@
 5. 进程托管：`systemd`
 6. 反向代理：`nginx`
 7. 数据库：PostgreSQL
-8. 定时任务：`cron` 每天 08:00 跑 `daily_bounty`
+8. 定时任务：`cron` 每天 08:00、14:00 跑 `daily_bounty`，每天 15:30 跑 Living Report 刷新检查
 
 ## 1. 线上关键路径
 
@@ -28,6 +28,7 @@
 3. FastAPI 应用
 4. PostgreSQL
 5. `cron` 触发 `python -m app.cli.daily_bounty`
+6. `cron` 触发 `python -m app.cli.refresh_living_market_report`
 
 排查问题时，不要一上来猜代码。先判断断在哪一层。
 
@@ -71,12 +72,28 @@ sudo nginx -t
 tail -n 100 /var/log/bounty-pool/daily-bounty.log
 ```
 
+Living Report 自动刷新日志：
+
+```bash
+tail -n 100 /var/log/bounty-pool/living-market-report.log
+```
+
 ### 2.6 手动跑一次每日任务
 
 ```bash
 cd /opt/bounty-pool/app/backend
 source /opt/bounty-pool/venv/bin/activate
 python -m app.cli.daily_bounty
+```
+
+### 2.6.1 手动刷新 Living Report
+
+这条命令会先幂等刷新 `market_intelligence_facts`，再按自然日判断最近一次成功 Living Report 是否已经满 3 天。没到 3 天会返回 `status=skipped`，不会重复生成。
+
+```bash
+cd /opt/bounty-pool/app/backend
+source /opt/bounty-pool/venv/bin/activate
+python -m app.cli.refresh_living_market_report --days 180 --min-age-days 3
 ```
 
 ### 2.7 本机探活
@@ -92,8 +109,9 @@ curl https://api.talentsignal.cloud/health
 
 1. `systemctl status bounty-pool --no-pager` 是否为 `active (running)`
 2. `curl https://api.talentsignal.cloud/health` 是否返回正常
-3. `/var/log/bounty-pool/daily-bounty.log` 今天 08:00 后是否有新记录
-4. 产品首页数据是否正常更新，没有空白或明显过旧
+3. `/var/log/bounty-pool/daily-bounty.log` 今天 08:00 或 14:00 后是否有新记录
+4. `/var/log/bounty-pool/living-market-report.log` 今天 15:30 后是否有新记录，且状态是 `success` 或合理的 `skipped`
+5. 产品首页数据是否正常更新，没有空白或明显过旧
 
 如果这四项都正常，说明主链基本健康。
 
@@ -301,6 +319,25 @@ python -m app.cli.daily_bounty
 ```
 
 如果手动能跑，说明问题多半在 cron 配置或环境。
+
+### 7.4 Living Report 没有三天自动更新
+
+先看：
+
+```bash
+tail -n 200 /var/log/bounty-pool/living-market-report.log
+cat /etc/cron.d/bounty-pool-living-report
+```
+
+再手动执行一次：
+
+```bash
+cd /opt/bounty-pool/app/backend
+source /opt/bounty-pool/venv/bin/activate
+python -m app.cli.refresh_living_market_report --days 180 --min-age-days 3
+```
+
+如果返回 `status=skipped`，说明最近成功报告还没满 3 天，是正常行为。如果返回 `fallback`，先看输出里的 `error_message`，通常是 LLM 配置、LLM 超时、或事实层为空。
 
 ## 8. 当前建议补充但不阻塞上线的事项
 
