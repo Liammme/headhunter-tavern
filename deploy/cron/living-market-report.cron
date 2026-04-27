@@ -1,1 +1,1 @@
-30 15 * * * cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.refresh_living_market_report --days 180 --min-age-days 3 >> /var/log/bounty-pool/living-market-report.log 2>&1
+30 15 * * * deploy cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.refresh_living_market_report --days 180 --min-age-days 3 >> /var/log/bounty-pool/living-market-report.log 2>&1

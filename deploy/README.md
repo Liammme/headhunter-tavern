@@ -9,9 +9,11 @@ This directory contains the minimum production artifacts for the recommended bac
   - Proxies `api.your-domain.com` to the local FastAPI process
 - `cron/daily-bounty.cron`
   - Runs `python -m app.cli.daily_bounty` every day at 08:00 and 14:00
+  - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `cron/living-market-report.cron`
   - Runs `python -m app.cli.refresh_living_market_report` every day at 15:30
   - Refreshes sanitized market facts idempotently, then generates a Living Report only when the latest successful report is at least 3 calendar days old
+  - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `backend-deploy.sh`
   - Pulls the latest `master`, restarts the backend service, and runs health checks
 - `tencent-cloud-postgres.md`
