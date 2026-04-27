@@ -300,6 +300,8 @@ def test_build_day_payloads_emits_estimated_bounty_amount_and_label_when_present
     company = payloads[0].companies[0]
     assert company.estimated_bounty_amount == 12600
     assert company.estimated_bounty_label == "¥7,200-¥18,000"
+    assert company.jobs[0].estimated_bounty_amount == 12600
+    assert company.jobs[0].estimated_bounty_label == "¥7,200-¥18,000"
 
 
 def test_build_day_payloads_keeps_persisted_estimated_bounty_values(monkeypatch):

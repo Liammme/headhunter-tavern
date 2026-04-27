@@ -51,14 +51,14 @@ export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: 
 }
 
 function renderEstimatedBounty(company: CompanyClaimSealProps["company"]) {
-  if (typeof company.estimated_bounty_amount === "number" && Number.isFinite(company.estimated_bounty_amount)) {
-    return `¥${company.estimated_bounty_amount.toLocaleString("zh-CN")}`;
-  }
-
   const bountyLabel = company.estimated_bounty_label?.trim();
 
   if (bountyLabel) {
     return bountyLabel;
+  }
+
+  if (typeof company.estimated_bounty_amount === "number" && Number.isFinite(company.estimated_bounty_amount)) {
+    return `¥${company.estimated_bounty_amount.toLocaleString("zh-CN")}`;
   }
 
   return "待估算";

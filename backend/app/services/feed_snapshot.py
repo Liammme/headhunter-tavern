@@ -24,6 +24,8 @@ class JobFeedSnapshot:
     bounty_grade: str
     tags: list[str]
     claimed_names: list[str]
+    estimated_bounty_amount: int | None = None
+    estimated_bounty_label: str | None = None
 
 
 @dataclass(frozen=True)

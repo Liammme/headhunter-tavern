@@ -71,6 +71,8 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                                 "bounty_grade": "high",
                                 "tags": ["AI", "Senior"],
                                 "claimed_names": ["Liam"],
+                                "estimated_bounty_amount": None,
+                                "estimated_bounty_label": None,
                             }
                         ],
                     }
