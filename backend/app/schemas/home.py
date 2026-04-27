@@ -41,6 +41,7 @@ class IntelligenceOut(BaseModel):
     generated_at: str
     findings: list[str]
     actions: list[str]
+    living_report: dict | None = None
 
 
 class HomeMetaOut(BaseModel):

@@ -4,6 +4,55 @@ export type IntelligencePayload = {
   summary: string;
   findings: string[];
   actions: string[];
+  living_report?: LivingReportPayload | null;
+};
+
+export type LivingReportPayload = {
+  kind: "living_market_report";
+  schema_version: "living-market-report-v1";
+  headline: string;
+  version: number;
+  mode: "baseline_seed" | "incremental_update";
+  previous_snapshot_id: number | null;
+  seed_window_days: number;
+  generated_at: string;
+  executive_summary: string;
+  sections: LivingReportSection[];
+  claims: LivingReportClaim[];
+  watchlist: LivingReportWatchItem[];
+  data_quality: LivingReportDataQuality;
+};
+
+export type LivingReportSection = {
+  section_id: string;
+  title: string;
+  body: string;
+  claim_ids: string[];
+};
+
+export type LivingReportClaim = {
+  claim_id: string;
+  previous_claim_id: string | null;
+  status: "new" | "reinforced" | "weakened" | "retired";
+  claim: string;
+  confidence: "low" | "medium" | "high";
+  evidence_ids: string[];
+  evidence_notes: string[];
+  change_reason: string;
+};
+
+export type LivingReportWatchItem = {
+  topic: string;
+  why_watch: string;
+  evidence_ids: string[];
+};
+
+export type LivingReportDataQuality = {
+  baseline_note?: string;
+  posted_at_fact_count?: number;
+  collected_at_fallback_count?: number;
+  unknown_company_count?: number;
+  sample_count?: number;
 };
 
 export type JobCardPayload = {

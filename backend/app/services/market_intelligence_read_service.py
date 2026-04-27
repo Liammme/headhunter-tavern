@@ -8,16 +8,42 @@ MARKET_INTELLIGENCE_VERSION = "market-intelligence-v1"
 
 
 def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
-    snapshot = db.execute(
-        select(MarketIntelligenceSnapshot)
-        .where(MarketIntelligenceSnapshot.status.in_(("success", "fallback")))
-        .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    if snapshot is None:
-        return None
+    snapshots = (
+        db.execute(
+            select(MarketIntelligenceSnapshot)
+            .where(MarketIntelligenceSnapshot.status.in_(("success", "fallback")))
+            .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
+            .limit(20)
+        )
+        .scalars()
+        .all()
+    )
+    for snapshot in snapshots:
+        if snapshot.status != "success":
+            continue
+        payload = _home_payload_from_snapshot(snapshot, require_living=True)
+        if payload is not None:
+            return payload
 
+    for snapshot in snapshots:
+        report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
+        if "living_report" in report and _valid_living_report(report.get("living_report")) is None:
+            continue
+        payload = _home_payload_from_snapshot(snapshot, require_living=False)
+        if payload is not None:
+            return payload
+    return None
+
+
+def _home_payload_from_snapshot(
+    snapshot: MarketIntelligenceSnapshot,
+    *,
+    require_living: bool,
+) -> dict | None:
     report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
+    living_report = _valid_living_report(report.get("living_report"))
+    if require_living and living_report is None:
+        return None
     headline = _non_empty_text(report.get("headline"))
     narrative = _non_empty_text(report.get("narrative"))
     if headline is None or narrative is None:
@@ -34,6 +60,7 @@ def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
         "generated_at": snapshot.generated_at.replace(microsecond=0).isoformat(),
         "findings": _findings_from_report(report),
         "actions": _actions_from_report(report),
+        "living_report": living_report,
     }
 
 
@@ -77,3 +104,23 @@ def _non_empty_text(value: object) -> str | None:
 
     stripped = value.strip()
     return stripped or None
+
+
+def _valid_living_report(value: object) -> dict | None:
+    if not isinstance(value, dict):
+        return None
+    if value.get("kind") != "living_market_report":
+        return None
+    if value.get("schema_version") != "living-market-report-v1":
+        return None
+    if not isinstance(value.get("version"), int):
+        return None
+    if not isinstance(value.get("sections"), list):
+        return None
+    if not isinstance(value.get("claims"), list):
+        return None
+    if not isinstance(value.get("watchlist"), list):
+        return None
+    if not isinstance(value.get("data_quality"), dict):
+        return None
+    return value

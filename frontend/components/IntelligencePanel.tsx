@@ -11,6 +11,7 @@ import {
   type ChartDatum,
   Visual3,
 } from "./ui/animated-card-chart";
+import LivingReportPaper from "./LivingReportPaper";
 import type { IntelligencePayload } from "../lib/types";
 
 type IntelligencePanelProps = {
@@ -57,11 +58,15 @@ export default function IntelligencePanel({
                 </h2>
                 <div className="intel-paper-copy">
                   <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
-                  {narrativeParagraphs.map((paragraph, index) => (
-                    <p key={`${index}-${paragraph}`} className="intel-narrative">
-                      {paragraph}
-                    </p>
-                  ))}
+                  {intelligence.living_report ? (
+                    <LivingReportPaper report={intelligence.living_report} />
+                  ) : (
+                    narrativeParagraphs.map((paragraph, index) => (
+                      <p key={`${index}-${paragraph}`} className="intel-narrative">
+                        {paragraph}
+                      </p>
+                    ))
+                  )}
                 </div>
               </article>
             ) : (
