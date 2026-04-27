@@ -76,6 +76,9 @@ export default async function HomePage() {
           </section>
         )}
       </section>
+      <footer className="page-brand-footer" aria-label="Powered by Talentverse X">
+        <img src="/assets/talentverse-powered-by.svg" alt="Powered by Talentverse X" width={245} height={25} />
+      </footer>
     </main>
   );
 }

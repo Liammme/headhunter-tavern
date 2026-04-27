@@ -102,7 +102,7 @@ h5,
   overflow-x: hidden;
   width: min(var(--page-width), calc(100vw - 36px));
   margin: 0 auto;
-  padding: 22px 0 56px;
+  padding: 22px 0 70px;
   display: grid;
   gap: 30px;
 }
@@ -134,7 +134,8 @@ h5,
 }
 
 .hero-shell,
-.feed-shell {
+.feed-shell,
+.page-brand-footer {
   position: relative;
   z-index: 1;
 }
@@ -842,6 +843,19 @@ h5,
 .feed-shell {
   display: grid;
   gap: 16px;
+}
+
+.page-brand-footer {
+  display: grid;
+  justify-items: center;
+  padding: 10px 0 4px;
+  margin-top: 4px;
+}
+
+.page-brand-footer img {
+  display: block;
+  width: min(245px, 70vw);
+  height: auto;
 }
 
 .feed-timeline {
