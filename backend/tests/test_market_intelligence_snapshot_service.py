@@ -218,7 +218,7 @@ def test_generate_daily_market_intelligence_snapshot_persists_fallback_snapshot_
     assert result == {"status": "fallback", "snapshot_id": snapshot.id}
     assert snapshot.status == "fallback"
     assert snapshot.snapshot_date == date(2026, 4, 26)
-    assert snapshot.report_payload["headline"] == "Market demand remains selective"
+    assert snapshot.report_payload["headline"] == "市场需求保持克制"
     assert snapshot.error_message == "report contains banned phrase: bd"
 
 

@@ -5,6 +5,9 @@ from app.models import Job
 from app.services.market_theme_classifier import classify_market_theme
 
 WINDOW_DAYS = (1, 7, 30, 90)
+SOURCE_DERIVED_COMPANIES = {
+    "aijobsnet": {"aijobs"},
+}
 TECH_KEYWORDS = (
     "llm",
     "rag",
@@ -99,7 +102,7 @@ def _build_sample(job: Job) -> dict:
     business_keywords = _extract_keywords(job.description or "", BUSINESS_KEYWORDS)
     domain = _domain(job)
     return {
-        "company": job.company,
+        "company": _company_for_market_sample(job),
         "title": job.title,
         "posted_date": _posted_date(job),
         "function": _function(job),
@@ -129,6 +132,16 @@ def _time_basis(job: Job) -> datetime | None:
 
 def _domain(job: Job) -> str:
     return classify_market_theme(job.title or "", job.description or "")
+
+
+def _company_for_market_sample(job: Job) -> str | None:
+    normalized_source = (job.source_name or "").strip().lower()
+    normalized_company = (job.company_normalized or job.company or "").strip().lower()
+    if normalized_company in SOURCE_DERIVED_COMPANIES.get(normalized_source, set()):
+        return None
+
+    company = (job.company or "").strip()
+    return company or None
 
 
 def _function(job: Job) -> str:

@@ -10,6 +10,7 @@ PERSPECTIVE_LENSES = {"industry", "product_business", "organization_hiring"}
 TREND_DIRECTIONS = {"rising", "cooling", "shifting", "stable", "emerging"}
 TREND_TIME_HORIZONS = {"7d", "30d", "90d"}
 BANNED_DIRECT_PHRASES = (
+    "bd_entry",
     "猎头",
     "赏金",
     "认领",
@@ -22,9 +23,22 @@ BANNED_DIRECT_PHRASES = (
     "综合来看",
     "建议持续关注",
 )
-BANNED_TOKEN_TERMS = ("bd", "source", "link", "bounty", "bounties", "claim", "claims", "claimed")
-BANNED_RIGHT_HYPHEN_TOKEN_TERMS = {"bd", "source", "link"}
+BANNED_TOKEN_TERMS = ("source", "link", "bounty", "bounties", "claim", "claims", "claimed")
+BANNED_RIGHT_HYPHEN_TOKEN_TERMS = {"source", "link"}
 BANNED_LEFT_OR_RIGHT_HYPHEN_TOKEN_TERMS = {"bounty", "bounties", "claim", "claims", "claimed"}
+THEME_TERM_ALIASES = {
+    "AI infra": ("AI基础设施",),
+    "agent / RAG": ("Agent/RAG", "agent/RAG"),
+    "data platform": ("数据平台",),
+    "Web3 infra": ("Web3基础设施",),
+    "wallet / payment": ("钱包/支付",),
+    "security": ("安全",),
+    "risk / compliance": ("风险/合规",),
+    "trading infra": ("交易基础设施",),
+    "developer tools": ("开发者工具",),
+    "enterprise AI integration": ("企业AI集成",),
+    "other": ("其他",),
+}
 
 
 class MarketIntelligenceReportError(Exception):
@@ -35,14 +49,32 @@ def build_market_intelligence_system_prompt() -> str:
     return (
         "You write market intelligence reports from sanitized hiring signals. "
         "Return only a JSON object with fields: headline, narrative, primary_judgment, "
-        "perspectives, trend_cards, and watchlist. primary_judgment must include confidence. "
-        "Each trend card must include direction, time_horizon, and confidence. "
+        "perspectives, trend_cards, and watchlist. "
+        'Return exactly this JSON shape and field names: {"headline": "...", '
+        '"narrative": "...", "primary_judgment": {"claim": "...", '
+        '"why_it_matters": "...", "confidence": "low|medium|high"}, '
+        '"perspectives": [{"lens": "industry|product_business|organization_hiring", '
+        '"judgment": "...", "evidence": ["..."]}], '
+        '"trend_cards": [{"title": "...", '
+        '"direction": "rising|cooling|shifting|stable|emerging", '
+        '"time_horizon": "7d|30d|90d", "judgment": "...", '
+        '"evidence": ["..."], "confidence": "low|medium|high"}], '
+        '"watchlist": ["..."]}. '
+        "Do not use alternative keys such as statement, trend headline, or trend narrative. "
+        "perspectives and trend_cards must be arrays, not objects. "
         "Required lenses are industry, product_business, and organization_hiring. "
         "Trend direction must be one of rising, cooling, shifting, stable, or emerging. "
         "Use watchlist max 3 and trend cards max 4. "
-        "Evidence must quote or contain a representative sample company/title/domain. "
-        "Include a primary judgment, and make the narrative explicitly reference 30d or 90d. "
-        "Never mention BD, bounty, claim, claimed, 猎头, 赏金, 认领, 客户开发, 岗位来源, or 岗位链接. "
+        "Write user-facing fields in Chinese. "
+        "Evidence must quote or contain a representative sample company when present/title/domain. "
+        "Every evidence item must contain a concrete company, title, domain, theme, "
+        "function label, or count label from the input payload. "
+        "Do not describe a job board or source site as a company or employer. "
+        "Do not write generic evidence such as no specific title, no concrete role, "
+        "or theme classification only. "
+        "Include a primary judgment, and include at least one 30d or 90d trend card. "
+        "BD or Business Development may appear only when it is literally a job function or market role. "
+        "Never mention bounty, claim, claimed, 猎头, 赏金, 认领, 客户开发, 岗位来源, or 岗位链接. "
         "Do not expose source fields such as canonical_url or source_name."
     )
 
@@ -96,9 +128,7 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
 
     _reject_banned_phrases(payload)
     _require_str(payload, "headline")
-    narrative = _require_str(payload, "narrative")
-    if "30d" not in narrative and "90d" not in narrative:
-        raise MarketIntelligenceReportError("narrative must include 30d or 90d")
+    _require_str(payload, "narrative")
 
     primary_judgment = _require_dict(payload, "primary_judgment")
     _require_str(primary_judgment, "claim")
@@ -123,6 +153,7 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
     trend_cards = _require_list(payload, "trend_cards")
     if not 1 <= len(trend_cards) <= 4:
         raise MarketIntelligenceReportError("trend_cards must contain 1 to 4 cards")
+    has_long_horizon_card = False
     for card in trend_cards:
         if not isinstance(card, dict):
             raise MarketIntelligenceReportError("trend_cards must contain objects")
@@ -133,12 +164,16 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
         time_horizon = _require_str(card, "time_horizon")
         if time_horizon not in TREND_TIME_HORIZONS:
             raise MarketIntelligenceReportError("trend card time_horizon is invalid")
+        if time_horizon in {"30d", "90d"}:
+            has_long_horizon_card = True
         _require_str(card, "judgment")
         evidence = _require_non_empty_str_list(card, "evidence")
         _validate_evidence_terms(evidence, allowed_terms)
         card_confidence = _require_str(card, "confidence")
         if card_confidence not in CONFIDENCE_VALUES:
             raise MarketIntelligenceReportError("trend card confidence is invalid")
+    if not has_long_horizon_card:
+        raise MarketIntelligenceReportError("trend_cards must include a 30d or 90d card")
 
     watchlist = _require_str_list(payload, "watchlist")
     if len(watchlist) > 3:
@@ -146,42 +181,42 @@ def validate_market_intelligence_report(payload: dict, *, allowed_terms: set[str
 
 
 def build_rule_market_report(signal_payload: dict) -> dict:
-    headline = "Market demand remains selective"
+    headline = "市场需求保持克制"
     narrative = (
-        "The 30d signal is not strong enough to call a broad surge, while the 90d view "
-        "supports a cautious read of steady demand."
+        "近30天的信号还不足以判断行业进入普遍升温，90天视角更像是稳定需求中的局部调整。"
+        "当前更适合看方向变化，而不是把短期波动解读成趋势反转。"
     )
     return {
         "headline": headline,
         "narrative": narrative,
         "primary_judgment": {
-            "claim": "Demand appears steady, with limited evidence for a broad acceleration.",
-            "why_it_matters": "A conservative read avoids overstating sparse or uneven signals.",
+            "claim": "市场需求整体平稳，暂时没有足够证据支持大范围加速。",
+            "why_it_matters": "这能避免把零散岗位波动误读成行业方向变化。",
             "confidence": "low",
         },
         "perspectives": [
             {
                 "lens": "industry",
-                "judgment": "Industry movement looks steady rather than clearly accelerating.",
+                "judgment": "行业层面更接近平稳运行，还看不出明显扩张。",
                 "evidence": ["30d signal", "90d context"],
             },
             {
                 "lens": "product_business",
-                "judgment": "Product and business impact should be interpreted cautiously.",
+                "judgment": "产品和商业方向的变化需要继续观察，现有信号不足以支撑强判断。",
                 "evidence": ["Limited structured signal"],
             },
             {
                 "lens": "organization_hiring",
-                "judgment": "Hiring posture appears selective from the available signal.",
+                "judgment": "组织招聘更像选择性补强，而不是全面扩招。",
                 "evidence": ["Conservative fallback report"],
             },
         ],
         "trend_cards": [
             {
-                "title": "Selective demand",
+                "title": "选择性需求",
                 "direction": "stable",
                 "time_horizon": "30d",
-                "judgment": "The available signal supports a stable rather than rising read.",
+                "judgment": "现有信号更支持平稳判断，还不能判断为明显升温。",
                 "evidence": ["30d signal", "90d context"],
                 "confidence": "low",
             }
@@ -193,17 +228,52 @@ def build_rule_market_report(signal_payload: dict) -> dict:
 def _allowed_terms(signal_payload: dict) -> set[str]:
     terms: set[str] = set()
     representative_samples = signal_payload.get("representative_samples")
-    if not isinstance(representative_samples, list):
-        return terms
+    if isinstance(representative_samples, list):
+        for sample in representative_samples:
+            if not isinstance(sample, dict):
+                continue
+            for field in ("company", "title", "domain"):
+                value = sample.get(field)
+                if isinstance(value, str) and value.strip():
+                    _add_allowed_term(terms, value.strip())
+                    if field == "title":
+                        _add_title_alias_terms(terms, value.strip())
+            seniority = sample.get("seniority")
+            if isinstance(seniority, str) and seniority.strip():
+                _add_allowed_term(terms, seniority.strip())
 
-    for sample in representative_samples:
-        if not isinstance(sample, dict):
-            continue
-        for field in ("company", "title", "domain"):
-            value = sample.get(field)
-            if isinstance(value, str) and value.strip():
-                terms.add(value.strip())
+    windows = signal_payload.get("windows")
+    if isinstance(windows, dict):
+        for window in windows.values():
+            if not isinstance(window, dict):
+                continue
+            for field in ("theme_counts", "function_counts"):
+                counts = window.get(field)
+                if not isinstance(counts, dict):
+                    continue
+                for value in counts:
+                    if isinstance(value, str) and value.strip():
+                        _add_allowed_term(terms, value.strip())
     return terms
+
+
+def _add_allowed_term(terms: set[str], value: str) -> None:
+    terms.add(value)
+    for alias in THEME_TERM_ALIASES.get(value, ()):
+        terms.add(alias)
+
+
+def _add_title_alias_terms(terms: set[str], value: str) -> None:
+    aliases = set()
+    aliases.add(re.split(r"\s+[–—-]\s+", value, maxsplit=1)[0])
+    compact = re.sub(r"^\[[^\]]+\]\s*", "", value)
+    compact = re.sub(r"\s*\([^)]*\)", "", compact)
+    compact = re.split(r"\s+[–—-]\s+", compact, maxsplit=1)[0]
+    aliases.add(" ".join(compact.split()))
+
+    for alias in aliases:
+        if len(alias) >= 6:
+            _add_allowed_term(terms, alias)
 
 
 def _reject_banned_phrases(payload: dict) -> None:
@@ -229,11 +299,18 @@ def _validate_evidence_terms(evidence: list[str], allowed_terms: set[str]) -> No
 
 
 def _evidence_contains_term(evidence: str, term: str) -> bool:
-    normalized_term = term.lower()
-    normalized_evidence = evidence.lower()
+    normalized_term = _normalize_evidence_match_text(term)
+    normalized_evidence = _normalize_evidence_match_text(evidence)
     if re.fullmatch(r"[a-z0-9]{1,3}", normalized_term):
         return _contains_ascii_token(normalized_evidence, normalized_term)
     return normalized_term in normalized_evidence
+
+
+def _normalize_evidence_match_text(value: str) -> str:
+    normalized = value.lower()
+    normalized = re.sub(r"\s*/\s*", "/", normalized)
+    normalized = re.sub(r"\s+", " ", normalized)
+    return normalized.strip()
 
 
 def _iter_token_check_texts(value: Any):

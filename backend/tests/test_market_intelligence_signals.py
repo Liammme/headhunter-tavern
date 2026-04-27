@@ -24,6 +24,7 @@ def build_job(
     missing_timestamps: bool = False,
     job_category: str = "技术",
     domain_tag: str = "AI",
+    source_name: str = "demo-board",
 ) -> Job:
     snapshot_date = date(2026, 4, 26)
     base_time = datetime.combine(snapshot_date, datetime.min.time())
@@ -39,7 +40,7 @@ def build_job(
     return Job(
         id=job_id,
         canonical_url=f"https://jobs.example.com/{job_id}",
-        source_name="demo-board",
+        source_name=source_name,
         title=title,
         company=company,
         company_normalized=company.lower(),
@@ -81,6 +82,26 @@ def test_build_market_signal_payload_sanitizes_sensitive_job_fields():
     assert "claimed" not in serialized
     assert "bd_entry" not in serialized
     assert FULL_DESCRIPTION not in serialized
+
+
+def test_build_market_signal_payload_does_not_treat_aijobs_source_as_company():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(
+                title="Networking Software Expert",
+                company="Aijobs",
+                job_id=1,
+                source_name="aijobsnet",
+            )
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    sample = payload["representative_samples"][0]
+    assert sample["company"] is None
+
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "Aijobs" not in serialized
 
 
 def test_build_market_signal_payload_counts_jobs_by_windows():

@@ -59,20 +59,20 @@ def test_validate_market_intelligence_report_accepts_valid_payload():
     )
 
 
-def test_validate_market_intelligence_report_rejects_bounty_or_bd_language():
+def test_validate_market_intelligence_report_rejects_bounty_language():
     report = _valid_report()
-    report["narrative"] = "30d demand mentions BD and high bounty / 赏金 language."
+    report["narrative"] = "30d demand mentions high bounty / 赏金 language."
 
     with pytest.raises(MarketIntelligenceReportError, match="banned"):
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
-def test_validate_market_intelligence_report_rejects_lowercase_bd_language():
+def test_validate_market_intelligence_report_allows_bd_when_it_is_a_market_role():
     report = _valid_report()
-    report["narrative"] = "30d demand mentions bd outreach."
+    report["narrative"] = "Recent Business Development and BD hiring is visible in go-to-market roles."
+    report["perspectives"][2]["evidence"] = ["OpenGradient lists BD market roles"]
 
-    with pytest.raises(MarketIntelligenceReportError, match="banned"):
-        validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+    validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
 def test_validate_market_intelligence_report_rejects_english_source_or_link_language():
@@ -106,7 +106,6 @@ def test_validate_market_intelligence_report_rejects_hyphenated_banned_terms_eve
         "bounty-grade",
         "claim-status",
         "claimed-role",
-        "BD-led",
         "source-led",
         "link-based",
         "customer-claim",
@@ -125,6 +124,14 @@ def test_validate_market_intelligence_report_rejects_hyphenated_banned_terms_eve
                     report,
                     allowed_terms={"AI infra", "OpenGradient"},
                 )
+
+
+def test_validate_market_intelligence_report_allows_hyphenated_bd_role_language():
+    report = _valid_report()
+    report["narrative"] = "Recent demand includes BD-focused market roles."
+    report["trend_cards"][0]["evidence"] = ["OpenGradient has BD-focused roles"]
+
+    validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
 def test_validate_market_intelligence_report_allows_non_leakage_source_or_link_words():
@@ -215,6 +222,180 @@ def test_validate_market_intelligence_report_uses_boundaries_for_short_ascii_ter
         validate_market_intelligence_report(report, allowed_terms={"AI", "Go", "HR"})
 
 
+def test_validate_market_intelligence_report_matches_slash_spaced_terms():
+    report = _valid_report()
+    for perspective in report["perspectives"]:
+        perspective["evidence"] = ["Agent/RAG主题在90天内计14个岗位"]
+    report["trend_cards"][0]["evidence"] = ["Agent/RAG主题在90天内计14个岗位"]
+
+    validate_market_intelligence_report(report, allowed_terms={"agent / RAG"})
+
+
+def test_generate_market_report_accepts_chinese_theme_alias_evidence(monkeypatch):
+    expected = _valid_report()
+    expected["narrative"] = "Recent demand remains visible across platform engineering."
+    expected["perspectives"][0]["evidence"] = ["开发者工具主题在30天窗口内计13个岗位"]
+    expected["trend_cards"][0]["evidence"] = ["开发者工具主题在30天窗口内计13个岗位"]
+    calls = []
+
+    monkeypatch.setattr(market_intelligence_report, "should_use_llm", lambda: True)
+
+    def fake_request_structured_json(messages):
+        calls.append(messages)
+        return """```json
+{
+  "headline": "AI infra demand is broadening",
+  "narrative": "Recent demand remains visible across platform engineering.",
+  "primary_judgment": {
+    "claim": "AI infra is moving from isolated platform teams into broader product groups.",
+    "why_it_matters": "This points to durable investment rather than a short hiring spike.",
+    "confidence": "medium"
+  },
+  "perspectives": [
+    {
+      "lens": "industry",
+      "judgment": "Infrastructure hiring remains active across model deployment and data systems.",
+      "evidence": ["开发者工具主题在30天窗口内计13个岗位"]
+    },
+    {
+      "lens": "product_business",
+      "judgment": "Teams are connecting infrastructure work to production product outcomes.",
+      "evidence": ["AI infra product-facing platform roles are present"]
+    },
+    {
+      "lens": "organization_hiring",
+      "judgment": "Hiring suggests practical buildout rather than pure research expansion.",
+      "evidence": ["OpenGradient engineering ownership language is visible"]
+    }
+  ],
+  "trend_cards": [
+    {
+      "title": "AI infra",
+      "direction": "rising",
+      "time_horizon": "30d",
+      "judgment": "Demand is strengthening in platform and deployment work.",
+      "evidence": ["开发者工具主题在30天窗口内计13个岗位"],
+      "confidence": "medium"
+    }
+  ],
+  "watchlist": ["AI infra", "OpenGradient"]
+}
+```"""
+
+    monkeypatch.setattr(
+        market_intelligence_report,
+        "request_structured_json",
+        fake_request_structured_json,
+    )
+
+    report = generate_market_report(
+        {
+            "windows": {
+                "30d": {
+                    "theme_counts": {"developer tools": 13},
+                    "function_counts": {"技术": 34},
+                }
+            },
+            "representative_samples": [
+                {
+                    "company": "OpenGradient",
+                    "title": "AI Infrastructure Engineer",
+                    "domain": "AI infra",
+                }
+            ],
+        }
+    )
+
+    assert report == expected
+    assert calls
+
+
+def test_generate_market_report_accepts_title_alias_and_seniority_evidence(monkeypatch):
+    expected = _valid_report()
+    expected["narrative"] = "Recent demand remains visible across platform engineering."
+    expected["perspectives"][0]["evidence"] = ["代表样本中多数为Mid级别，仅一个Senior标题"]
+    expected["trend_cards"][0]["evidence"] = ["'SPDK Software Expert'"]
+    calls = []
+
+    monkeypatch.setattr(market_intelligence_report, "should_use_llm", lambda: True)
+
+    def fake_request_structured_json(messages):
+        calls.append(messages)
+        return """```json
+{
+  "headline": "AI infra demand is broadening",
+  "narrative": "Recent demand remains visible across platform engineering.",
+  "primary_judgment": {
+    "claim": "AI infra is moving from isolated platform teams into broader product groups.",
+    "why_it_matters": "This points to durable investment rather than a short hiring spike.",
+    "confidence": "medium"
+  },
+  "perspectives": [
+    {
+      "lens": "industry",
+      "judgment": "Infrastructure hiring remains active across model deployment and data systems.",
+      "evidence": ["代表样本中多数为Mid级别，仅一个Senior标题"]
+    },
+    {
+      "lens": "product_business",
+      "judgment": "Teams are connecting infrastructure work to production product outcomes.",
+      "evidence": ["AI infra product-facing platform roles are present"]
+    },
+    {
+      "lens": "organization_hiring",
+      "judgment": "Hiring suggests practical buildout rather than pure research expansion.",
+      "evidence": ["OpenGradient engineering ownership language is visible"]
+    }
+  ],
+  "trend_cards": [
+    {
+      "title": "AI infra",
+      "direction": "rising",
+      "time_horizon": "30d",
+      "judgment": "Demand is strengthening in platform and deployment work.",
+      "evidence": ["'SPDK Software Expert'"],
+      "confidence": "medium"
+    }
+  ],
+  "watchlist": ["AI infra", "OpenGradient"]
+}
+```"""
+
+    monkeypatch.setattr(
+        market_intelligence_report,
+        "request_structured_json",
+        fake_request_structured_json,
+    )
+
+    report = generate_market_report(
+        {
+            "windows": {
+                "30d": {
+                    "theme_counts": {"AI infra": 35},
+                    "function_counts": {"技术": 34},
+                }
+            },
+            "representative_samples": [
+                {
+                    "company": "OpenGradient",
+                    "title": "SPDK Software Expert – Next-Generation AI Infrastructure Storage Platform",
+                    "domain": "AI infra",
+                    "seniority": "Senior",
+                },
+                {
+                    "company": None,
+                    "title": "[BD] AI Software QA (Next-Gen & AI-Driven Testing) - 6 months Internship",
+                    "domain": "other",
+                    "seniority": "Mid",
+                },
+            ],
+        }
+    )
+
+    assert report == expected
+    assert calls
+
+
 def test_parse_market_intelligence_report_accepts_code_fence():
     content = """```json
 {"headline": "AI infra", "narrative": "30d and 90d signal"}
@@ -250,9 +431,16 @@ def test_validate_market_intelligence_report_rejects_more_than_three_watchlist_i
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
 
 
-def test_validate_market_intelligence_report_requires_30d_or_90d_in_narrative():
+def test_validate_market_intelligence_report_accepts_long_horizon_in_trend_cards_without_narrative_token():
     report = _valid_report()
     report["narrative"] = "Recent demand remains visible across platform engineering."
+
+    validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
+
+
+def test_validate_market_intelligence_report_requires_long_horizon_trend_card():
+    report = _valid_report()
+    report["trend_cards"][0]["time_horizon"] = "7d"
 
     with pytest.raises(MarketIntelligenceReportError, match="30d|90d"):
         validate_market_intelligence_report(report, allowed_terms={"AI infra", "OpenGradient"})
@@ -261,8 +449,11 @@ def test_validate_market_intelligence_report_requires_30d_or_90d_in_narrative():
 def test_build_market_intelligence_system_prompt_contains_quality_gate_instructions():
     prompt = build_market_intelligence_system_prompt()
 
-    for phrase in ["BD", "猎头", "赏金", "认领", "客户开发", "岗位来源", "岗位链接"]:
+    for phrase in ["猎头", "赏金", "认领", "客户开发", "岗位来源", "岗位链接"]:
         assert phrase in prompt
+    assert "Never mention BD" not in prompt
+    assert "BD" in prompt
+    assert "Business Development" in prompt
     for field in [
         "headline",
         "narrative",
@@ -285,7 +476,18 @@ def test_build_market_intelligence_system_prompt_contains_quality_gate_instructi
         assert enum_value in prompt
     assert "watchlist max 3" in prompt
     assert "trend cards max 4" in prompt
-    assert "representative sample company/title/domain" in prompt
+    assert "representative sample company when present/title/domain" in prompt
+    assert "Do not describe a job board or source site as a company" in prompt
+    assert "Every evidence item" in prompt
+    assert "Do not write generic evidence" in prompt
+    assert '"primary_judgment": {' in prompt
+    assert '"claim":' in prompt
+    assert '"why_it_matters":' in prompt
+    assert '"perspectives": [' in prompt
+    assert '"trend_cards": [' in prompt
+    assert '"title":' in prompt
+    assert '"judgment":' in prompt
+    assert '"evidence":' in prompt
 
 
 def test_build_market_intelligence_user_prompt_preserves_non_ascii_payload():
@@ -300,6 +502,15 @@ def test_build_rule_market_report_passes_validation():
     report = build_rule_market_report({})
 
     validate_market_intelligence_report(report, allowed_terms=set())
+
+
+def test_build_rule_market_report_uses_chinese_market_language():
+    report = build_rule_market_report({})
+
+    assert "市场" in report["headline"]
+    assert "需求" in report["narrative"]
+    assert "bounty" not in str(report).lower()
+    assert "赏金" not in str(report)
 
 
 def test_generate_market_report_returns_rule_fallback_when_llm_disabled(monkeypatch):
@@ -390,6 +601,85 @@ def test_generate_market_report_uses_llm_payload_when_enabled(monkeypatch):
                     "domain": "AI infra",
                 }
             ]
+        }
+    )
+
+    assert report == expected
+    assert calls
+
+
+def test_generate_market_report_accepts_aggregate_window_evidence(monkeypatch):
+    expected = _valid_report()
+    expected["narrative"] = "Recent demand remains visible across platform engineering."
+    expected["perspectives"][0]["evidence"] = ["技术类在30d窗口占34个岗位"]
+    expected["trend_cards"][0]["evidence"] = ["技术类在30d窗口占34个岗位"]
+    calls = []
+
+    monkeypatch.setattr(market_intelligence_report, "should_use_llm", lambda: True)
+
+    def fake_request_structured_json(messages):
+        calls.append(messages)
+        return """```json
+{
+  "headline": "AI infra demand is broadening",
+  "narrative": "Recent demand remains visible across platform engineering.",
+  "primary_judgment": {
+    "claim": "AI infra is moving from isolated platform teams into broader product groups.",
+    "why_it_matters": "This points to durable investment rather than a short hiring spike.",
+    "confidence": "medium"
+  },
+  "perspectives": [
+    {
+      "lens": "industry",
+      "judgment": "Infrastructure hiring remains active across model deployment and data systems.",
+      "evidence": ["技术类在30d窗口占34个岗位"]
+    },
+    {
+      "lens": "product_business",
+      "judgment": "Teams are connecting infrastructure work to production product outcomes.",
+      "evidence": ["AI infra product-facing platform roles are present"]
+    },
+    {
+      "lens": "organization_hiring",
+      "judgment": "Hiring suggests practical buildout rather than pure research expansion.",
+      "evidence": ["OpenGradient engineering ownership language is visible"]
+    }
+  ],
+  "trend_cards": [
+    {
+      "title": "AI infra",
+      "direction": "rising",
+      "time_horizon": "30d",
+      "judgment": "Demand is strengthening in platform and deployment work.",
+      "evidence": ["技术类在30d窗口占34个岗位"],
+      "confidence": "medium"
+    }
+  ],
+  "watchlist": ["AI infra", "OpenGradient"]
+}
+```"""
+
+    monkeypatch.setattr(
+        market_intelligence_report,
+        "request_structured_json",
+        fake_request_structured_json,
+    )
+
+    report = generate_market_report(
+        {
+            "windows": {
+                "30d": {
+                    "theme_counts": {"AI infra": 35},
+                    "function_counts": {"技术": 34},
+                }
+            },
+            "representative_samples": [
+                {
+                    "company": "OpenGradient",
+                    "title": "AI Infrastructure Engineer",
+                    "domain": "AI infra",
+                }
+            ],
         }
     )
 
