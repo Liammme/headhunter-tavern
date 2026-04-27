@@ -6,7 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Job, MarketIntelligenceSnapshot
-from app.services.market_intelligence_report import generate_market_report
+from app.services.market_intelligence_report import (
+    MarketIntelligenceReportError,
+    build_rule_market_report,
+    generate_market_report,
+)
 from app.services.market_signal_builder import build_market_signal_payload
 
 
@@ -41,6 +45,22 @@ def generate_daily_market_intelligence_snapshot(
 
     try:
         report_payload = generate_market_report(signal_payload)
+    except MarketIntelligenceReportError as exc:
+        error_message = _sanitize_error_message(exc)
+        snapshot = MarketIntelligenceSnapshot(
+            snapshot_date=target_date,
+            generated_at=generated_at,
+            window_days=90,
+            market_signal_payload=signal_payload,
+            report_payload=build_rule_market_report(signal_payload),
+            model_name=None,
+            status="fallback",
+            error_message=error_message,
+        )
+        db.add(snapshot)
+        db.commit()
+        db.refresh(snapshot)
+        return {"status": "fallback", "snapshot_id": snapshot.id}
     except Exception as exc:
         error_message = _sanitize_error_message(exc)
         snapshot = MarketIntelligenceSnapshot(

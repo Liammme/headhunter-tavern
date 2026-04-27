@@ -201,6 +201,38 @@ def test_run_daily_bounty_generation_reports_market_snapshot_failure(db_session,
     assert summary["today_job_count"] == 2
 
 
+def test_run_daily_bounty_generation_allows_market_snapshot_fallback(db_session, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.trigger_crawl",
+        lambda db: {
+            "status": "triggered",
+            "fetched_jobs": 2,
+            "new_jobs": 2,
+            "source_stats": {"greenhouse": 2},
+            "errors": [],
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.generate_daily_market_intelligence_snapshot",
+        lambda db: {"status": "fallback", "snapshot_id": 1},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.services.daily_bounty_service.get_home_payload",
+        lambda db: _home_payload([{"company": "OpenGradient", "total_jobs": 2, "jobs": [{}, {}]}]),
+    )
+
+    summary = run_daily_bounty_generation(
+        db_session,
+        clock=_clock(datetime(2026, 4, 21, 8, 0), datetime(2026, 4, 21, 8, 2)),
+    )
+
+    assert summary["status"] == "completed"
+    assert summary["errors"] == []
+    assert summary["today_company_count"] == 1
+    assert summary["today_job_count"] == 2
+
+
 def test_run_daily_bounty_generation_reports_market_snapshot_exception(db_session, monkeypatch):
     monkeypatch.setattr(
         "app.services.daily_bounty_service.trigger_crawl",

@@ -68,6 +68,21 @@ def test_load_latest_market_intelligence_skips_failed_snapshot(db_session):
     assert payload["narrative"] == "Successful narrative"
 
 
+def test_load_latest_market_intelligence_reads_fallback_snapshot(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        status="fallback",
+        report_payload=_report_payload(headline="Fallback headline", narrative="Fallback narrative"),
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Fallback headline"
+    assert payload["narrative"] == "Fallback narrative"
+
+
 def test_load_latest_market_intelligence_uses_generated_at_then_id_order(db_session):
     _add_snapshot(
         db_session,

@@ -4,6 +4,7 @@ from datetime import date, datetime
 from sqlalchemy import select
 
 from app.models import Job, MarketIntelligenceSnapshot
+from app.services.market_intelligence_report import MarketIntelligenceReportError
 
 
 FULL_DESCRIPTION = (
@@ -117,6 +118,32 @@ def test_generate_daily_market_intelligence_snapshot_persists_failed_snapshot(
     assert snapshot.report_payload == {}
     assert snapshot.error_message == result["error"]
     assert "model timed out" in snapshot.error_message
+
+
+def test_generate_daily_market_intelligence_snapshot_persists_fallback_snapshot_on_quality_gate_failure(
+    db_session,
+    monkeypatch,
+):
+    service = _load_snapshot_service()
+    _add_job(db_session)
+
+    def raise_quality_gate_error(signal_payload):
+        raise MarketIntelligenceReportError("report contains banned phrase: bd")
+
+    monkeypatch.setattr(service, "generate_market_report", raise_quality_gate_error)
+
+    result = service.generate_daily_market_intelligence_snapshot(
+        db_session,
+        snapshot_date=date(2026, 4, 26),
+        clock=_fixed_clock,
+    )
+
+    snapshot = db_session.execute(select(MarketIntelligenceSnapshot)).scalar_one()
+    assert result == {"status": "fallback", "snapshot_id": snapshot.id}
+    assert snapshot.status == "fallback"
+    assert snapshot.snapshot_date == date(2026, 4, 26)
+    assert snapshot.report_payload["headline"] == "Market demand remains selective"
+    assert snapshot.error_message == "report contains banned phrase: bd"
 
 
 def test_generate_daily_market_intelligence_snapshot_redacts_secrets_from_errors(
