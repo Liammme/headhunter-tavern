@@ -91,6 +91,82 @@ def test_generate_daily_market_intelligence_snapshot_persists_success_snapshot(
     assert FULL_DESCRIPTION not in serialized_signal
 
 
+def test_generate_daily_market_intelligence_snapshot_skips_when_recent_success_exists(
+    db_session,
+    monkeypatch,
+):
+    service = _load_snapshot_service()
+    _add_job(db_session)
+    existing = MarketIntelligenceSnapshot(
+        snapshot_date=date(2026, 4, 25),
+        generated_at=datetime(2026, 4, 25, 14, 30, 15),
+        window_days=90,
+        market_signal_payload={},
+        report_payload={"headline": "Existing", "narrative": "Existing"},
+        model_name=None,
+        status="success",
+        error_message=None,
+    )
+    db_session.add(existing)
+    db_session.commit()
+    db_session.refresh(existing)
+
+    def fail_if_called(signal_payload):
+        raise AssertionError("recent success should skip LLM report generation")
+
+    monkeypatch.setattr(service, "generate_market_report", fail_if_called)
+
+    result = service.generate_daily_market_intelligence_snapshot(
+        db_session,
+        snapshot_date=date(2026, 4, 26),
+        clock=_fixed_clock,
+    )
+
+    snapshots = db_session.execute(select(MarketIntelligenceSnapshot)).scalars().all()
+    assert result == {"status": "skipped", "snapshot_id": existing.id}
+    assert snapshots == [existing]
+
+
+def test_generate_daily_market_intelligence_snapshot_retries_when_recent_snapshot_is_fallback(
+    db_session,
+    monkeypatch,
+):
+    service = _load_snapshot_service()
+    _add_job(db_session)
+    db_session.add(
+        MarketIntelligenceSnapshot(
+            snapshot_date=date(2026, 4, 25),
+            generated_at=datetime(2026, 4, 25, 14, 30, 15),
+            window_days=90,
+            market_signal_payload={},
+            report_payload={"headline": "Fallback", "narrative": "Fallback"},
+            model_name=None,
+            status="fallback",
+            error_message="quality gate",
+        )
+    )
+    db_session.commit()
+
+    monkeypatch.setattr(
+        service,
+        "generate_market_report",
+        lambda signal_payload: {"headline": "Fresh", "narrative": "30d and 90d fresh report"},
+    )
+
+    result = service.generate_daily_market_intelligence_snapshot(
+        db_session,
+        snapshot_date=date(2026, 4, 26),
+        clock=_fixed_clock,
+    )
+
+    snapshots = db_session.execute(
+        select(MarketIntelligenceSnapshot).order_by(MarketIntelligenceSnapshot.generated_at)
+    ).scalars().all()
+    assert result["status"] == "success"
+    assert len(snapshots) == 2
+    assert snapshots[-1].report_payload["headline"] == "Fresh"
+
+
 def test_generate_daily_market_intelligence_snapshot_persists_failed_snapshot(
     db_session,
     monkeypatch,

@@ -35,8 +35,8 @@ class DailyBountySummary:
     new_jobs: int
     source_stats: dict[str, int]
     errors: list[str]
-    today_company_count: int
-    today_job_count: int
+    recent_3_day_company_count: int
+    recent_3_day_job_count: int
 
 
 def run_daily_bounty_generation(
@@ -74,7 +74,7 @@ def run_daily_bounty_generation(
         status = "failed"
 
     home_payload = get_home_payload(db)
-    today_company_count, today_job_count = _summarize_today(home_payload)
+    recent_3_day_company_count, recent_3_day_job_count = _summarize_recent_3_days(home_payload)
     finished_at = _isoformat(clock())
 
     summary = DailyBountySummary(
@@ -85,21 +85,21 @@ def run_daily_bounty_generation(
         new_jobs=int(crawl_result.get("new_jobs") or 0),
         source_stats=dict(crawl_result.get("source_stats") or {}),
         errors=errors,
-        today_company_count=today_company_count,
-        today_job_count=today_job_count,
+        recent_3_day_company_count=recent_3_day_company_count,
+        recent_3_day_job_count=recent_3_day_job_count,
     )
     return asdict(summary)
 
 
-def _summarize_today(home_payload: dict[str, Any]) -> tuple[int, int]:
-    today_bucket = next(
-        (day for day in home_payload.get("days", []) if day.get("bucket") == "today"),
+def _summarize_recent_3_days(home_payload: dict[str, Any]) -> tuple[int, int]:
+    recent_bucket = next(
+        (day for day in home_payload.get("days", []) if day.get("bucket") == "within_3_days"),
         None,
     )
-    if not today_bucket:
+    if not recent_bucket:
         return 0, 0
 
-    companies = list(today_bucket.get("companies") or [])
+    companies = list(recent_bucket.get("companies") or [])
     job_count = sum(_company_job_count(company) for company in companies)
     return len(companies), job_count
 

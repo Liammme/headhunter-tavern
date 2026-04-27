@@ -17,8 +17,8 @@ function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): Intell
 
 describe("IntelligencePanel", () => {
   const collectionStats = [
-    { label: "今天", value: 5 },
-    { label: "昨天", value: 3 },
+    { label: "3天内", value: 5 },
+    { label: "7天内", value: 3 },
     { label: "更早", value: 12 },
   ];
 
@@ -37,7 +37,7 @@ describe("IntelligencePanel", () => {
 
     expect(screen.getByRole("heading", { level: 3, name: "每日岗位收集数量" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "今天，5 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "3天内，5 个岗位" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Daily Capture Signal")).toBeInTheDocument();
     const chartVisual = container.querySelector(".animated-chart-visual");
     expect(chartVisual).not.toHaveClass("is-active");
@@ -58,6 +58,21 @@ describe("IntelligencePanel", () => {
       "今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。",
     );
     expect(screen.queryByText(intelligence.summary)).not.toBeInTheDocument();
+  });
+
+  it("uses recent bucket labels when collection stats are empty", () => {
+    render(
+      <IntelligencePanel
+        intelligence={buildIntelligence()}
+        reportDateLabel="2026/4/23"
+        dailyCaptureSummary="近3天岗位 0 个，分布来源：暂无公司来源。"
+        collectionStats={[]}
+      />,
+    );
+
+    expect(screen.getAllByRole("button", { name: "3天内，0 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "7天内，0 个岗位" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "更早，0 个岗位" }).length).toBeGreaterThan(0);
   });
 
   it("breaks a multi-sentence narrative into letter-like paragraphs", () => {

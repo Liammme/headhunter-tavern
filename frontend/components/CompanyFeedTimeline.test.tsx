@@ -38,22 +38,26 @@ function buildDay(bucket: DayBucketPayload["bucket"], company: string, jobCount 
 }
 
 describe("CompanyFeedTimeline", () => {
-  it("switches between today, yesterday, and earlier with horizontal tabs", () => {
+  it("switches between recent buckets with horizontal tabs", () => {
     render(
       <CompanyFeedTimeline
-        days={[buildDay("today", "Today Co"), buildDay("yesterday", "Yesterday Co"), buildDay("earlier", "Earlier Co")]}
+        days={[
+          buildDay("within_3_days", "Recent Co"),
+          buildDay("within_7_days", "Week Co"),
+          buildDay("earlier", "Earlier Co"),
+        ]}
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "今天" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("Today Co")).toBeInTheDocument();
-    expect(screen.queryByText("Yesterday Co")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "3天内" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Recent Co")).toBeInTheDocument();
+    expect(screen.queryByText("Week Co")).not.toBeInTheDocument();
     expect(screen.queryByText("Earlier Co")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "昨天" }));
+    fireEvent.click(screen.getByRole("tab", { name: "7天内" }));
 
-    expect(screen.getByText("Yesterday Co")).toBeInTheDocument();
-    expect(screen.queryByText("Today Co")).not.toBeInTheDocument();
+    expect(screen.getByText("Week Co")).toBeInTheDocument();
+    expect(screen.queryByText("Recent Co")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "更早" }));
 

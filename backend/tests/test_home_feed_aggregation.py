@@ -91,7 +91,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
 
     payloads = build_day_payloads(jobs, claims, today=datetime(2026, 4, 18).date())
 
-    assert [day.bucket for day in payloads] == ["today"]
+    assert [day.bucket for day in payloads] == ["within_3_days"]
     companies = payloads[0].companies
     assert [company.company for company in companies] == ["OpenGradient", "Beta Labs"]
     assert companies[0].company_grade == "watch"
@@ -126,8 +126,42 @@ def test_build_day_payloads_filters_jobs_outside_window():
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     assert len(payloads) == 1
-    assert payloads[0].bucket == "today"
+    assert payloads[0].bucket == "within_3_days"
     assert [company.company for company in payloads[0].companies] == ["OpenGradient"]
+
+
+def test_build_day_payloads_uses_non_overlapping_recent_buckets():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Recent Co",
+            company_normalized="recent-co",
+            title="Recent Role",
+            bounty_grade="high",
+            days_ago=2,
+        ),
+        build_job(
+            job_id=2,
+            company="Week Co",
+            company_normalized="week-co",
+            title="Week Role",
+            bounty_grade="medium",
+            days_ago=3,
+        ),
+        build_job(
+            job_id=3,
+            company="Earlier Co",
+            company_normalized="earlier-co",
+            title="Earlier Role",
+            bounty_grade="low",
+            days_ago=7,
+        ),
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert [day.bucket for day in payloads] == ["within_3_days", "within_7_days", "earlier"]
+    assert [day.companies[0].company for day in payloads] == ["Recent Co", "Week Co", "Earlier Co"]
 
 
 def test_build_day_payloads_company_grade_follows_v2_backed_bounty_grades(monkeypatch):

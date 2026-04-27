@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -24,7 +26,7 @@ class CompanyCardOut(BaseModel):
 
 
 class DayBucketOut(BaseModel):
-    bucket: str
+    bucket: Literal["within_3_days", "within_7_days", "earlier"]
     companies: list[CompanyCardOut]
 
 

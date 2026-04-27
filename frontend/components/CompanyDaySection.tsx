@@ -34,11 +34,11 @@ export default function CompanyDaySection({
 }
 
 function renderBucketTitle(bucket: DayBucketPayload["bucket"]) {
-  if (bucket === "today") {
-    return "今天";
+  if (bucket === "within_3_days") {
+    return "3天内";
   }
-  if (bucket === "yesterday") {
-    return "昨天";
+  if (bucket === "within_7_days") {
+    return "7天内";
   }
   return "更早";
 }

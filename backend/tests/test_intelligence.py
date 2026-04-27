@@ -18,7 +18,7 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkey
     monkeypatch.setattr(settings, "bounty_pool_intelligence_llm_enabled", False)
     day_payloads = [
         DayBucketSnapshot(
-            bucket="today",
+            bucket="within_3_days",
             companies=[
                 CompanyFeedSnapshot(
                     company="OpenGradient",
@@ -195,7 +195,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
 
     day_payloads = [
         DayBucketSnapshot(
-            bucket="today",
+            bucket="within_3_days",
             companies=[
                 CompanyFeedSnapshot(
                     company="OpenGradient",
@@ -251,7 +251,7 @@ def test_build_intelligence_snapshot_falls_back_when_llm_fails(monkeypatch):
     snapshot = build_intelligence_snapshot(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -292,7 +292,7 @@ def test_rule_intelligence_uses_change_context_when_jobs_are_available(monkeypat
     snapshot = build_intelligence_snapshot(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -394,7 +394,7 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
     snapshot = build_intelligence_snapshot(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -464,7 +464,7 @@ def test_build_llm_intelligence_input_uses_fact_briefs_instead_of_raw_descriptio
     llm_input = build_llm_intelligence_input(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -525,11 +525,99 @@ def test_build_llm_intelligence_input_uses_fact_briefs_instead_of_raw_descriptio
     assert "description" not in llm_input["job_fact_briefs"][0]
 
 
+def test_build_llm_intelligence_input_orders_fact_briefs_by_recent_buckets():
+    def day(bucket, company, job_id, bounty_grade):
+        return DayBucketSnapshot(
+            bucket=bucket,
+            companies=[
+                CompanyFeedSnapshot(
+                    company=company,
+                    company_url=None,
+                    company_grade="focus",
+                    total_jobs=1,
+                    claimed_names=[],
+                    jobs=[
+                        JobFeedSnapshot(
+                            id=job_id,
+                            title=f"{company} Engineer",
+                            canonical_url=f"https://example.com/{job_id}",
+                            bounty_grade=bounty_grade,
+                            tags=["AI"],
+                            claimed_names=[],
+                        )
+                    ],
+                )
+            ],
+        )
+
+    llm_input = build_llm_intelligence_input(
+        [
+            day("earlier", "Earlier Co", 1, "high"),
+            day("within_7_days", "Week Co", 2, "medium"),
+            day("within_3_days", "Recent Co", 3, "low"),
+        ],
+        FeedMetadata(
+            analysis_version="feed-v1",
+            rule_version="score-v2",
+            window_start="2026-04-05",
+            window_end="2026-04-18",
+            generated_at="2026-04-18T09:00:00",
+        ),
+        jobs=[
+            Job(
+                id=1,
+                canonical_url="https://example.com/1",
+                source_name="test",
+                title="Earlier Co Engineer",
+                company="Earlier Co",
+                company_normalized="earlier co",
+                description="Build AI systems.",
+                posted_at=datetime(2026, 4, 10, 9, 0, 0),
+                collected_at=datetime(2026, 4, 10, 9, 0, 0),
+                bounty_grade="high",
+                signal_tags={"display_tags": ["AI"]},
+            ),
+            Job(
+                id=2,
+                canonical_url="https://example.com/2",
+                source_name="test",
+                title="Week Co Engineer",
+                company="Week Co",
+                company_normalized="week co",
+                description="Build AI systems.",
+                posted_at=datetime(2026, 4, 14, 9, 0, 0),
+                collected_at=datetime(2026, 4, 14, 9, 0, 0),
+                bounty_grade="medium",
+                signal_tags={"display_tags": ["AI"]},
+            ),
+            Job(
+                id=3,
+                canonical_url="https://example.com/3",
+                source_name="test",
+                title="Recent Co Engineer",
+                company="Recent Co",
+                company_normalized="recent co",
+                description="Build AI systems.",
+                posted_at=datetime(2026, 4, 17, 9, 0, 0),
+                collected_at=datetime(2026, 4, 17, 9, 0, 0),
+                bounty_grade="low",
+                signal_tags={"display_tags": ["AI"]},
+            ),
+        ],
+    )
+
+    assert [item["bucket"] for item in llm_input["job_fact_briefs"]] == [
+        "within_3_days",
+        "within_7_days",
+        "earlier",
+    ]
+
+
 def test_build_llm_intelligence_input_includes_change_context():
     llm_input = build_llm_intelligence_input(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -658,7 +746,7 @@ def test_build_intelligence_snapshot_falls_back_when_output_uses_claimed_name(mo
     snapshot = build_intelligence_snapshot(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",
@@ -713,7 +801,7 @@ def test_generate_llm_intelligence_fields_repairs_invalid_first_draft(monkeypatc
     result = generate_llm_intelligence_fields(
         [
             DayBucketSnapshot(
-                bucket="today",
+                bucket="within_3_days",
                 companies=[
                     CompanyFeedSnapshot(
                         company="OpenGradient",

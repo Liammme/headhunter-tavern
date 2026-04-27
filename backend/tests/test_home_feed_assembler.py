@@ -5,7 +5,7 @@ from app.services.home_feed_assembler import assemble_home_payload
 def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contract():
     day_payloads = [
         DayBucketSnapshot(
-            bucket="today",
+            bucket="within_3_days",
             companies=[
                 CompanyFeedSnapshot(
                     company="OpenGradient",
@@ -51,7 +51,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
         },
         "days": [
             {
-                "bucket": "today",
+                "bucket": "within_3_days",
                 "companies": [
                     {
                         "company": "OpenGradient",

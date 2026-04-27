@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 from sqlalchemy import select
@@ -15,6 +15,7 @@ from app.services.market_signal_builder import build_market_signal_payload
 
 
 ERROR_MESSAGE_LIMIT = 500
+SUCCESS_REFRESH_INTERVAL_DAYS = 3
 DB_CREDENTIAL_URL_PATTERN = re.compile(
     r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
     re.IGNORECASE,
@@ -38,6 +39,10 @@ def generate_daily_market_intelligence_snapshot(
 ) -> dict[str, Any]:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
+    recent_success = _load_recent_success_snapshot(db, generated_at=generated_at)
+    if recent_success is not None:
+        return {"status": "skipped", "snapshot_id": recent_success.id}
+
     jobs = list(db.execute(select(Job)).scalars().all())
     signal_payload = build_market_signal_payload(jobs=jobs, snapshot_date=target_date)
     if db.in_transaction():
@@ -91,6 +96,23 @@ def generate_daily_market_intelligence_snapshot(
     db.commit()
     db.refresh(snapshot)
     return {"status": "success", "snapshot_id": snapshot.id}
+
+
+def _load_recent_success_snapshot(
+    db: Session,
+    *,
+    generated_at: datetime,
+) -> MarketIntelligenceSnapshot | None:
+    cutoff = generated_at - timedelta(days=SUCCESS_REFRESH_INTERVAL_DAYS)
+    return db.execute(
+        select(MarketIntelligenceSnapshot)
+        .where(
+            MarketIntelligenceSnapshot.status == "success",
+            MarketIntelligenceSnapshot.generated_at >= cutoff,
+        )
+        .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
+        .limit(1)
+    ).scalar_one_or_none()
 
 
 def _sanitize_error_message(exc: Exception) -> str:

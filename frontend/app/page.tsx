@@ -68,9 +68,9 @@ export default async function HomePage() {
         ) : (
           <section className="empty-state" aria-live="polite">
             <p className="eyebrow">赏金池状态</p>
-            <h2>今天还没有可展示的岗位</h2>
+            <h2>最近还没有可展示的岗位</h2>
             <p>
-              抓取任务完成前，首页会暂时保持空态。等下一次抓取写入后，这里会自动展示按天聚合的公司机会池。
+              抓取任务完成前，首页会暂时保持空态。等下一次抓取写入后，这里会自动展示按时间段聚合的公司机会池。
             </p>
           </section>
         )}
@@ -95,20 +95,20 @@ function formatReportDate(date: Date) {
 }
 
 function buildDailyCaptureSummary(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
-  const today = days.find((day) => day.bucket === "today");
-  const companies = today?.companies ?? [];
+  const recent = days.find((day) => day.bucket === "within_3_days");
+  const companies = recent?.companies ?? [];
   const jobCount = companies.reduce((sum, company) => sum + company.total_jobs, 0);
   const sourceNames = companies.map((company) => company.company).filter(Boolean);
   const sourceSummary = sourceNames.length ? sourceNames.slice(0, 6).join("、") : "暂无公司来源";
   const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
 
-  return `今日抓取 ${jobCount} 个岗位，分布来源：${sourceSummary}${overflow}。`;
+  return `近3天岗位 ${jobCount} 个，分布来源：${sourceSummary}${overflow}。`;
 }
 
 function buildCollectionStats(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
   const labels: Record<(typeof days)[number]["bucket"], string> = {
-    today: "今天",
-    yesterday: "昨天",
+    within_3_days: "3天内",
+    within_7_days: "7天内",
     earlier: "更早",
   };
 

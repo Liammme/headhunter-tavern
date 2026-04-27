@@ -7,23 +7,23 @@ import { AnimatedTabs } from "./ui/animated-tabs";
 import type { CompanyCardPayload, DayBucketPayload } from "../lib/types";
 
 const FEED_TABS: Array<{ label: FeedTabLabel; bucket: DayBucketPayload["bucket"] }> = [
-  { label: "今天", bucket: "today" },
-  { label: "昨天", bucket: "yesterday" },
+  { label: "3天内", bucket: "within_3_days" },
+  { label: "7天内", bucket: "within_7_days" },
   { label: "更早", bucket: "earlier" },
 ];
 
 const EARLIER_JOB_PREVIEW_LIMIT = 10;
 
-type FeedTabLabel = "今天" | "昨天" | "更早";
+type FeedTabLabel = "3天内" | "7天内" | "更早";
 
 export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[] }) {
-  const [activeTab, setActiveTab] = useState<FeedTabLabel>("今天");
+  const [activeTab, setActiveTab] = useState<FeedTabLabel>("3天内");
   const [showAllEarlier, setShowAllEarlier] = useState(false);
 
   const daysByBucket = useMemo(() => {
     const grouped: Record<DayBucketPayload["bucket"], CompanyCardPayload[]> = {
-      today: [],
-      yesterday: [],
+      within_3_days: [],
+      within_7_days: [],
       earlier: [],
     };
 
@@ -34,7 +34,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
     return grouped;
   }, [days]);
 
-  const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "today";
+  const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "within_3_days";
   const activeCompanies = daysByBucket[activeBucket];
   const isEarlier = activeBucket === "earlier";
   const { companies: visibleCompanies, hasHiddenJobs } =

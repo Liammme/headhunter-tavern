@@ -94,7 +94,7 @@ def test_trigger_crawl_populates_grouped_home_payload(client, monkeypatch):
 
     assert home_response.status_code == 200
     payload = home_response.json()
-    assert [day["bucket"] for day in payload["days"]] == ["today", "yesterday", "earlier"]
+    assert [day["bucket"] for day in payload["days"]] == ["within_3_days", "within_7_days"]
     today_companies = payload["days"][0]["companies"]
     assert today_companies[0]["company"] == "OpenGradient"
     assert today_companies[0]["total_jobs"] == 2

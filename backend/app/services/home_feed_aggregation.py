@@ -11,7 +11,7 @@ from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, J
 from app.services.grouping import bucket_posted_date
 from app.services.scoring import derive_company_grade
 
-BUCKET_ORDER = {"today": 0, "yesterday": 1, "earlier": 2}
+BUCKET_ORDER = {"within_3_days": 0, "within_7_days": 1, "earlier": 2}
 JOB_GRADE_ORDER = {"high": 0, "medium": 1, "low": 2}
 COMPANY_GRADE_ORDER = {"focus": 0, "watch": 1, "normal": 2}
 WINDOW_DAYS = 14

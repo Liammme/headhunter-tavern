@@ -29,7 +29,7 @@ export type CompanyCardPayload = {
 };
 
 export type DayBucketPayload = {
-  bucket: "today" | "yesterday" | "earlier";
+  bucket: "within_3_days" | "within_7_days" | "earlier";
   companies: CompanyCardPayload[];
 };
 

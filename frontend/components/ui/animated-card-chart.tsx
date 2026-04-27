@@ -114,8 +114,8 @@ function buildChartBars(data: ChartDatum[]) {
   const source = data.length
     ? data
     : [
-        { label: "今天", value: 0 },
-        { label: "昨天", value: 0 },
+        { label: "3天内", value: 0 },
+        { label: "7天内", value: 0 },
         { label: "更早", value: 0 },
       ];
 

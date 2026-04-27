@@ -159,7 +159,7 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
         },
         "days": [
             {
-                "bucket": "today",
+                "bucket": "within_3_days",
                 "companies": [
                     {
                         "company": "OpenGradient",

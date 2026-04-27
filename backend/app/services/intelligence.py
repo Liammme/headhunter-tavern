@@ -522,7 +522,7 @@ def build_job_fact_briefs(*, jobs_by_id: dict[int, Job], day_payloads: list[DayB
 
     briefs.sort(
         key=lambda item: (
-            {"today": 0, "yesterday": 1, "earlier": 2}.get(item["bucket"], 3),
+            {"within_3_days": 0, "within_7_days": 1, "earlier": 2}.get(item["bucket"], 3),
             {"focus": 0, "watch": 1, "normal": 2}.get(item["company_grade"], 3),
             {"high": 0, "medium": 1, "low": 2}.get(item["bounty_grade"], 3),
             item["company"].lower(),

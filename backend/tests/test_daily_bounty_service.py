@@ -9,16 +9,16 @@ def _clock(*values):
     return lambda: next(ticks)
 
 
-def _home_payload(today_companies):
+def _home_payload(recent_3_day_companies):
     return {
         "intelligence": {"headline": "test", "summary": "test", "findings": [], "actions": []},
         "days": [
             {
-                "bucket": "today",
-                "label": "今天",
-                "companies": today_companies,
+                "bucket": "within_3_days",
+                "label": "3天内",
+                "companies": recent_3_day_companies,
             },
-            {"bucket": "yesterday", "label": "昨天", "companies": []},
+            {"bucket": "within_7_days", "label": "7天内", "companies": []},
         ],
     }
 
@@ -35,7 +35,7 @@ def _job(canonical_url, *, company="OpenGradient"):
     )
 
 
-def test_run_daily_bounty_generation_returns_crawl_and_today_summary(db_session, monkeypatch):
+def test_run_daily_bounty_generation_returns_crawl_and_recent_3_day_summary(db_session, monkeypatch):
     snapshot_calls = []
 
     def fake_trigger_crawl(db):
@@ -83,8 +83,8 @@ def test_run_daily_bounty_generation_returns_crawl_and_today_summary(db_session,
         "new_jobs": 3,
         "source_stats": {"greenhouse": 2, "lever": 3},
         "errors": [],
-        "today_company_count": 2,
-        "today_job_count": 3,
+        "recent_3_day_company_count": 2,
+        "recent_3_day_job_count": 3,
     }
     assert snapshot_calls == [db_session]
 
@@ -118,8 +118,8 @@ def test_run_daily_bounty_generation_keeps_partial_failures_observable(db_sessio
     assert summary["status"] == "completed_with_errors"
     assert summary["errors"] == ["lever: timeout"]
     assert summary["source_stats"] == {"greenhouse": 2}
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_redacts_trigger_crawl_result_error_secrets(db_session, monkeypatch):
@@ -165,8 +165,8 @@ def test_run_daily_bounty_generation_redacts_trigger_crawl_result_error_secrets(
     assert "crawl-bearer-secret" not in error_text
     assert "crawl-db-secret" not in error_text
     assert "postgresql://user:crawl-db-secret" not in error_text
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_reports_market_snapshot_failure(db_session, monkeypatch):
@@ -197,8 +197,8 @@ def test_run_daily_bounty_generation_reports_market_snapshot_failure(db_session,
 
     assert summary["status"] == "completed_with_errors"
     assert summary["errors"] == ["market_intelligence: model timed out"]
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_allows_market_snapshot_fallback(db_session, monkeypatch):
@@ -229,8 +229,8 @@ def test_run_daily_bounty_generation_allows_market_snapshot_fallback(db_session,
 
     assert summary["status"] == "completed"
     assert summary["errors"] == []
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_reports_market_snapshot_exception(db_session, monkeypatch):
@@ -265,8 +265,8 @@ def test_run_daily_bounty_generation_reports_market_snapshot_exception(db_sessio
 
     assert summary["status"] == "completed_with_errors"
     assert summary["errors"] == ["market_intelligence: provider unavailable"]
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_redacts_market_snapshot_exception_secrets(db_session, monkeypatch):
@@ -336,8 +336,8 @@ def test_run_daily_bounty_generation_redacts_market_snapshot_exception_secrets(d
     assert "postgresql://user:db-password-secret" not in error_text
     assert "postgres://user:postgres-password-secret" not in error_text
     assert "mysql://user:mysql-password-secret" not in error_text
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 2
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 2
 
 
 def test_run_daily_bounty_generation_redacts_trigger_crawl_exception_secrets(
@@ -375,8 +375,8 @@ def test_run_daily_bounty_generation_redacts_trigger_crawl_exception_secrets(
     assert "crawl-bearer-secret" not in error_text
     assert "crawl-db-secret" not in error_text
     assert "postgresql://user:crawl-db-secret" not in error_text
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 4
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 4
 
 
 def test_run_daily_bounty_generation_rolls_back_trigger_crawl_db_error(db_session, monkeypatch):
@@ -398,8 +398,8 @@ def test_run_daily_bounty_generation_rolls_back_trigger_crawl_db_error(db_sessio
 
     assert summary["status"] == "failed"
     assert summary["errors"] == ["daily_bounty: crawl db write failed"]
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 1
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 1
 
 
 def test_run_daily_bounty_generation_rolls_back_market_snapshot_db_error(db_session, monkeypatch):
@@ -435,8 +435,8 @@ def test_run_daily_bounty_generation_rolls_back_market_snapshot_db_error(db_sess
 
     assert summary["status"] == "completed_with_errors"
     assert summary["errors"] == ["market_intelligence: snapshot db write failed"]
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 1
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 1
 
 
 def test_run_daily_bounty_generation_reports_failure_without_hiding_existing_home(db_session, monkeypatch):
@@ -470,6 +470,6 @@ def test_run_daily_bounty_generation_reports_failure_without_hiding_existing_hom
     assert summary["new_jobs"] == 0
     assert summary["source_stats"] == {}
     assert summary["errors"] == ["daily_bounty: network unavailable"]
-    assert summary["today_company_count"] == 1
-    assert summary["today_job_count"] == 4
+    assert summary["recent_3_day_company_count"] == 1
+    assert summary["recent_3_day_job_count"] == 4
     assert snapshot_calls == []
