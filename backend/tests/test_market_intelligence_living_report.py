@@ -216,7 +216,7 @@ def test_generate_living_market_report_payload_raises_after_invalid_llm(monkeypa
     calls = []
     monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
 
-    def fake_request_structured_json(messages):
+    def fake_request_structured_json(messages, **_kwargs):
         calls.append(messages)
         return "{invalid json"
 

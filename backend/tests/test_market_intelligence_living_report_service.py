@@ -139,7 +139,7 @@ def test_generate_living_market_report_update_writes_next_version(db_session, mo
 def test_generate_living_market_report_marks_invalid_llm_as_fallback(db_session, monkeypatch):
     _add_fact(db_session, title="AI Infra Engineer", created_at=datetime(2026, 4, 27, 10, 0, 0))
     monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
-    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", lambda messages: "{invalid json")
+    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", lambda messages, **_kwargs: "{invalid json")
 
     result = generate_living_market_report(
         db_session,

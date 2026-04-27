@@ -56,6 +56,7 @@ BANNED_FIELDS = {
     "signal_tags",
 }
 BANNED_TOKENS = {"bounty", "claimed"}
+LIVING_REPORT_LLM_TIMEOUT_SECONDS = 120
 
 
 class LivingMarketReportError(Exception):
@@ -119,7 +120,7 @@ def generate_living_market_report_payload(
     last_error: Exception | None = None
     for attempt in range(2):
         try:
-            content = request_structured_json(messages)
+            content = request_structured_json(messages, timeout_seconds=LIVING_REPORT_LLM_TIMEOUT_SECONDS)
             report = parse_market_intelligence_report(content)
             report["version"] = version
             report["mode"] = mode
