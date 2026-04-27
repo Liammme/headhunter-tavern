@@ -30,12 +30,14 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
-        dailyCaptureSummary="今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient、Beta Labs。"
         collectionStats={collectionStats}
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 3, name: "每日岗位收集数量" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.getByText("分布来源：OpenGradient、Beta Labs。")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "3天内，5 个岗位" }).length).toBeGreaterThan(0);
     expect(screen.getByText("Daily Capture Signal")).toBeInTheDocument();
@@ -46,18 +48,27 @@ describe("IntelligencePanel", () => {
     expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "查看猎场控制台" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "返回" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
 
     expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
     const paper = screen.getByRole("article", { name: reportDateLabel });
+    expect(screen.getByRole("button", { name: "返回" })).toBeInTheDocument();
     expect(within(paper).getByRole("heading", { level: 3, name: reportDateLabel })).toBeInTheDocument();
     expect(within(paper).getByText(intelligence.narrative)).toBeInTheDocument();
-    expect(within(paper).queryByText("今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。")).not.toBeInTheDocument();
+    expect(within(paper).queryByText("分布来源：OpenGradient、Beta Labs。")).not.toBeInTheDocument();
     expect(within(paper).queryByText(intelligence.summary)).not.toBeInTheDocument();
-    expect(container.querySelector(".intel-footnote")).toHaveTextContent(
-      "今日抓取 5 个岗位，分布来源：OpenGradient、Beta Labs。",
-    );
+    expect(container.querySelector(".intel-footnote")).not.toBeInTheDocument();
     expect(screen.queryByText(intelligence.summary)).not.toBeInTheDocument();
+
+    fireEvent.click(paper);
+
+    expect(screen.getByRole("heading", { level: 2, name: intelligence.headline })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "返回" }));
+
+    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
   });
 
   it("uses recent bucket labels when collection stats are empty", () => {
@@ -65,7 +76,8 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={buildIntelligence()}
         reportDateLabel="2026/4/23"
-        dailyCaptureSummary="近3天岗位 0 个，分布来源：暂无公司来源。"
+        captureTitle="近3天岗位 0 个"
+        captureDescription="分布来源：暂无公司来源。"
         collectionStats={[]}
       />,
     );
@@ -85,7 +97,8 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/24"
-        dailyCaptureSummary="今日抓取 12 个岗位。分布来源：Aijobs。重点公司 2 家。"
+        captureTitle="近3天岗位 12 个"
+        captureDescription="分布来源：Aijobs。"
         collectionStats={collectionStats}
       />,
     );
@@ -117,7 +130,8 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/25"
-        dailyCaptureSummary="今日抓取 18 个岗位，分布来源：Aijobs、RemoteHub。"
+        captureTitle="近3天岗位 18 个"
+        captureDescription="分布来源：Aijobs、RemoteHub。"
         collectionStats={collectionStats}
       />,
     );
@@ -139,7 +153,8 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
-        dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
+        captureTitle="近3天岗位 3 个"
+        captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
     );
@@ -160,7 +175,8 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/23"
-        dailyCaptureSummary="今日抓取 3 个岗位，分布来源：OpenGradient。"
+        captureTitle="近3天岗位 3 个"
+        captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
     );

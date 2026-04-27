@@ -337,6 +337,28 @@ h5,
   overflow: hidden;
 }
 
+.intel-back-button {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  min-height: 32px;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-subtle);
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+
+.intel-back-button:hover {
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
 .intel-preview {
   margin: 0;
   width: min(100%, 420px);
@@ -390,9 +412,9 @@ h5,
 
 .intel-chart-card {
   justify-self: center;
-  width: 356px;
+  width: 392px;
   max-width: 100%;
-  min-height: 300px;
+  min-height: 318px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -400,28 +422,26 @@ h5,
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
-.intel-chart-card.is-clickable,
-.intel-paper.is-clickable {
+.intel-chart-card.is-clickable {
   cursor: pointer;
 }
 
-.intel-chart-card.is-clickable:focus-visible,
-.intel-paper.is-clickable:focus-visible {
+.intel-chart-card.is-clickable:focus-visible {
   outline: 2px solid rgba(117, 251, 110, 0.75);
   outline-offset: 4px;
 }
 
 .animated-card-visual {
   position: relative;
-  height: 180px;
+  height: 188px;
   width: 100%;
   overflow: hidden;
 }
 
 .animated-card-body {
   display: grid;
-  gap: 5px;
-  padding: 14px 18px 15px;
+  gap: 9px;
+  padding: 17px 22px 20px;
   border-top: 1px solid var(--border);
   text-align: left;
 }
@@ -433,19 +453,24 @@ h5,
 
 .animated-card-title {
   color: var(--foreground);
-  font-size: 18px;
-  line-height: 1.08;
+  max-width: 100%;
+  font-size: 19px;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .animated-card-description {
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
+  max-width: 31ch;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .animated-chart-visual {
   position: relative;
-  height: 180px;
+  height: 188px;
   width: 100%;
   overflow: hidden;
   color: rgba(10, 10, 10, 0.12);
@@ -1339,8 +1364,15 @@ h5,
   .intel-paper {
     width: min(100%, 280px);
     min-height: 168px;
-    padding: 18px 12px;
+    padding: 48px 12px 18px;
     border-radius: var(--radius-lg);
+  }
+
+  .intel-back-button {
+    top: 12px;
+    left: 12px;
+    min-height: 30px;
+    padding-inline: 10px;
   }
 
   .intel-card,
@@ -1351,7 +1383,7 @@ h5,
   }
 
   .intel-chart-card {
-    width: 280px;
+    width: min(340px, calc(100vw - 40px));
     max-width: calc(100vw - 56px);
     margin-inline: auto;
   }
@@ -1386,10 +1418,13 @@ h5,
 
   .animated-card-title {
     font-size: 17px;
+    line-height: 1.2;
   }
 
   .animated-card-description {
-    font-size: 11px;
+    max-width: none;
+    font-size: 12px;
+    line-height: 1.5;
     overflow-wrap: anywhere;
   }
 

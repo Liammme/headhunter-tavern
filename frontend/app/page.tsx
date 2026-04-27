@@ -9,7 +9,7 @@ export default async function HomePage() {
   const payload = await fetchHomePayload();
   const hasDays = payload.days.length > 0;
   const reportDateLabel = formatReportDate(new Date());
-  const dailyCaptureSummary = buildDailyCaptureSummary(payload.days);
+  const dailyCaptureInfo = buildDailyCaptureInfo(payload.days);
 
   return (
     <main className="page-shell">
@@ -57,7 +57,8 @@ export default async function HomePage() {
         <IntelligencePanel
           intelligence={payload.intelligence}
           reportDateLabel={reportDateLabel}
-          dailyCaptureSummary={dailyCaptureSummary}
+          captureTitle={dailyCaptureInfo.title}
+          captureDescription={dailyCaptureInfo.description}
           collectionStats={buildCollectionStats(payload.days)}
         />
       </section>
@@ -94,7 +95,7 @@ function formatReportDate(date: Date) {
   return `${year}/${month}/${day}`;
 }
 
-function buildDailyCaptureSummary(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
+function buildDailyCaptureInfo(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
   const recent = days.find((day) => day.bucket === "within_3_days");
   const companies = recent?.companies ?? [];
   const jobCount = companies.reduce((sum, company) => sum + company.total_jobs, 0);
@@ -102,7 +103,10 @@ function buildDailyCaptureSummary(days: Awaited<ReturnType<typeof fetchHomePaylo
   const sourceSummary = sourceNames.length ? sourceNames.slice(0, 6).join("、") : "暂无公司来源";
   const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
 
-  return `近3天岗位 ${jobCount} 个，分布来源：${sourceSummary}${overflow}。`;
+  return {
+    title: `近3天岗位 ${jobCount} 个`,
+    description: `分布来源：${sourceSummary}${overflow}。`,
+  };
 }
 
 function buildCollectionStats(days: Awaited<ReturnType<typeof fetchHomePayload>>["days"]) {
