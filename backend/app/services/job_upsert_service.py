@@ -8,7 +8,7 @@ from app.crawlers.base import NormalizedJob
 from app.models import Job, JobClaim
 from app.services.job_enrichment import build_job_payload
 
-WINDOW_DAYS = 14
+WINDOW_DAYS = 30
 
 
 def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
@@ -37,6 +37,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
         for key, value in payload.items():
             setattr(existing, key, value)
 
+    db.flush()
     delete_out_of_window_jobs(db)
     db.commit()
     return new_jobs

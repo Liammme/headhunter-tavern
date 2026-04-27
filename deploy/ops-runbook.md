@@ -111,6 +111,8 @@ curl https://api.talentsignal.cloud/health
 2. 没有把 `.env`、密钥、数据库密码提交到 Git
 3. 没有改坏 `deploy/` 模板和路径假设
 
+本地开发推荐使用本地 PostgreSQL，不要把本地 `DATABASE_URL` 指向生产库。SQLite 可以保留给 pytest fixture，但涉及 release 的数据库行为，发版前要做一次本地 PostgreSQL smoke。
+
 ### 4.2 推荐方式：执行后端部署脚本
 
 代码已经合并并 push 到 `master` 后，优先用脚本发后端：
@@ -131,11 +133,11 @@ bash /opt/bounty-pool/app/deploy/backend-deploy.sh
 脚本不会执行：
 
 1. 安装 Python 依赖
-2. 数据库迁移
+2. 数据库初始化或迁移
 3. 修改 `.env`
 4. 修改 nginx、cron 或 systemd 配置
 
-如果本次后端依赖、数据库、nginx、cron 或 systemd 有变化，不要只跑脚本，先按对应变更类型做额外检查。
+如果本次后端依赖、数据库、nginx、cron 或 systemd 有变化，不要只跑脚本，先按对应变更类型做额外检查。遇到本次市场情报层这种 schema 新表发布，不能只跑 `deploy/backend-deploy.sh`。
 
 ### 4.3 手动方式：拉新代码
 
@@ -159,7 +161,7 @@ git rev-parse HEAD
 /opt/bounty-pool/venv/bin/pip install -e ./backend
 ```
 
-如果没有依赖变化，也可以跳过。
+如果没有 Python 或 Node 依赖变化，不需要额外执行 `pip` 或 `npm` install。只有 `pyproject` 或 package 文件变化时，才安装对应依赖。
 
 ### 4.5 重启服务
 
@@ -199,6 +201,32 @@ curl https://api.talentsignal.cloud/api/v1/home
 - `.env` 改动：`sudo systemctl restart bounty-pool`
 - cron 改动：重新复制 cron 文件并确认权限
 
+### 5.1 本次市场情报层 release checklist
+
+本次新增 PostgreSQL 表：`market_intelligence_snapshots`。这是新增表，不 ALTER 现有表。
+
+生产发布前或发布时，在服务器执行：
+
+```bash
+cd /opt/bounty-pool/app/backend
+source /opt/bounty-pool/venv/bin/activate
+python -c "from app.db.init_db import init_db; init_db()"
+```
+
+发布后执行：
+
+```bash
+sudo systemctl restart bounty-pool
+curl http://127.0.0.1:8000/health
+curl https://api.talentsignal.cloud/health
+cd /opt/bounty-pool/app/backend
+source /opt/bounty-pool/venv/bin/activate
+python -m app.cli.daily_bounty
+curl https://api.talentsignal.cloud/api/v1/home
+```
+
+验收 `/api/v1/home` 时，确认 `intelligence` 不含 source/link/full JD/bounty/claim/BD 语言，只保留面向首页的市场情报摘要。
+
 ## 6. 回滚原则
 
 如果新版本上线后出现明显异常，先做最小回滚，不要在线上临时 patch。
@@ -224,6 +252,8 @@ curl https://api.talentsignal.cloud/health
 ```
 
 注意：不要在线上做 `git reset --hard` 这类破坏性操作，除非你明确知道当前工作树状态。
+
+本次市场情报层如果生成失败，优先保留服务在线：home 可以回退到旧逻辑或最新成功快照。不要在线上事故处理中删除 `market_intelligence_snapshots` 表，新增表可以保留给后续修复版本继续使用。
 
 ## 7. 常见故障先看哪里
 

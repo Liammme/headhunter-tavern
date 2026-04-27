@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from app.models import Job
+from app.models import Job, MarketIntelligenceSnapshot
 
 
 def test_home_endpoint_returns_query_service_result(client, monkeypatch):
@@ -58,6 +58,48 @@ def test_home_payload_has_intelligence_and_days(client):
     assert "days" in body
     assert body["meta"]["analysis_version"] == "feed-v1"
     assert body["meta"]["rule_version"] == "score-v2"
+
+
+def test_home_endpoint_allows_market_intelligence_null_window_start(client, db_session):
+    db_session.add(
+        MarketIntelligenceSnapshot(
+            snapshot_date=date(2026, 4, 25),
+            generated_at=datetime(2026, 4, 26, 15, 0, 0),
+            window_days=90,
+            market_signal_payload={},
+            report_payload={
+                "headline": "Market snapshot headline",
+                "narrative": "Market snapshot narrative",
+                "primary_judgment": {"claim": "Market snapshot summary"},
+                "trend_cards": [{"judgment": "Market snapshot finding"}],
+                "watchlist": ["Market snapshot action"],
+            },
+            model_name=None,
+            status="success",
+            error_message=None,
+        )
+    )
+    db_session.commit()
+
+    response = client.get("/api/v1/home")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"intelligence", "meta", "days"}
+    assert set(body["intelligence"]) == {
+        "narrative",
+        "headline",
+        "summary",
+        "analysis_version",
+        "rule_version",
+        "window_start",
+        "window_end",
+        "generated_at",
+        "findings",
+        "actions",
+    }
+    assert body["intelligence"]["window_start"] is None
+    assert isinstance(body["meta"]["window_start"], str)
 
 
 def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session, monkeypatch):

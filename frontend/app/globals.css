@@ -350,9 +350,12 @@ h5,
 
 .intel-paper-copy {
   width: min(100%, 560px);
+  max-height: min(360px, 52vh);
   display: grid;
   gap: 10px;
   justify-items: center;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   text-align: center;
 }
 
