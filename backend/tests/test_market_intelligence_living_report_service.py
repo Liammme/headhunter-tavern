@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 
 from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
+from app.services import market_intelligence_living_report
 from app.services import market_intelligence_living_report_service
 from app.services.market_intelligence_living_report_service import generate_living_market_report
 
@@ -133,3 +134,23 @@ def test_generate_living_market_report_update_writes_next_version(db_session, mo
     assert snapshot.report_payload["living_report"]["version"] == 2
     assert snapshot.report_payload["living_report"]["mode"] == "incremental_update"
     assert snapshot.report_payload["living_report"]["previous_snapshot_id"] == first["snapshot_id"]
+
+
+def test_generate_living_market_report_marks_invalid_llm_as_fallback(db_session, monkeypatch):
+    _add_fact(db_session, title="AI Infra Engineer", created_at=datetime(2026, 4, 27, 10, 0, 0))
+    monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
+    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", lambda messages: "{invalid json")
+
+    result = generate_living_market_report(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+    )
+
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    assert result["status"] == "fallback"
+    assert snapshot.status == "fallback"
+    assert "LLM report failed validation" in snapshot.error_message
+    assert snapshot.report_payload["living_report"]["claims"][0]["change_reason"].startswith("LLM 不可用")

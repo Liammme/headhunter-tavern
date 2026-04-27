@@ -68,7 +68,26 @@ def build_living_market_report_system_prompt() -> str:
         "目标 1500-2500 字，不写日报、不写榜单、不写岗位流水账。"
         "只能使用输入 JSON 中的统计和 evidence_id；每个 claim 必须有 evidence_ids。"
         "禁止补外部事实，禁止输出 canonical_url/source_name/job_url/full_description、猎头、赏金、认领、客户开发、岗位来源、岗位链接。"
-        "字段必须匹配 living_market_report schema，必须包含 headline，status 只能是 new/reinforced/weakened/retired。"
+        "字段必须严格匹配 living_market_report schema，不能输出 date、statement 或任何 schema 外字段。"
+        "claim 文本字段必须叫 claim，不能叫 statement。status 只能是 new/reinforced/weakened/retired。"
+        "\n\n必须返回这个结构："
+        "{"
+        '"kind":"living_market_report",'
+        '"schema_version":"living-market-report-v1",'
+        '"headline":"中文标题",'
+        '"version":1,'
+        '"mode":"baseline_seed 或 incremental_update",'
+        '"previous_snapshot_id":null,'
+        '"seed_window_days":180,'
+        '"generated_at":"ISO 时间",'
+        '"executive_summary":"核心判断摘要",'
+        '"sections":[{"section_id":"market_structure","title":"市场结构","body":"分析正文","claim_ids":["c1"]}],'
+        '"claims":[{"claim_id":"c1","previous_claim_id":null,"status":"new","claim":"判断","confidence":"low","evidence_ids":["fact-1"],"evidence_notes":["证据说明"],"change_reason":"变化原因"}],'
+        '"watchlist":[{"topic":"观察主题","why_watch":"为什么要看","evidence_ids":["fact-1"]}],'
+        '"data_quality":{}'
+        "}。"
+        "sections 必须 3-5 个，section_id 只能是 market_structure/demand_shifts/company_patterns/risk_and_uncertainty；"
+        "claims 必须 4-10 个；每个 claim 使用 1-5 个输入中存在的 evidence_id。"
     )
 
 
@@ -97,6 +116,7 @@ def generate_living_market_report_payload(
         {"role": "system", "content": build_living_market_report_system_prompt()},
         {"role": "user", "content": build_living_market_report_user_prompt(input_payload)},
     ]
+    last_error: Exception | None = None
     for attempt in range(2):
         try:
             content = request_structured_json(messages)
@@ -109,21 +129,21 @@ def generate_living_market_report_payload(
             validate_living_market_report(report, input_payload=input_payload, expected_version=version)
             return report
         except Exception as exc:
+            last_error = exc
             messages.append(
                 {
                     "role": "user",
-                    "content": f"上次输出未通过校验：{str(exc)[:300]}。只修 JSON/schema，不添加输入外事实。",
+                    "content": (
+                        f"上次输出未通过校验：{str(exc)[:300]}。"
+                        "重新输出完整 JSON object，不要解释。"
+                        "只修 JSON/schema，不添加输入外事实。"
+                        "不要输出 date、statement 或 schema 外字段；claim 文本字段必须叫 claim。"
+                    ),
                 }
             )
             if attempt == 0:
                 continue
-    return build_rule_living_market_report(
-        input_payload,
-        version=version,
-        mode=mode,
-        previous_snapshot_id=previous_snapshot_id,
-        generated_at=generated_at,
-    )
+    raise LivingMarketReportError(f"LLM report failed validation after retries: {str(last_error)[:300]}")
 
 
 def validate_living_market_report(payload: dict, *, input_payload: dict, expected_version: int) -> None:

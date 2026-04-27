@@ -212,7 +212,7 @@ def test_validate_living_market_report_requires_previous_claim_for_non_new_statu
         validate_living_market_report(report, input_payload=_living_input(), expected_version=1)
 
 
-def test_generate_living_market_report_payload_retries_once_then_fallback(monkeypatch):
+def test_generate_living_market_report_payload_raises_after_invalid_llm(monkeypatch):
     calls = []
     monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
 
@@ -222,18 +222,16 @@ def test_generate_living_market_report_payload_retries_once_then_fallback(monkey
 
     monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", fake_request_structured_json)
 
-    report = generate_living_market_report_payload(
-        _living_input(),
-        version=1,
-        mode="baseline_seed",
-        previous_snapshot_id=None,
-        generated_at=datetime(2026, 4, 27, 10, 0, 0),
-    )
+    with pytest.raises(LivingMarketReportError, match="LLM report failed validation"):
+        generate_living_market_report_payload(
+            _living_input(),
+            version=1,
+            mode="baseline_seed",
+            previous_snapshot_id=None,
+            generated_at=datetime(2026, 4, 27, 10, 0, 0),
+        )
 
     assert len(calls) == 2
-    assert report["kind"] == "living_market_report"
-    assert report["headline"]
-    assert report["version"] == 1
 
 
 def test_build_rule_living_market_report_passes_validation():
