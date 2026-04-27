@@ -23,7 +23,9 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
           <span>最近更新 {report.generated_at}</span>
         </div>
         <h3 className="living-report-title">{report.headline}</h3>
-        <p className="living-report-summary">{report.executive_summary}</p>
+        <div className="living-report-copy">
+          {renderTextBlocks(report.executive_summary)}
+        </div>
       </header>
 
       <section className="living-report-sections" aria-label="报告章节">
@@ -31,7 +33,7 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
           report.sections.map((section) => (
             <section key={section.section_id} className="living-report-section">
               <h3>{section.title}</h3>
-              <p>{section.body}</p>
+              <div className="living-report-copy">{renderTextBlocks(section.body)}</div>
             </section>
           ))
         ) : (
@@ -68,4 +70,12 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
       </footer>
     </div>
   );
+}
+
+function renderTextBlocks(value: string) {
+  return value
+    .split(/\n\s*\n/g)
+    .map((block) => block.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map((block) => <p key={block}>{block}</p>);
 }
