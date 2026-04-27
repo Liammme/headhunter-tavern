@@ -16,6 +16,7 @@ def test_home_endpoint_returns_query_service_result(client, monkeypatch):
             "generated_at": "2026-04-18T09:00:00",
             "findings": [],
             "actions": [],
+            "living_report": None,
         },
         "meta": {
             "analysis_version": "feed-v1",
@@ -52,6 +53,7 @@ def test_home_payload_has_intelligence_and_days(client):
         "generated_at",
         "findings",
         "actions",
+        "living_report",
     }
     assert "intelligence" in body
     assert "meta" in body
@@ -97,6 +99,7 @@ def test_home_endpoint_allows_market_intelligence_null_window_start(client, db_s
         "generated_at",
         "findings",
         "actions",
+        "living_report",
     }
     assert body["intelligence"]["window_start"] is None
     assert isinstance(body["meta"]["window_start"], str)
@@ -151,6 +154,7 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
             "generated_at": "2026-04-18T09:00:00",
             "findings": [],
             "actions": [],
+            "living_report": None,
         },
         "meta": {
             "analysis_version": "feed-v1",

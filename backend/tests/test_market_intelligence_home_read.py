@@ -24,6 +24,59 @@ def _report_payload(
     }
 
 
+def _living_report_payload(*, version: int = 1) -> dict:
+    payload = _report_payload(
+        headline="Legacy headline",
+        narrative="Legacy narrative",
+        claim="Legacy claim",
+    )
+    payload["living_report"] = {
+        "kind": "living_market_report",
+        "schema_version": "living-market-report-v1",
+        "version": version,
+        "mode": "baseline_seed" if version == 1 else "incremental_update",
+        "previous_snapshot_id": None,
+        "seed_window_days": 180,
+        "generated_at": "2026-04-27T10:00:00",
+        "executive_summary": "AI infra 在长期样本中保持可见。",
+        "sections": [
+            {
+                "section_id": "market_structure",
+                "title": "市场结构",
+                "body": "AI infra 是当前样本的主要结构。",
+                "claim_ids": ["c1"],
+            }
+        ],
+        "claims": [
+            {
+                "claim_id": "c1",
+                "previous_claim_id": None,
+                "status": "new",
+                "claim": "AI infra 保持可见。",
+                "confidence": "medium",
+                "evidence_ids": ["e1"],
+                "evidence_notes": ["AI infra 在 180d 窗口可见。"],
+                "change_reason": "baseline",
+            }
+        ],
+        "watchlist": [
+            {
+                "topic": "AI infra",
+                "why_watch": "观察短窗是否延续。",
+                "evidence_ids": ["e1"],
+            }
+        ],
+        "data_quality": {
+            "baseline_note": "当前可见岗位的历史基线，不代表完整真实半年历史。",
+            "posted_at_fact_count": 1,
+            "collected_at_fallback_count": 0,
+            "unknown_company_count": 0,
+            "sample_count": 1,
+        },
+    }
+    return payload
+
+
 def _add_snapshot(
     db_session,
     *,
@@ -165,4 +218,59 @@ def test_load_latest_market_intelligence_returns_home_intelligence_shape(db_sess
         "generated_at": "2026-04-26T10:15:30",
         "findings": ["AI infra roles are showing the clearest demand."],
         "actions": ["Watch platform teams with multiple senior openings."],
+        "living_report": None,
     }
+
+
+def test_load_latest_market_intelligence_prefers_latest_living_report(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=_report_payload(headline="Newer legacy headline", narrative="Newer legacy narrative"),
+    )
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 25, 10, 0, 0),
+        report_payload=_living_report_payload(version=2),
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Legacy headline"
+    assert payload["living_report"]["version"] == 2
+
+
+def test_load_latest_market_intelligence_falls_back_to_legacy_when_no_living_report(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=_report_payload(headline="Legacy only", narrative="Legacy narrative"),
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Legacy only"
+    assert payload["living_report"] is None
+
+
+def test_load_latest_market_intelligence_skips_bad_living_payload_without_500(db_session):
+    bad_payload = _report_payload(headline="Bad living headline", narrative="Bad living narrative")
+    bad_payload["living_report"] = {"kind": "living_market_report", "sections": "bad"}
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=bad_payload,
+    )
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 25, 10, 0, 0),
+        report_payload=_report_payload(headline="Good legacy", narrative="Good legacy narrative"),
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Good legacy"
+    assert payload["living_report"] is None

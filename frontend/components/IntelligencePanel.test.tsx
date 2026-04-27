@@ -11,7 +11,71 @@ function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): Intell
     narrative: "近 14 天里，算法工程与增长岗位开始同步回升，适合优先看有连续发布动作的公司。",
     findings: ["右侧注记：新增公司集中在 AI 工具与企业服务。", "右侧注记：重复岗位主要出现在同组招聘团队。"],
     actions: ["榜单引导：先看今日新增最多的公司。", "露头信号：连续两天都在发相近岗位的团队值得先跟。"],
+    living_report: null,
     ...overrides,
+  };
+}
+
+function buildLivingReport(): NonNullable<IntelligencePayload["living_report"]> {
+  return {
+    kind: "living_market_report",
+    schema_version: "living-market-report-v1",
+    version: 2,
+    mode: "incremental_update",
+    previous_snapshot_id: 1,
+    seed_window_days: 180,
+    generated_at: "2026-04-27T10:00:00",
+    executive_summary: "AI infra 在长期样本中保持可见，短期变化仍需观察。",
+    sections: [
+      {
+        section_id: "market_structure",
+        title: "市场结构",
+        body: "AI infra 是当前样本中最稳定的结构性主题。",
+        claim_ids: ["c1"],
+      },
+      {
+        section_id: "demand_shifts",
+        title: "需求变化",
+        body: "短窗信号没有脱离 180 天基线。",
+        claim_ids: ["c2"],
+      },
+    ],
+    claims: [
+      {
+        claim_id: "c1",
+        previous_claim_id: "c0",
+        status: "reinforced",
+        claim: "AI infra 保持可见。",
+        confidence: "medium",
+        evidence_ids: ["e1"],
+        evidence_notes: ["AI infra 在 180d 和 30d 窗口都可见。"],
+        change_reason: "新增事实继续支持上一版判断。",
+      },
+      {
+        claim_id: "c2",
+        previous_claim_id: null,
+        status: "new",
+        claim: "短期变化不足以证明全面升温。",
+        confidence: "low",
+        evidence_ids: ["e1"],
+        evidence_notes: ["7d 样本仍较小。"],
+        change_reason: "新增保守判断。",
+      },
+    ],
+    watchlist: [
+      {
+        topic: "AI infra",
+        why_watch: "观察 30 天窗口是否继续扩大。",
+        evidence_ids: ["e1"],
+      },
+    ],
+    data_quality: {
+      baseline_note: "当前可见岗位的历史基线，不代表完整真实半年历史。",
+      posted_at_fact_count: 8,
+      collected_at_fallback_count: 0,
+      unknown_company_count: 0,
+      sample_count: 8,
+    },
   };
 }
 
@@ -69,6 +133,103 @@ describe("IntelligencePanel", () => {
 
     expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
+  });
+
+  it("reveals the living report after clicking the chart", () => {
+    const intelligence = buildIntelligence({ living_report: buildLivingReport() });
+
+    const { container } = render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/27"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient。"
+        collectionStats={collectionStats}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.queryByText("第 2 版")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
+
+    expect(screen.getByText("第 2 版")).toBeInTheDocument();
+    expect(screen.getByText("基于 180 天基线")).toBeInTheDocument();
+    expect(screen.getByText("最近更新 2026-04-27T10:00:00")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "市场结构" })).toBeInTheDocument();
+    expect(screen.getByText("AI infra 保持可见。")).toBeInTheDocument();
+    expect(screen.getByText("观察 30 天窗口是否继续扩大。")).toBeInTheDocument();
+    expect(screen.getByText("样本数 8")).toBeInTheDocument();
+    expect(container.querySelector(".living-report-scroll")).toBeInTheDocument();
+  });
+
+  it("falls back to the legacy narrative when living_report is absent", () => {
+    const intelligence = buildIntelligence({ living_report: null });
+
+    render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/27"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient。"
+        collectionStats={collectionStats}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
+
+    expect(screen.getByText(intelligence.narrative)).toBeInTheDocument();
+    expect(screen.queryByText("基于 180 天基线")).not.toBeInTheDocument();
+  });
+
+  it("renders an empty sections fallback for malformed living report content", () => {
+    const livingReport = buildLivingReport();
+    livingReport.sections = [];
+    const intelligence = buildIntelligence({ living_report: livingReport });
+
+    render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/27"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient。"
+        collectionStats={collectionStats}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
+
+    expect(screen.getByText("暂无可展示章节。")).toBeInTheDocument();
+  });
+
+  it("opens the living report with Enter and Space", () => {
+    const intelligence = buildIntelligence({ living_report: buildLivingReport() });
+
+    const { rerender } = render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/27"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient。"
+        collectionStats={collectionStats}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("region", { name: "打开猎场控制台" }), { key: "Enter" });
+    expect(screen.getByText("第 2 版")).toBeInTheDocument();
+
+    rerender(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026/4/27"
+        captureTitle="近3天岗位 5 个"
+        captureDescription="分布来源：OpenGradient。"
+        collectionStats={collectionStats}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "返回" }));
+    fireEvent.keyDown(screen.getByRole("region", { name: "打开猎场控制台" }), { key: " " });
+    expect(screen.getByText("第 2 版")).toBeInTheDocument();
   });
 
   it("uses recent bucket labels when collection stats are empty", () => {
