@@ -68,10 +68,11 @@ describe("CompanyCard", () => {
     expect(within(rightRail as HTMLElement).queryByText("公司线索认领")).not.toBeInTheDocument();
   });
 
-  it("shows estimated bounty on each visible job row", () => {
+  it("does not show estimated bounty on job rows", () => {
     render(
       <CompanyCard
         company={buildCompany({
+          estimated_bounty_label: "¥3,000+",
           jobs: [
             {
               id: 1,
@@ -80,8 +81,6 @@ describe("CompanyCard", () => {
               bounty_grade: "high",
               tags: ["AI"],
               claimed_names: [],
-              estimated_bounty_amount: 12600,
-              estimated_bounty_label: "¥7,200-¥18,000",
             },
             {
               id: 2,
@@ -90,8 +89,6 @@ describe("CompanyCard", () => {
               bounty_grade: "medium",
               tags: ["Growth"],
               claimed_names: [],
-              estimated_bounty_amount: null,
-              estimated_bounty_label: "待估算",
             },
           ],
         })}
@@ -99,9 +96,15 @@ describe("CompanyCard", () => {
     );
 
     const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+    const firstJob = within(card as HTMLElement)
+      .getByRole("heading", { level: 4, name: "Principal AI Engineer" })
+      .closest(".job-row");
 
-    expect(within(card as HTMLElement).getByText("¥7,200-¥18,000")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getAllByText("待估算").length).toBeGreaterThan(0);
+    expect(within(card as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(firstJob).not.toBeNull();
+    expect(within(firstJob as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(firstJob as HTMLElement).queryByText("¥7,200-¥18,000")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("待估算")).not.toBeInTheDocument();
   });
 
   it("shows a stamped or english signature state with estimated bounty after claim for task 5.5", () => {

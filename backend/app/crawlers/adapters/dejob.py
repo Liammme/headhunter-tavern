@@ -35,6 +35,7 @@ def _build_jobs(results: list[dict[str, Any]]) -> list[NormalizedJob]:
 
         content = "\n".join(
             [
+                _format_salary_range(item),
                 str(item.get("content") or "").strip(),
                 str(item.get("content2") or "").strip(),
                 str(item.get("content3") or "").strip(),
@@ -60,6 +61,23 @@ def _build_jobs(results: list[dict[str, Any]]) -> list[NormalizedJob]:
             )
         )
     return jobs
+
+
+def _format_salary_range(item: dict[str, Any]) -> str:
+    min_salary = item.get("minSalary")
+    max_salary = item.get("maxSalary")
+    if not isinstance(min_salary, (int, float)) or not isinstance(max_salary, (int, float)):
+        return ""
+    if min_salary < 0 or max_salary <= 0:
+        return ""
+
+    low = int(min(min_salary, max_salary))
+    high = int(max(min_salary, max_salary))
+    if high < 100:
+        return ""
+    if low <= 1 and high >= 100:
+        low = 0
+    return f"Salary range: USD {low:,} - {high:,} / month."
 
 
 class DeJobAdapter(SourceAdapter):

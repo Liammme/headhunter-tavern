@@ -13,8 +13,6 @@ export type JobCardPayload = {
   bounty_grade: "high" | "medium" | "low";
   tags: string[];
   claimed_names: string[];
-  estimated_bounty_amount?: number | null;
-  estimated_bounty_label?: string | null;
 };
 
 export type CompanyCardPayload = {

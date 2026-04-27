@@ -134,6 +134,8 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
     company = response.json()["days"][0]["companies"][0]
     assert company["estimated_bounty_amount"] == 12600
     assert company["estimated_bounty_label"] == "¥7,200-¥18,000"
+    assert "estimated_bounty_amount" not in company["jobs"][0]
+    assert "estimated_bounty_label" not in company["jobs"][0]
 
 
 def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):

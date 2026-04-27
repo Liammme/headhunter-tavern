@@ -130,6 +130,29 @@ def test_extract_job_facts_converts_aijobs_usd_annual_salary_range_to_cny():
     assert facts.compensation_signal == "strong"
 
 
+def test_extract_job_facts_converts_usd_monthly_salary_range_to_cny():
+    from app.services.job_facts import extract_job_facts, standardize_job_input
+
+    job = NormalizedJob(
+        source_job_id="dejob-paid-role",
+        canonical_url="https://dejob.ai/jobDetail?id=6839",
+        title="Business Development",
+        company="Viabtc",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="Salary range: USD 2,500 - 5,000 / month. Build partnerships.",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={},
+    )
+
+    standardized = standardize_job_input(job, now=datetime(2026, 4, 27, 9, 0, 0))
+    facts = extract_job_facts(standardized, now=datetime(2026, 4, 27, 9, 0, 0))
+
+    assert facts.annual_salary_range == (216000, 432000)
+    assert facts.compensation_signal == "strong"
+
+
 def test_build_score_inputs_from_same_facts_supports_v1_and_v2():
     from app.services.job_facts import (
         build_v1_score_input,

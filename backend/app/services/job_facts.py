@@ -295,6 +295,10 @@ def classify_compensation_signal(text: str) -> str:
 
 def parse_annual_salary_range(text: str) -> tuple[int, int] | None:
     normalized = text.lower().replace(",", "")
+    currency_monthly = _parse_currency_monthly_salary_range(normalized)
+    if currency_monthly is not None:
+        return currency_monthly
+
     monthly = _parse_salary_range(
         normalized,
         (
@@ -325,6 +329,21 @@ def parse_annual_salary_range(text: str) -> tuple[int, int] | None:
         return annual_wan
 
     return _parse_currency_annual_salary_range(normalized)
+
+
+def _parse_currency_monthly_salary_range(text: str) -> tuple[int, int] | None:
+    match = re.search(
+        r"(?:salary\s*range[:：]?\s*)?(?:usd|\$)\s*(\d+(?:\.\d+)?)\s*(k)?\s*[-~－到]\s*(?:usd|\$)?\s*(\d+(?:\.\d+)?)\s*(k)?\s*(?:/\s*|per\s*)?(?:month|月|monthly)",
+        text,
+    )
+    if match is None:
+        return None
+
+    low_multiplier = 1_000 if match.group(2) else 1
+    high_multiplier = 1_000 if match.group(4) else 1
+    low = int(float(match.group(1)) * low_multiplier * CURRENCY_TO_CNY_RATE["usd"] * 12)
+    high = int(float(match.group(3)) * high_multiplier * CURRENCY_TO_CNY_RATE["usd"] * 12)
+    return (min(low, high), max(low, high))
 
 
 def _parse_salary_range(text: str, patterns: tuple[str, ...], *, multiplier: int) -> tuple[int, int] | None:

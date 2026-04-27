@@ -7,6 +7,7 @@ from app.services.market_theme_classifier import classify_market_theme
 WINDOW_DAYS = (1, 7, 30, 90)
 SOURCE_DERIVED_COMPANIES = {
     "aijobsnet": {"aijobs"},
+    "dejob": {"dejob"},
 }
 TECH_KEYWORDS = (
     "llm",

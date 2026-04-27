@@ -1124,22 +1124,6 @@ h5,
   font-size: 13px;
 }
 
-.job-bounty {
-  display: grid;
-  justify-items: end;
-  gap: 3px;
-  color: var(--muted);
-  font-family: var(--font-mono-stack);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.job-bounty strong {
-  color: var(--foreground);
-  font-size: 14px;
-  font-weight: 650;
-}
-
 .company-footer {
   display: flex;
   justify-content: flex-end;
@@ -1309,10 +1293,6 @@ h5,
 
   .job-actions,
   .company-claim-seal {
-    justify-items: start;
-  }
-
-  .job-bounty {
     justify-items: start;
   }
 }

@@ -104,6 +104,26 @@ def test_build_market_signal_payload_does_not_treat_aijobs_source_as_company():
     assert "Aijobs" not in serialized
 
 
+def test_build_market_signal_payload_does_not_treat_dejob_source_as_company():
+    payload = build_market_signal_payload(
+        jobs=[
+            build_job(
+                title="Community Growth Lead",
+                company="Dejob",
+                job_id=1,
+                source_name="dejob",
+            )
+        ],
+        snapshot_date=date(2026, 4, 26),
+    )
+
+    sample = payload["representative_samples"][0]
+    assert sample["company"] is None
+
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "Dejob" not in serialized
+
+
 def test_build_market_signal_payload_counts_jobs_by_windows():
     payload = build_market_signal_payload(
         jobs=[

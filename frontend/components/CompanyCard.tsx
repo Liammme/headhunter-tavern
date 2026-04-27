@@ -178,10 +178,6 @@ export default function CompanyCard({
               </div>
             </div>
             <div className="job-actions">
-              <span className="job-bounty">
-                <span>预计赏金</span>
-                <strong>{renderJobBounty(job)}</strong>
-              </span>
               <a href={job.canonical_url} target="_blank" rel="noreferrer">
                 查看原帖
               </a>
@@ -212,19 +208,6 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
 
 function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
   return claimedNames.includes(claimerName) ? claimedNames : [...claimedNames, claimerName];
-}
-
-function renderJobBounty(job: JobCardPayload) {
-  const bountyLabel = job.estimated_bounty_label?.trim();
-  if (bountyLabel) {
-    return bountyLabel;
-  }
-
-  if (typeof job.estimated_bounty_amount === "number" && Number.isFinite(job.estimated_bounty_amount)) {
-    return `¥${job.estimated_bounty_amount.toLocaleString("zh-CN")}`;
-  }
-
-  return "待估算";
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {
