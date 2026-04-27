@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from app.core.config import settings
 from app.models import Job
 from app.services.company_clue_context import build_company_clue_context
-from app.services.company_clue_letter import generate_company_clue_letter, _should_use_company_clue_llm
+from app.services.company_clue_letter import generate_company_clue_letter, _company_clue_cache, _should_use_company_clue_llm
 from app.services.intelligence import IntelligenceGenerationError
 
 
@@ -123,6 +123,42 @@ def test_generate_company_clue_letter_returns_success_contract(db_session, monke
     assert result["generated_at"] == "2026-04-22T09:00:00"
     assert "James侦探" in result["narrative"]
     assert [section["key"] for section in result["sections"]] == ["clue_1", "clue_2", "clue_3"]
+
+
+def test_generate_company_clue_letter_reuses_cached_llm_result_for_same_job_fingerprint(db_session, monkeypatch):
+    _company_clue_cache.clear()
+    db_session.add(
+        build_job(
+            company="CacheCo",
+            title="Principal AI Engineer",
+            canonical_url="https://jobs.example.com/cacheco/1",
+            bounty_grade="high",
+            description="urgent llm infra founding role",
+        )
+    )
+    db_session.commit()
+
+    calls = []
+    monkeypatch.setattr("app.services.company_clue_letter._should_use_company_clue_llm", lambda: True)
+
+    def fake_request(messages):
+        calls.append(messages)
+        return (
+            '{"narrative":"CacheCo 的 Principal AI Engineer 是当前可验证线索。",'
+            '"sections":['
+            '{"key":"lead","title":"为什么现在值得查","content":"Principal AI Engineer 仍在窗口内。"},'
+            '{"key":"evidence","title":"最能代表需求的岗位","content":"Principal AI Engineer 是可验证岗位。"},'
+            '{"key":"next_move","title":"你下一步先验证什么","content":"先查 https://jobs.example.com/cacheco/1。"}'
+            ']}'
+        )
+
+    monkeypatch.setattr("app.services.company_clue_letter.request_zhipu_structured_json", fake_request)
+
+    first = generate_company_clue_letter(db_session, company="CacheCo")
+    second = generate_company_clue_letter(db_session, company="CacheCo")
+
+    assert first == second
+    assert len(calls) == 1
 
 
 def test_generate_company_clue_letter_rewrites_generic_first_pass_and_uses_windowed_jobs(db_session, monkeypatch):

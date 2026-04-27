@@ -101,3 +101,25 @@ def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch)
     assert context["evidence_cards"][0]["entry_points"]["hiring_page"] == "https://opengradient.ai/careers"
     assert context["evidence_cards"][0]["evidence_snippets"]
     assert context["entry_points"]["job_posts"] == [jobs[0].canonical_url]
+
+
+def test_build_company_clue_context_limits_llm_evidence_cards():
+    jobs = [
+        build_job(
+            company="OpenGradient",
+            title=f"Role {index}",
+            days_ago=index,
+            description="urgent ai platform hiring now",
+        )
+        for index in range(5)
+    ]
+
+    context = build_company_clue_context(
+        company="OpenGradient",
+        jobs=jobs,
+        today=datetime(2026, 4, 23, 12, 0, 0).date(),
+    )
+
+    assert context["summary"]["total_jobs"] == 5
+    assert len(context["evidence_cards"]) == 3
+    assert context["entry_points"]["job_posts"] == [job.canonical_url for job in jobs[:5]]

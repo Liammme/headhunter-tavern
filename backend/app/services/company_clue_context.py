@@ -12,6 +12,7 @@ from app.services.scoring import score_job_v2
 
 
 EMAIL_PATTERN = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
+MAX_LLM_EVIDENCE_CARDS = 3
 
 
 def load_company_jobs_for_clue(db: Session, *, company: str, today: date) -> list[Job]:
@@ -46,7 +47,7 @@ def build_company_clue_context(*, company: str, jobs: list[Job], today: date) ->
             "estimated_bounty": _collect_estimated_bounty(jobs),
         },
         "role_clusters": _build_role_clusters(evidence_cards)[:3],
-        "evidence_cards": evidence_cards[:5],
+        "evidence_cards": evidence_cards[:MAX_LLM_EVIDENCE_CARDS],
         "entry_points": _collect_entry_points(jobs),
     }
 
