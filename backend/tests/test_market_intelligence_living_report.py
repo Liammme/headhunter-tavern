@@ -234,6 +234,19 @@ def test_generate_living_market_report_payload_raises_after_invalid_llm(monkeypa
     assert len(calls) == 2
 
 
+def test_generate_living_market_report_payload_requires_llm(monkeypatch):
+    monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: False)
+
+    with pytest.raises(LivingMarketReportError, match="LLM is disabled"):
+        generate_living_market_report_payload(
+            _living_input(),
+            version=1,
+            mode="baseline_seed",
+            previous_snapshot_id=None,
+            generated_at=datetime(2026, 4, 27, 10, 0, 0),
+        )
+
+
 def test_build_rule_living_market_report_passes_validation():
     report = build_rule_living_market_report(
         _living_input(),

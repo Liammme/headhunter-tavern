@@ -105,13 +105,7 @@ def generate_living_market_report_payload(
     generated_at: datetime,
 ) -> dict:
     if not should_use_llm():
-        return build_rule_living_market_report(
-            input_payload,
-            version=version,
-            mode=mode,
-            previous_snapshot_id=previous_snapshot_id,
-            generated_at=generated_at,
-        )
+        raise LivingMarketReportError("LLM is disabled or missing API key")
 
     messages = [
         {"role": "system", "content": build_living_market_report_system_prompt()},
