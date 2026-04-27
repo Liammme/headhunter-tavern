@@ -23,6 +23,7 @@ def generate_living_market_report(
     days: int = 180,
     snapshot_date: date | None = None,
     clock: Callable[[], datetime] = datetime.now,
+    force: bool = False,
 ) -> dict:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
@@ -30,6 +31,8 @@ def generate_living_market_report(
     resolved_mode = "baseline" if mode == "auto" and previous_snapshot is None else mode
     if resolved_mode == "auto":
         resolved_mode = "update"
+    if resolved_mode == "baseline" and previous_snapshot is not None and not force:
+        raise ValueError("baseline living report already exists; use force to regenerate")
     if resolved_mode == "update" and previous_snapshot is None:
         raise ValueError("update requires a previous successful living report")
 
@@ -42,7 +45,7 @@ def generate_living_market_report(
         snapshot_date=target_date,
         previous_snapshot=previous_snapshot if resolved_mode == "update" else None,
     )
-    input_payload["fact_watermark"] = _fact_watermark(input_payload)
+    input_payload["fact_watermark"] = input_payload.get("fact_watermark") or _fact_watermark(input_payload)
 
     try:
         living_report = generate_living_market_report_payload(
@@ -84,7 +87,7 @@ def generate_living_market_report(
 
 def _compat_report_payload(living_report: dict) -> dict:
     return {
-        "headline": "活报告已更新",
+        "headline": living_report.get("headline") or "活报告已更新",
         "narrative": living_report.get("executive_summary", ""),
         "primary_judgment": {
             "claim": living_report.get("executive_summary", ""),

@@ -20,6 +20,7 @@ function buildLivingReport(): NonNullable<IntelligencePayload["living_report"]> 
   return {
     kind: "living_market_report",
     schema_version: "living-market-report-v1",
+    headline: "AI infra 保持结构性可见",
     version: 2,
     mode: "incremental_update",
     previous_snapshot_id: 1,
@@ -156,6 +157,7 @@ describe("IntelligencePanel", () => {
     expect(screen.getByText("第 2 版")).toBeInTheDocument();
     expect(screen.getByText("基于 180 天基线")).toBeInTheDocument();
     expect(screen.getByText("最近更新 2026-04-27T10:00:00")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "AI infra 保持结构性可见" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "市场结构" })).toBeInTheDocument();
     expect(screen.getByText("AI infra 保持可见。")).toBeInTheDocument();
     expect(screen.getByText("观察 30 天窗口是否继续扩大。")).toBeInTheDocument();

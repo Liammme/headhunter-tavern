@@ -29,9 +29,11 @@ def _add_fact(db_session, *, title: str, created_at: datetime) -> None:
 
 
 def _fake_report(input_payload, *, version, mode, previous_snapshot_id, generated_at):
+    evidence_id = input_payload["representative_samples"][0]["evidence_id"]
     return {
         "kind": "living_market_report",
         "schema_version": "living-market-report-v1",
+        "headline": "AI infra 保持结构性可见",
         "version": version,
         "mode": mode,
         "previous_snapshot_id": previous_snapshot_id,
@@ -51,13 +53,13 @@ def _fake_report(input_payload, *, version, mode, previous_snapshot_id, generate
                 "status": "new",
                 "claim": f"claim {index}",
                 "confidence": "low",
-                "evidence_ids": ["e1"],
+                "evidence_ids": [evidence_id],
                 "evidence_notes": ["note"],
                 "change_reason": "baseline",
             }
             for index in range(1, 5)
         ],
-        "watchlist": [{"topic": "AI infra", "why_watch": "watch", "evidence_ids": ["e1"]}],
+        "watchlist": [{"topic": "AI infra", "why_watch": "watch", "evidence_ids": [evidence_id]}],
         "data_quality": input_payload["data_quality"],
     }
 
@@ -79,8 +81,33 @@ def test_generate_living_market_report_baseline_writes_v1_snapshot(db_session, m
     assert snapshot.window_days == 180
     assert snapshot.report_payload["living_report"]["version"] == 1
     assert snapshot.report_payload["living_report"]["mode"] == "baseline_seed"
-    assert snapshot.report_payload["headline"]
+    assert snapshot.report_payload["headline"] == "AI infra 保持结构性可见"
     assert snapshot.report_payload["narrative"]
+
+
+def test_generate_living_market_report_baseline_rejects_existing_report(db_session, monkeypatch):
+    _add_fact(db_session, title="AI Infra Engineer", created_at=datetime(2026, 4, 27, 10, 0, 0))
+    monkeypatch.setattr(market_intelligence_living_report_service, "generate_living_market_report_payload", _fake_report)
+    generate_living_market_report(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+    )
+
+    try:
+        generate_living_market_report(
+            db_session,
+            mode="baseline",
+            days=180,
+            snapshot_date=date(2026, 4, 28),
+            clock=lambda: datetime(2026, 4, 28, 11, 0, 0),
+        )
+    except ValueError as exc:
+        assert "baseline" in str(exc)
+    else:
+        raise AssertionError("baseline should reject existing living report")
 
 
 def test_generate_living_market_report_update_writes_next_version(db_session, monkeypatch):

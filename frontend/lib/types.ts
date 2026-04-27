@@ -10,6 +10,7 @@ export type IntelligencePayload = {
 export type LivingReportPayload = {
   kind: "living_market_report";
   schema_version: "living-market-report-v1";
+  headline: string;
   version: number;
   mode: "baseline_seed" | "incremental_update";
   previous_snapshot_id: number | null;

@@ -39,8 +39,10 @@ def build_living_market_report_input(
             "90d_vs_180d": _delta(market_windows["90d"], market_windows["180d"]),
         },
         "new_facts": new_facts,
+        "new_fact_count": len(new_facts),
         "representative_samples": samples[:12],
         "allowed_evidence_terms": _allowed_terms(samples),
+        "fact_watermark": _facts_watermark_payload(facts),
         "data_quality": _data_quality(facts),
     }
 
@@ -76,7 +78,7 @@ def _build_window(*, facts: list[MarketIntelligenceFact], snapshot_date: date, d
 
 def _build_sample(fact: MarketIntelligenceFact, *, index: int) -> dict:
     return {
-        "evidence_id": f"e{index}",
+        "evidence_id": _evidence_id(fact),
         "fact_id": fact.id,
         "created_at": fact.created_at.replace(microsecond=0).isoformat(),
         "company": fact.company,
@@ -108,6 +110,9 @@ def _previous_report_summary(snapshot: MarketIntelligenceSnapshot | None) -> dic
                         "claim_id": claim.get("claim_id"),
                         "claim": claim.get("claim"),
                         "confidence": claim.get("confidence"),
+                        "evidence_ids": claim.get("evidence_ids") if isinstance(claim.get("evidence_ids"), list) else [],
+                        "evidence_notes": claim.get("evidence_notes") if isinstance(claim.get("evidence_notes"), list) else [],
+                        "change_reason": claim.get("change_reason"),
                     }
                 )
     return {
@@ -120,7 +125,7 @@ def _previous_report_summary(snapshot: MarketIntelligenceSnapshot | None) -> dic
 
 def _new_facts(*, samples: list[dict], previous_snapshot: MarketIntelligenceSnapshot | None) -> list[dict]:
     if previous_snapshot is None:
-        return samples[:12]
+        return samples
     cutoff_at, cutoff_id = _fact_watermark(previous_snapshot)
     return [
         {
@@ -132,7 +137,7 @@ def _new_facts(*, samples: list[dict], previous_snapshot: MarketIntelligenceSnap
         }
         for sample in samples
         if _is_after_watermark(sample, cutoff_at=cutoff_at, cutoff_id=cutoff_id)
-    ][:12]
+    ]
 
 
 def _fact_watermark(snapshot: MarketIntelligenceSnapshot) -> tuple[datetime, int]:
@@ -149,6 +154,13 @@ def _fact_watermark(snapshot: MarketIntelligenceSnapshot) -> tuple[datetime, int
 def _fact_watermark_payload(snapshot: MarketIntelligenceSnapshot) -> dict:
     created_at, fact_id = _fact_watermark(snapshot)
     return {"created_at": created_at.replace(microsecond=0).isoformat(), "id": fact_id}
+
+
+def _facts_watermark_payload(facts: list[MarketIntelligenceFact]) -> dict:
+    if not facts:
+        return {"created_at": datetime.min.isoformat(), "id": 0}
+    latest = max(facts, key=lambda fact: (fact.created_at, fact.id or 0))
+    return {"created_at": latest.created_at.replace(microsecond=0).isoformat(), "id": latest.id or 0}
 
 
 def _is_after_watermark(sample: dict, *, cutoff_at: datetime, cutoff_id: int) -> bool:
@@ -183,6 +195,12 @@ def _allowed_terms(samples: list[dict]) -> list[str]:
             if isinstance(value, str) and value.strip() and value not in terms:
                 terms.append(value)
     return terms
+
+
+def _evidence_id(fact: MarketIntelligenceFact) -> str:
+    if fact.id is not None:
+        return f"fact-{fact.id}"
+    return f"fact-{fact.dedupe_key[:12]}"
 
 
 def _sorted_facts(facts: list[MarketIntelligenceFact]) -> list[MarketIntelligenceFact]:

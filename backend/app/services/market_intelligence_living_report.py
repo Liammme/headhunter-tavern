@@ -14,6 +14,7 @@ CONFIDENCES = {"low", "medium", "high"}
 TOP_LEVEL_FIELDS = {
     "kind",
     "schema_version",
+    "headline",
     "version",
     "mode",
     "previous_snapshot_id",
@@ -54,7 +55,7 @@ BANNED_FIELDS = {
     "bd_entry",
     "signal_tags",
 }
-BANNED_TOKENS = {"bounty", "claimed", "source", "link"}
+BANNED_TOKENS = {"bounty", "claimed"}
 
 
 class LivingMarketReportError(Exception):
@@ -67,7 +68,7 @@ def build_living_market_report_system_prompt() -> str:
         "目标 1500-2500 字，不写日报、不写榜单、不写岗位流水账。"
         "只能使用输入 JSON 中的统计和 evidence_id；每个 claim 必须有 evidence_ids。"
         "禁止补外部事实，禁止输出 canonical_url/source_name/job_url/full_description、猎头、赏金、认领、客户开发、岗位来源、岗位链接。"
-        "字段必须匹配 living_market_report schema，status 只能是 new/reinforced/weakened/retired。"
+        "字段必须匹配 living_market_report schema，必须包含 headline，status 只能是 new/reinforced/weakened/retired。"
     )
 
 
@@ -136,6 +137,7 @@ def validate_living_market_report(payload: dict, *, input_payload: dict, expecte
         raise LivingMarketReportError("kind is invalid")
     if payload.get("schema_version") != SCHEMA_VERSION:
         raise LivingMarketReportError("schema_version is invalid")
+    _str(payload, "headline")
     if payload.get("version") != expected_version:
         raise LivingMarketReportError("version is invalid")
     if expected_version == 1 and "180d" not in _dict(input_payload, "market_windows"):
@@ -219,6 +221,7 @@ def build_rule_living_market_report(
     return {
         "kind": KIND,
         "schema_version": SCHEMA_VERSION,
+        "headline": "市场需求保持克制",
         "version": version,
         "mode": mode,
         "previous_snapshot_id": previous_snapshot_id,

@@ -65,7 +65,9 @@ def _add_living_snapshot(db_session, *, generated_at: datetime) -> MarketIntelli
                         "status": "new",
                         "claim": "AI infra 保持可见。",
                         "confidence": "medium",
-                        "evidence_ids": ["e1"],
+                        "evidence_ids": ["fact-1"],
+                        "evidence_notes": ["AI infra 在 180d 窗口可见。"],
+                        "change_reason": "baseline",
                     }
                 ],
                 "watchlist": [],
@@ -94,6 +96,9 @@ def test_build_living_market_report_input_builds_baseline_windows(db_session):
         snapshot_date=date(2026, 4, 27),
     )
 
+    sample_ids = {sample["title"]: sample["evidence_id"] for sample in payload["representative_samples"]}
+    assert sample_ids["Recent AI Infra Engineer"].startswith("fact-")
+    assert sample_ids["Older AI Infra Engineer"].startswith("fact-")
     assert payload["report_task"]["mode"] == "initial"
     assert payload["previous_report"] is None
     assert payload["market_windows"]["7d"]["job_count"] == 1
@@ -129,4 +134,46 @@ def test_build_living_market_report_input_uses_created_at_watermark_for_new_fact
 
     assert payload["report_task"]["mode"] == "update"
     assert payload["previous_report"]["version"] == 1
+    assert payload["previous_report"]["active_claims"][0]["evidence_ids"] == ["fact-1"]
+    assert payload["previous_report"]["active_claims"][0]["evidence_notes"] == ["AI infra 在 180d 窗口可见。"]
+    assert payload["previous_report"]["active_claims"][0]["change_reason"] == "baseline"
     assert [fact["title"] for fact in payload["new_facts"]] == [new_fact.title]
+
+
+def test_build_living_market_report_input_stabilizes_evidence_ids_when_sorting_changes(db_session):
+    now = datetime(2026, 4, 27, 10, 0, 0)
+    first = _add_fact(db_session, title="First Fact", created_at=now, posted_at=now - timedelta(days=2))
+    second = _add_fact(db_session, title="Second Fact", created_at=now + timedelta(minutes=1), posted_at=now)
+
+    payload = build_living_market_report_input(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+    )
+
+    evidence_by_title = {sample["title"]: sample["evidence_id"] for sample in payload["representative_samples"]}
+    assert evidence_by_title["First Fact"] == f"fact-{first.id}"
+    assert evidence_by_title["Second Fact"] == f"fact-{second.id}"
+
+
+def test_build_living_market_report_input_uses_all_facts_for_watermark(db_session):
+    now = datetime(2026, 4, 27, 10, 0, 0)
+    for index in range(13):
+        _add_fact(
+            db_session,
+            title=f"Fact {index}",
+            created_at=now + timedelta(minutes=index),
+            posted_at=now - timedelta(days=index % 3),
+        )
+
+    payload = build_living_market_report_input(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+    )
+
+    assert len(payload["representative_samples"]) == 12
+    assert payload["fact_watermark"]["created_at"] == "2026-04-27T10:12:00"
+    assert payload["new_fact_count"] == 13

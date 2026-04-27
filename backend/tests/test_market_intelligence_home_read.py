@@ -33,6 +33,7 @@ def _living_report_payload(*, version: int = 1) -> dict:
     payload["living_report"] = {
         "kind": "living_market_report",
         "schema_version": "living-market-report-v1",
+        "headline": "AI infra 长期需求报告",
         "version": version,
         "mode": "baseline_seed" if version == 1 else "incremental_update",
         "previous_snapshot_id": None,
@@ -167,7 +168,7 @@ def test_load_latest_market_intelligence_uses_generated_at_then_id_order(db_sess
         {"headline": "Headline", "narrative": " "},
     ],
 )
-def test_load_latest_market_intelligence_returns_none_when_latest_success_missing_text(
+def test_load_latest_market_intelligence_continues_when_latest_success_missing_text(
     db_session,
     report_payload,
 ):
@@ -182,7 +183,10 @@ def test_load_latest_market_intelligence_returns_none_when_latest_success_missin
         report_payload=report_payload,
     )
 
-    assert load_latest_market_intelligence_for_home(db_session) is None
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Older valid headline"
 
 
 def test_load_latest_market_intelligence_returns_home_intelligence_shape(db_session):
@@ -274,3 +278,21 @@ def test_load_latest_market_intelligence_skips_bad_living_payload_without_500(db
     assert payload is not None
     assert payload["headline"] == "Good legacy"
     assert payload["living_report"] is None
+
+
+def test_load_latest_market_intelligence_continues_after_latest_invalid_legacy(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload={"headline": "", "narrative": "Bad latest"},
+    )
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 25, 10, 0, 0),
+        report_payload=_report_payload(headline="Older usable", narrative="Older narrative"),
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Older usable"

@@ -22,6 +22,7 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
           <span>基于 {report.seed_window_days} 天基线</span>
           <span>最近更新 {report.generated_at}</span>
         </div>
+        <h3 className="living-report-title">{report.headline}</h3>
         <p className="living-report-summary">{report.executive_summary}</p>
       </header>
 

@@ -17,7 +17,7 @@ def test_generate_living_market_report_cli_baseline_smoke(monkeypatch, capsys):
     monkeypatch.setattr(
         cli,
         "generate_living_market_report",
-        lambda db, mode, days: {"status": "success", "mode": mode, "days": days},
+        lambda db, mode, days, force=False: {"status": "success", "mode": mode, "days": days, "force": force},
     )
 
     cli.main(["--mode", "baseline", "--days", "180"])
@@ -26,6 +26,7 @@ def test_generate_living_market_report_cli_baseline_smoke(monkeypatch, capsys):
         "status": "success",
         "mode": "baseline",
         "days": 180,
+        "force": False,
     }
 
 
@@ -35,7 +36,7 @@ def test_generate_living_market_report_cli_update_smoke(monkeypatch, capsys):
     monkeypatch.setattr(
         cli,
         "generate_living_market_report",
-        lambda db, mode, days: {"status": "success", "mode": mode, "days": days},
+        lambda db, mode, days, force=False: {"status": "success", "mode": mode, "days": days, "force": force},
     )
 
     cli.main(["--mode", "update", "--days", "180"])

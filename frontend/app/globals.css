@@ -418,6 +418,7 @@ h5,
 }
 
 .living-report-summary,
+.living-report-title,
 .living-report-section p,
 .living-report-watchlist p,
 .living-report-quality,
@@ -426,6 +427,12 @@ h5,
   font-size: 14px;
   line-height: 1.7;
   overflow-wrap: anywhere;
+}
+
+.living-report-title {
+  color: var(--foreground);
+  font-size: 18px;
+  line-height: 1.22;
 }
 
 .living-report-section h3,

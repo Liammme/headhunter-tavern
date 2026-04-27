@@ -29,7 +29,9 @@ def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
         report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
         if "living_report" in report and _valid_living_report(report.get("living_report")) is None:
             continue
-        return _home_payload_from_snapshot(snapshot, require_living=False)
+        payload = _home_payload_from_snapshot(snapshot, require_living=False)
+        if payload is not None:
+            return payload
     return None
 
 

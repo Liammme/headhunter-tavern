@@ -78,6 +78,7 @@ def _valid_living_report(*, version: int = 1, mode: str = "baseline_seed") -> di
     return {
         "kind": "living_market_report",
         "schema_version": "living-market-report-v1",
+        "headline": "AI infra 需求保持克制升温",
         "version": version,
         "mode": mode,
         "previous_snapshot_id": None if version == 1 else 10,
@@ -179,6 +180,13 @@ def test_validate_living_market_report_rejects_banned_terms():
         validate_living_market_report(report, input_payload=_living_input(), expected_version=1)
 
 
+def test_validate_living_market_report_allows_open_source_language():
+    report = _valid_living_report()
+    report["sections"][0]["body"] = "open source AI infra 工具链仍是市场结构的一部分。"
+
+    validate_living_market_report(report, input_payload=_living_input(), expected_version=1)
+
+
 def test_validate_living_market_report_rejects_claim_without_evidence():
     report = _valid_living_report()
     report["claims"][0]["evidence_ids"] = []
@@ -224,6 +232,7 @@ def test_generate_living_market_report_payload_retries_once_then_fallback(monkey
 
     assert len(calls) == 2
     assert report["kind"] == "living_market_report"
+    assert report["headline"]
     assert report["version"] == 1
 
 
