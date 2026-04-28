@@ -49,7 +49,7 @@ describe("CompanyFeedTimeline", () => {
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "3天内" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "最新" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Recent Co")).toBeInTheDocument();
     expect(screen.queryByText("Week Co")).not.toBeInTheDocument();
     expect(screen.queryByText("Earlier Co")).not.toBeInTheDocument();

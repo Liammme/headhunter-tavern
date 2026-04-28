@@ -7,17 +7,17 @@ import { AnimatedTabs } from "./ui/animated-tabs";
 import type { CompanyCardPayload, DayBucketPayload } from "../lib/types";
 
 const FEED_TABS: Array<{ label: FeedTabLabel; bucket: DayBucketPayload["bucket"] }> = [
-  { label: "3天内", bucket: "within_3_days" },
+  { label: "最新", bucket: "within_3_days" },
   { label: "7天内", bucket: "within_7_days" },
   { label: "更早", bucket: "earlier" },
 ];
 
 const EARLIER_JOB_PREVIEW_LIMIT = 10;
 
-type FeedTabLabel = "3天内" | "7天内" | "更早";
+type FeedTabLabel = "最新" | "7天内" | "更早";
 
 export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[] }) {
-  const [activeTab, setActiveTab] = useState<FeedTabLabel>("3天内");
+  const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
   const [showAllEarlier, setShowAllEarlier] = useState(false);
 
   const daysByBucket = useMemo(() => {
