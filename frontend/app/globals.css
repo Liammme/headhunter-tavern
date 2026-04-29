@@ -1176,67 +1176,6 @@ h5,
   height: 14px;
 }
 
-.company-claim-seal {
-  width: 100%;
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.seal-unclaimed-row {
-  display: grid;
-  gap: 12px;
-}
-
-.seal-details dt {
-  color: var(--muted);
-  font-family: var(--font-mono-stack);
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.seal-mark {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--foreground);
-  color: var(--accent);
-  font-family: var(--font-mono-stack);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
-
-.seal-details {
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.seal-details div {
-  display: grid;
-  gap: 3px;
-}
-
-.seal-details dt,
-.seal-details dd {
-  margin: 0;
-}
-
-.seal-details dd,
-.seal-signature {
-  color: var(--foreground);
-  overflow-wrap: anywhere;
-}
-
-.seal-signature {
-  font-family: var(--font-mono-stack);
-}
-
 .job-list {
   display: grid;
   gap: 10px;
@@ -1449,8 +1388,7 @@ h5,
     grid-template-columns: 1fr;
   }
 
-  .job-actions,
-  .company-claim-seal {
+  .job-actions {
     justify-items: start;
   }
 }

@@ -72,9 +72,13 @@ def test_change_context_identifies_new_companies_today_with_evidence():
     )
 
     assert context["today_counts"]["job_count"] == 1
+    assert context["today_counts"]["high_priority_job_count"] == 1
+    assert "high_bounty_job_count" not in context["today_counts"]
     assert context["yesterday_counts"]["job_count"] == 0
     assert context["baseline_counts"]["job_count"] == 1
     assert context["deltas"]["today_vs_yesterday"]["job_count"] == 1
+    assert context["deltas"]["today_vs_yesterday"]["high_priority_job_count"] == 1
+    assert "high_bounty_job_count" not in context["deltas"]["today_vs_yesterday"]
     assert context["new_companies_today"][0]["company"] == "OpenGradient"
     assert context["new_companies_today"][0]["evidence"][0] == {
         "company": "OpenGradient",

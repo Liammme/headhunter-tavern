@@ -96,7 +96,7 @@ def _build_counts(jobs: list[Job]) -> dict:
     return {
         "job_count": len(jobs),
         "company_count": len(company_keys),
-        "high_bounty_job_count": sum(1 for job in jobs if job.bounty_grade == "high"),
+        "high_priority_job_count": sum(1 for job in jobs if job.bounty_grade == "high"),
         "category_counts": dict(sorted(category_counts.items())),
         "domain_counts": dict(sorted(domain_counts.items())),
         "company_counts": dict(sorted(company_counts.items())),
@@ -107,7 +107,7 @@ def _build_delta(left: dict, right: dict) -> dict:
     return {
         "job_count": left["job_count"] - right["job_count"],
         "company_count": left["company_count"] - right["company_count"],
-        "high_bounty_job_count": left["high_bounty_job_count"] - right["high_bounty_job_count"],
+        "high_priority_job_count": left["high_priority_job_count"] - right["high_priority_job_count"],
     }
 
 
