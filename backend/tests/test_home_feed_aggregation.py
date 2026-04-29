@@ -6,13 +6,6 @@ from app.services.job_enrichment import build_job_payload
 from app.services.home_feed_aggregation import build_day_payloads
 
 
-def enable_estimated_bounty_read(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "app.services.home_feed_aggregation._should_expose_estimated_bounty",
-        lambda: True,
-    )
-
-
 def build_job(
     *,
     job_id: int,
@@ -271,8 +264,7 @@ def test_build_day_payloads_emits_company_level_claim_subject():
     assert [job.claimed_names for job in company.jobs] == [[], []]
 
 
-def test_build_day_payloads_emits_company_level_estimated_bounty_when_present(monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
+def test_build_day_payloads_ignores_persisted_estimated_bounty_signal_tags():
     jobs = [
         build_job(
             job_id=1,
@@ -298,80 +290,13 @@ def test_build_day_payloads_emits_company_level_estimated_bounty_when_present(mo
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount == 12600
-    assert company.estimated_bounty_label == "¥7,200-¥18,000"
+    assert not hasattr(company, "estimated_bounty_amount")
+    assert not hasattr(company, "estimated_bounty_label")
     assert not hasattr(company.jobs[0], "estimated_bounty_amount")
     assert not hasattr(company.jobs[0], "estimated_bounty_label")
 
 
-def test_build_day_payloads_keeps_persisted_estimated_bounty_values(monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
-    jobs = [
-        build_job(
-            job_id=1,
-            company="OpenGradient",
-            company_normalized="opengradient",
-            title="Staff AI Engineer",
-            bounty_grade="high",
-            days_ago=0,
-        )
-    ]
-    jobs[0].signal_tags.update(
-        {
-            "estimated_bounty_amount": 12600,
-            "estimated_bounty_label": "¥7,200-¥18,000",
-            "estimated_bounty_min": 7200,
-            "estimated_bounty_max": 18000,
-            "estimated_bounty_rate_pct": 10,
-            "estimated_bounty_rule_version": "bounty-rule-v2",
-            "estimated_bounty_confidence": "high",
-        }
-    )
-
-    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
-
-    company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount == 12600
-    assert company.estimated_bounty_label == "¥7,200-¥18,000"
-
-
-def test_build_day_payloads_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
-    jobs = [
-        build_job(
-            job_id=1,
-            company="OpenGradient",
-            company_normalized="opengradient",
-            title="Staff AI Engineer",
-            bounty_grade="high",
-            days_ago=0,
-        )
-    ]
-    jobs[0].signal_tags.update(
-        {
-            "estimated_bounty_amount": 150000,
-            "estimated_bounty_label": "¥120,000-¥180,000",
-            "estimated_bounty_min": 120000,
-            "estimated_bounty_max": 180000,
-            "estimated_bounty_rate_pct": 20,
-            "estimated_bounty_rule_version": "bounty-rule-v1",
-            "estimated_bounty_confidence": "medium",
-        }
-    )
-    monkeypatch.setattr(
-        "app.services.home_feed_aggregation._should_expose_estimated_bounty",
-        lambda: False,
-        raising=False,
-    )
-
-    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
-
-    company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount is None
-    assert company.estimated_bounty_label == "待估算"
-
-
-def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card(monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
+def test_build_day_payloads_keeps_priority_sort_without_estimated_bounty():
     jobs = [
         build_job(
             job_id=1,
@@ -417,11 +342,11 @@ def test_build_day_payloads_uses_top_ranked_job_estimate_for_company_card(monkey
 
     company = payloads[0].companies[0]
     assert [job.id for job in company.jobs] == [2, 1]
-    assert company.estimated_bounty_amount == 12600
-    assert company.estimated_bounty_label == "¥7,200-¥18,000"
+    assert not hasattr(company, "estimated_bounty_amount")
+    assert not hasattr(company, "estimated_bounty_label")
 
 
-def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():
+def test_build_day_payloads_has_no_pending_estimate_when_missing():
     jobs = [
         build_job(
             job_id=1,
@@ -436,5 +361,5 @@ def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():
     payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
 
     company = payloads[0].companies[0]
-    assert company.estimated_bounty_amount is None
-    assert company.estimated_bounty_label == "待估算"
+    assert not hasattr(company, "estimated_bounty_amount")
+    assert not hasattr(company, "estimated_bounty_label")

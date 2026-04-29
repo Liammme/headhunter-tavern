@@ -28,8 +28,8 @@ def test_load_home_snapshot_candidate_reads_daily_summaries_and_latest_intellige
             IntelligenceSnapshot(
                 snapshot_payload={
                     "headline": "James侦探说今天先盯 OpenGradient。",
-                    "summary": "今天 OpenGradient 有新增高赏金 AI 岗位。",
-                    "narrative": "James侦探说今天先盯 OpenGradient。你抬眼示意他继续，他说变化来自新增高赏金 AI 岗位。",
+                    "summary": "今天 OpenGradient 有新增高优先级 AI 岗位。",
+                    "narrative": "James侦探说今天先盯 OpenGradient。你抬眼示意他继续，他说变化来自新增高优先级 AI 岗位。",
                     "findings": ["OpenGradient 今天新增核心岗。"],
                     "actions": ["先看 OpenGradient 的 AI 岗。"],
                     "analysis_version": "feed-v1",

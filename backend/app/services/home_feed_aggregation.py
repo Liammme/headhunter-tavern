@@ -2,11 +2,6 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from app.models import Job, JobClaim
-from app.services.estimated_bounty_read import (
-    PENDING_ESTIMATED_BOUNTY_LABEL,
-    select_readable_estimated_bounty,
-    should_expose_estimated_bounty,
-)
 from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
 from app.services.grouping import bucket_posted_date
 from app.services.scoring import derive_company_grade
@@ -53,7 +48,6 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
     for bucket in sorted(day_groups.keys(), key=lambda item: BUCKET_ORDER[item]):
         companies: list[CompanyFeedSnapshot] = []
         for company in day_groups[bucket].values():
-            expose_estimated_bounty = _should_expose_estimated_bounty()
             sorted_jobs = sorted(
                 company["jobs"],
                 key=lambda current_job: (JOB_GRADE_ORDER[current_job.bounty_grade], current_job.title.lower()),
@@ -65,9 +59,6 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     if name not in company_claims:
                         company_claims.append(name)
             company_grade = derive_company_grade([job_item["bounty_grade"] for job_item in jobs_payload])
-            company_bounty_estimate = (
-                _select_company_bounty_estimate(sorted_jobs) if expose_estimated_bounty else None
-            )
             companies.append(
                 CompanyFeedSnapshot(
                     company=company["company"],
@@ -78,8 +69,6 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     jobs=[JobFeedSnapshot(**job_item) for job_item in jobs_payload],
                     claimed_by=company_claims[0] if company_claims else None,
                     claim_status="claimed" if company_claims else None,
-                    estimated_bounty_amount=company_bounty_estimate.amount if company_bounty_estimate else None,
-                    estimated_bounty_label=company_bounty_estimate.label if company_bounty_estimate else PENDING_ESTIMATED_BOUNTY_LABEL,
                 )
             )
 
@@ -93,14 +82,6 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
         day_payloads.append(DayBucketSnapshot(bucket=bucket, companies=companies))
 
     return day_payloads
-
-
-def _should_expose_estimated_bounty() -> bool:
-    return should_expose_estimated_bounty()
-
-
-def _select_company_bounty_estimate(jobs: list[Job]):
-    return select_readable_estimated_bounty(jobs)
 
 
 def _build_job_payload(job: Job) -> dict:

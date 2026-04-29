@@ -21,8 +21,6 @@ class CompanyCardOut(BaseModel):
     jobs: list[JobCardOut]
     claimed_by: str | None = None
     claim_status: str | None = None
-    estimated_bounty_amount: int | None = None
-    estimated_bounty_label: str | None = None
 
 
 class DayBucketOut(BaseModel):

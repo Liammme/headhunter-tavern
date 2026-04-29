@@ -89,8 +89,7 @@ h3,
 h4,
 h5,
 .day-title,
-.intel-preview,
-.seal-bounty strong {
+.intel-preview {
   font-family: var(--font-heading-stack);
   font-weight: 650;
   letter-spacing: 0;
@@ -1192,23 +1191,11 @@ h5,
   gap: 12px;
 }
 
-.seal-bounty {
-  display: grid;
-  gap: 4px;
-}
-
-.seal-bounty-label,
 .seal-details dt {
   color: var(--muted);
   font-family: var(--font-mono-stack);
   font-size: 12px;
   text-transform: uppercase;
-}
-
-.seal-bounty strong {
-  font-family: var(--font-mono-stack);
-  font-size: 22px;
-  line-height: 1;
 }
 
 .seal-mark {

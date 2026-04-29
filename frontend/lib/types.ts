@@ -73,8 +73,6 @@ export type CompanyCardPayload = {
   jobs: JobCardPayload[];
   claimed_by?: string | null;
   claim_status?: string | null;
-  estimated_bounty_amount?: number | null;
-  estimated_bounty_label?: string | null;
 };
 
 export type DayBucketPayload = {

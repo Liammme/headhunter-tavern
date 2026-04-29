@@ -253,7 +253,7 @@ describe("IntelligencePanel", () => {
   it("breaks a multi-sentence narrative into letter-like paragraphs", () => {
     const intelligence = buildIntelligence({
       narrative:
-        "James侦探晃了晃杯底，低声说：今天先盯核心产研岗。和近14天摊开的盘子比，今天真正冒头的不是热闹标签。你示意他继续，他把话说透：优先抢技术、AI、产品里的高赏金核心岗。",
+        "James侦探晃了晃杯底，低声说：今天先盯核心产研岗。和近14天摊开的盘子比，今天真正冒头的不是热闹标签。你示意他继续，他把话说透：优先抢技术、AI、产品里的高优先级核心岗。",
     });
 
     const { container } = render(
@@ -273,7 +273,7 @@ describe("IntelligencePanel", () => {
     expect(narrativeParagraphs).toHaveLength(3);
     expect(narrativeParagraphs[0]).toHaveTextContent("James侦探晃了晃杯底");
     expect(narrativeParagraphs[1]).toHaveTextContent("今天真正冒头的不是热闹标签");
-    expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高赏金核心岗");
+    expect(narrativeParagraphs[2]).toHaveTextContent("优先抢技术、AI、产品里的高优先级核心岗");
   });
 
   it("renders every paragraph from a long intelligence narrative inside the paper copy", () => {
@@ -282,7 +282,7 @@ describe("IntelligencePanel", () => {
       "第二段：AI 工具链公司在过去 14 天里连续露头，但真正值得先看的，是同一团队反复补算法和后端的位置。",
       "第三段：企业服务方向的增长岗位开始回暖，尤其是同时出现销售运营、数据分析和产品经理的公司。",
       "第四段：重复 JD 不是噪音，它可能说明招聘团队在多个渠道试水，也可能说明岗位描述还没被业务方校准。",
-      "第五段：今天的行动顺序应该先看连续发布动作，再看赏金金额，最后才回头补齐公司背景。",
+      "第五段：今天的行动顺序应该先看连续发布动作，再看岗位优先级，最后才回头补齐公司背景。",
       "第六段：如果你只能处理三家公司，优先选择新岗位多、岗位族稳定、且最近两天都在更新的团队。",
     ];
     const intelligence = buildIntelligence({

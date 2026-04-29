@@ -273,7 +273,7 @@ def build_v2_reasons(input_data: JobScoreV2Input, rule_hits: list[ScoreRuleHit])
     if any(hit.dimension == "bd_entry" for hit in rule_hits):
         reasons.append("可作为切入公司关系的 BD 入口")
     if any(hit.dimension == "category_bias" for hit in rule_hits) and input_data.category in {"AI/算法", "数据", "技术", "产品"}:
-        reasons.append("产研方向与当前赏金池优先策略一致")
+        reasons.append("产研方向与当前岗位池优先策略一致")
     if not reasons:
         reasons.append("当前岗位缺少明显的优先介入信号")
     return tuple(reasons[:3])

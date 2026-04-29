@@ -105,8 +105,7 @@ def test_home_endpoint_allows_market_intelligence_null_window_start(client, db_s
     assert isinstance(body["meta"]["window_start"], str)
 
 
-def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session, monkeypatch):
-    monkeypatch.setattr("app.services.home_feed_aggregation._should_expose_estimated_bounty", lambda: True)
+def test_home_payload_ignores_persisted_estimated_bounty_signal_tags(client, db_session):
     job = Job(
         canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
         source_name="demo-board",
@@ -135,8 +134,8 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
 
     assert response.status_code == 200
     company = response.json()["days"][0]["companies"][0]
-    assert company["estimated_bounty_amount"] == 12600
-    assert company["estimated_bounty_label"] == "¥7,200-¥18,000"
+    assert "estimated_bounty_amount" not in company
+    assert "estimated_bounty_label" not in company
     assert "estimated_bounty_amount" not in company["jobs"][0]
     assert "estimated_bounty_label" not in company["jobs"][0]
 
@@ -172,8 +171,6 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
                         "company_url": "https://jobs.example.com/company/opengradient",
                         "claimed_by": "Mina",
                         "claim_status": "claimed",
-                        "estimated_bounty_amount": 1500,
-                        "estimated_bounty_label": "¥1,500",
                         "company_grade": "focus",
                         "total_jobs": 1,
                         "claimed_names": [],
@@ -194,15 +191,13 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
     assert company_card["company_url"] == "https://jobs.example.com/company/opengradient"
     assert company_card["claimed_by"] == "Mina"
     assert company_card["claim_status"] == "claimed"
-    assert company_card["estimated_bounty_amount"] == 1500
-    assert company_card["estimated_bounty_label"] == "¥1,500"
+    assert "estimated_bounty_amount" not in company_card
+    assert "estimated_bounty_label" not in company_card
     assert set(company_card) >= {
         "company",
         "company_url",
         "claimed_by",
         "claim_status",
-        "estimated_bounty_amount",
-        "estimated_bounty_label",
         "company_grade",
         "total_jobs",
         "claimed_names",

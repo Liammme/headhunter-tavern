@@ -78,29 +78,29 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkey
     )
 
     assert snapshot["headline"] == "今日重点：AI 核心岗位仍是当前窗口内最明确的主线。"
-    assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。"
+    assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高优先级岗位。"
     assert not snapshot["narrative"].startswith("James侦探")
     assert snapshot["summary"] not in snapshot["narrative"]
     assert "AI 相关岗位仍是当前窗口内最强主线。" in snapshot["narrative"]
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
     assert "重点公司 1 家，优先顺着公司卡往下打。" in snapshot["findings"]
-    assert "已认领 1 个岗位，继续优先补齐未认领高赏金岗位。" in snapshot["findings"]
-    assert snapshot["actions"][0] == "先看重点公司，再优先认领其中的高赏金岗位。"
+    assert "已认领 1 个岗位，继续优先补齐未认领高优先级岗位。" in snapshot["findings"]
+    assert snapshot["actions"][0] == "先看重点公司，再优先认领其中的高优先级岗位。"
 
 
 def test_build_narrative_from_fields_excludes_summary_text():
     narrative = build_narrative_from_fields(
         headline="今日重点：AI 核心岗位仍是当前窗口内最明确的主线。",
-        summary="基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高赏金岗位。",
+        summary="基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高优先级岗位。",
         findings=["重点公司 1 家，优先顺着公司卡往下打。"],
-        actions=["先看重点公司，再优先认领其中的高赏金岗位。"],
+        actions=["先看重点公司，再优先认领其中的高优先级岗位。"],
     )
 
     assert "基于近 14 天统一聚合结果生成" not in narrative
     assert "你抬眼示意他继续" not in narrative
     assert not narrative.startswith("James侦探")
-    assert "先看重点公司，再优先认领其中的高赏金岗位。" in narrative
+    assert "先看重点公司，再优先认领其中的高优先级岗位。" in narrative
 
 
 def test_build_intelligence_snapshot_handles_empty_day_payloads(monkeypatch):
@@ -184,11 +184,11 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
         captured["meta"] = meta
         captured["jobs"] = jobs
         return {
-            "narrative": "今天先盯 AI 核心产研。重点公司里的高赏金岗位正在重新往前顶，说明企业更急着补卡业务节奏的关键岗位。",
+            "narrative": "今天先盯 AI 核心产研。重点公司里的高优先级岗位正在重新往前顶，说明企业更急着补卡业务节奏的关键岗位。",
             "headline": "LLM 判断今天先打 AI 核心产研。",
-            "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。",
+            "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高优先级岗位。",
             "findings": ["AI 主线继续增强。"],
-            "actions": ["优先认领未认领高赏金岗位。"],
+            "actions": ["优先认领未认领高优先级岗位。"],
         }
 
     monkeypatch.setattr("app.services.intelligence.generate_llm_intelligence_fields", fake_generate)
@@ -232,9 +232,9 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
     assert captured["jobs"] == []
     assert not snapshot["narrative"].startswith("James侦探")
     assert snapshot["headline"] == "LLM 判断今天先打 AI 核心产研。"
-    assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高赏金岗位。"
+    assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高优先级岗位。"
     assert snapshot["findings"] == ["AI 主线继续增强。"]
-    assert snapshot["actions"] == ["优先认领未认领高赏金岗位。"]
+    assert snapshot["actions"] == ["优先认领未认领高优先级岗位。"]
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
 
@@ -283,7 +283,7 @@ def test_build_intelligence_snapshot_falls_back_when_llm_fails(monkeypatch):
     )
 
     assert snapshot["headline"] == "今日重点：AI 核心岗位仍是当前窗口内最明确的主线。"
-    assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：1 家公司，1 个岗位，1 个高赏金岗位。"
+    assert snapshot["summary"] == "基于近 14 天统一聚合结果生成：1 家公司，1 个岗位，1 个高优先级岗位。"
 
 
 def test_rule_intelligence_uses_change_context_when_jobs_are_available(monkeypatch):
@@ -349,16 +349,16 @@ def test_rule_intelligence_uses_change_context_when_jobs_are_available(monkeypat
 def test_parse_llm_intelligence_fields_accepts_json_code_fence():
     payload = parse_llm_intelligence_fields(
         """```json
-{"narrative":"James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高赏金岗位继续走强。","headline":"今天先盯 AI 核心岗","summary":"重点公司和高赏金岗位继续走强。","findings":["AI 产研是主线","重点公司集中出现","未认领高赏金仍有空间"],"actions":["先扫重点公司","优先认领高赏金","补公司判断"]}
+{"narrative":"James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高优先级岗位继续走强。","headline":"今天先盯 AI 核心岗","summary":"重点公司和高优先级岗位继续走强。","findings":["AI 产研是主线","重点公司集中出现","未认领高优先级仍有空间"],"actions":["先扫重点公司","优先认领高优先级","补公司判断"]}
 ```"""
     )
 
     assert payload == {
-        "narrative": "James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高赏金岗位继续走强。",
+        "narrative": "James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高优先级岗位继续走强。",
         "headline": "今天先盯 AI 核心岗",
-        "summary": "重点公司和高赏金岗位继续走强。",
-        "findings": ["AI 产研是主线", "重点公司集中出现", "未认领高赏金仍有空间"],
-        "actions": ["先扫重点公司", "优先认领高赏金", "补公司判断"],
+        "summary": "重点公司和高优先级岗位继续走强。",
+        "findings": ["AI 产研是主线", "重点公司集中出现", "未认领高优先级仍有空间"],
+        "actions": ["先扫重点公司", "优先认领高优先级", "补公司判断"],
     }
 
 
@@ -379,11 +379,11 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
         if model_name == "broken-model":
             raise RuntimeError("bad request")
         return (
-            '{"narrative":"今天先盯高赏金产研岗。今天冒头的不是散岗，而是往重点公司收拢的核心岗位。这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。下一步先盯重点公司里的高赏金技术、AI和产品岗。",'
-            '"headline":"今天先盯高赏金产研岗。",'
+            '{"narrative":"今天先盯高优先级产研岗。今天冒头的不是散岗，而是往重点公司收拢的核心岗位。这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。下一步先盯重点公司里的高优先级技术、AI和产品岗。",'
+            '"headline":"今天先盯高优先级产研岗。",'
             '"summary":"今天冒头的不是散岗，而是往重点公司收拢的核心岗位。",'
             '"findings":["这波变化说明近14天里真正升温的是卡业务的产研岗，不是热闹标签。"],'
-            '"actions":["今天先盯重点公司里的高赏金技术、AI和产品岗。"]}'
+            '"actions":["今天先盯重点公司里的高优先级技术、AI和产品岗。"]}'
         )
 
     monkeypatch.setattr(
@@ -426,7 +426,7 @@ def test_build_intelligence_snapshot_retries_with_fallback_models(monkeypatch):
     )
 
     assert called_models == ["broken-model", "glm-4-flash-250414"]
-    assert snapshot["headline"] == "今天先盯高赏金产研岗。"
+    assert snapshot["headline"] == "今天先盯高优先级产研岗。"
 
 
 def test_request_retry_retries_transient_rate_limit_errors(monkeypatch):
@@ -438,7 +438,7 @@ def test_request_retry_retries_transient_rate_limit_errors(monkeypatch):
     sleep_calls = []
     responses = [
         RuntimeError('LLM request failed with 429: {"error":{"code":"1305","message":"该模型当前访问量过大，请您稍后再试"}}'),
-        '{"narrative":"今天AI/算法岗位数量显著增加，Aijobs平台成为主要贡献者。","headline":"今天AI/算法岗位数量显著增加。","summary":"今天AI/算法方向出现明显升温。","findings":["Aijobs平台贡献了多条AI岗位。"],"actions":["优先筛查AI/算法方向里的高赏金岗位。"]}',
+        '{"narrative":"今天AI/算法岗位数量显著增加，Aijobs平台成为主要贡献者。","headline":"今天AI/算法岗位数量显著增加。","summary":"今天AI/算法方向出现明显升温。","findings":["Aijobs平台贡献了多条AI岗位。"],"actions":["优先筛查AI/算法方向里的高优先级岗位。"]}',
     ]
 
     monkeypatch.setattr("app.services.intelligence._iter_zhipu_models", lambda: ["glm-4-flash-250414"])
@@ -690,9 +690,9 @@ def test_intelligence_prompts_use_plain_business_style_and_banned_rules():
 
 def test_validate_llm_intelligence_fields_rejects_claimed_names():
     payload = {
-        "narrative": "今天先看高赏金产研岗。验收测试员已经认领了这条线。",
-        "headline": "今天先盯高赏金产研岗。",
-        "summary": "他说今天真正冒头的是高赏金核心岗。",
+        "narrative": "今天先看高优先级产研岗。验收测试员已经认领了这条线。",
+        "headline": "今天先盯高优先级产研岗。",
+        "summary": "他说今天真正冒头的是高优先级核心岗。",
         "findings": ["验收测试员已经认领了这条线。"],
         "actions": ["先盯重点公司。"],
     }
@@ -707,11 +707,11 @@ def test_validate_llm_intelligence_fields_rejects_claimed_names():
 
 def test_validate_llm_intelligence_fields_rejects_stat_broadcast():
     payload = {
-        "narrative": "今天先盯 AI 主线。AI标签出现很多次，Web3标签达25次。先盯重点公司里的高赏金产研岗。",
+        "narrative": "今天先盯 AI 主线。AI标签出现很多次，Web3标签达25次。先盯重点公司里的高优先级产研岗。",
         "headline": "今天先盯 AI 主线。",
-        "summary": "他说今天变化不在噪音，在高赏金岗位开始往重点公司收拢。",
+        "summary": "他说今天变化不在噪音，在高优先级岗位开始往重点公司收拢。",
         "findings": ["AI标签出现很多次，Web3标签达25次。"],
-        "actions": ["先盯重点公司里的高赏金产研岗。"],
+        "actions": ["先盯重点公司里的高优先级产研岗。"],
     }
 
     try:
@@ -724,11 +724,11 @@ def test_validate_llm_intelligence_fields_rejects_stat_broadcast():
 
 def test_validate_llm_intelligence_fields_accepts_plain_business_brief():
     payload = {
-        "narrative": "今天先盯 AI 主线。今天变化不在噪音，而在高赏金岗位开始往重点公司收拢。这说明真正往前顶的是卡业务节奏的技术和产品岗。下一步先盯重点公司里的高赏金产研岗。",
+        "narrative": "今天先盯 AI 主线。今天变化不在噪音，而在高优先级岗位开始往重点公司收拢。这说明真正往前顶的是卡业务节奏的技术和产品岗。下一步先盯重点公司里的高优先级产研岗。",
         "headline": "今天先盯 AI 主线。",
-        "summary": "今天变化不在噪音，而在高赏金岗位开始往重点公司收拢。",
+        "summary": "今天变化不在噪音，而在高优先级岗位开始往重点公司收拢。",
         "findings": ["这说明真正往前顶的是卡业务节奏的技术和产品岗。"],
-        "actions": ["先盯重点公司里的高赏金产研岗。"],
+        "actions": ["先盯重点公司里的高优先级产研岗。"],
     }
 
     validate_llm_intelligence_fields(payload, banned_names=set())
@@ -785,11 +785,11 @@ def test_generate_llm_intelligence_fields_repairs_invalid_first_draft(monkeypatc
 
     first = '{"narrative":"分析报告。本周市场动态显示 AI标签出现很多次。","headline":"分析报告","summary":"本周市场动态显示 AI标签出现很多次。","findings":["AI标签很多。"],"actions":["制定专项方案。"]}'
     repaired = (
-        '{"narrative":"今天先盯重点公司里重新抬头的高赏金产研岗。和近14天基线相比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。",'
-        '"headline":"今天先盯重点公司里重新抬头的高赏金产研岗。",'
-        '"summary":"和近14天基线相比，今天更明显的变化不是热闹标签，而是高赏金岗位重新往重点公司和卡业务节奏的团队收拢。",'
+        '{"narrative":"今天先盯重点公司里重新抬头的高优先级产研岗。和近14天基线相比，今天更明显的变化不是热闹标签，而是高优先级岗位重新往重点公司和卡业务节奏的团队收拢。这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高优先级核心岗。",'
+        '"headline":"今天先盯重点公司里重新抬头的高优先级产研岗。",'
+        '"summary":"和近14天基线相比，今天更明显的变化不是热闹标签，而是高优先级岗位重新往重点公司和卡业务节奏的团队收拢。",'
         '"findings":["这说明企业现在更急着把真正会拖慢产品和交付节奏的技术、AI、产品岗位往外放，而不是单纯补普通编制。"],'
-        '"actions":["下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。"]}'
+        '"actions":["下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高优先级核心岗。"]}'
     )
     responses = [first, repaired]
 

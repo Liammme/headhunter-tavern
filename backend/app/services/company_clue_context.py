@@ -5,7 +5,6 @@ import re
 from sqlalchemy.orm import Session
 
 from app.models import Job
-from app.services.estimated_bounty_read import select_readable_estimated_bounty, should_expose_estimated_bounty
 from app.services.feed_snapshot import WINDOW_DAYS
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
 from app.services.scoring import score_job_v2
@@ -39,12 +38,11 @@ def build_company_clue_context(*, company: str, jobs: list[Job], today: date) ->
         },
         "summary": {
             "total_jobs": len(jobs),
-            "high_bounty_jobs": sum(1 for card in evidence_cards if card["bounty_grade"] == "high"),
+            "high_priority_jobs": sum(1 for card in evidence_cards if card["bounty_grade"] == "high"),
             "urgent_jobs": sum(1 for card in evidence_cards if card["urgent"]),
             "critical_jobs": sum(1 for card in evidence_cards if card["critical"]),
             "top_categories": [name for name, _count in categories.most_common(3)],
             "top_domains": [name for name, _count in domains.most_common(3)],
-            "estimated_bounty": _collect_estimated_bounty(jobs),
         },
         "role_clusters": _build_role_clusters(evidence_cards)[:3],
         "evidence_cards": evidence_cards[:MAX_LLM_EVIDENCE_CARDS],
@@ -128,16 +126,6 @@ def _extract_evidence_snippets(description: str) -> list[str]:
     ]
     selected = prioritized[:2] or candidates[:1]
     return [item[:180] for item in selected]
-
-
-def _collect_estimated_bounty(jobs: list[Job]) -> dict | None:
-    if not should_expose_estimated_bounty():
-        return None
-
-    estimate = select_readable_estimated_bounty(jobs)
-    if estimate is not None:
-        return {"amount": estimate.amount, "label": estimate.label}
-    return None
 
 
 def _collect_entry_points(jobs: list[Job]) -> dict:

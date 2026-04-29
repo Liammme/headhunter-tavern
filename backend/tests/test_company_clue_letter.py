@@ -7,13 +7,6 @@ from app.services.company_clue_letter import generate_company_clue_letter, _comp
 from app.services.intelligence import IntelligenceGenerationError
 
 
-def enable_estimated_bounty_read(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "app.services.company_clue_context.should_expose_estimated_bounty",
-        lambda: True,
-    )
-
-
 def build_job(
     *,
     company: str,
@@ -107,7 +100,7 @@ def test_generate_company_clue_letter_returns_success_contract(db_session, monke
             '{"narrative":"James侦探把名单往你面前一压，说 OpenGradient 这家公司值得先查，'
             '因为它同时把 Principal AI Engineer 和 Growth Engineer 放出来，节奏不像普通补人，更像在补关键推进位。'
             '你抬眼示意他继续，他点了点 Principal AI Engineer，说这类岗位带着时间压力、业务关键性和持续招不动的味道，'
-            '再配上可直接进官网与原帖的入口，足够先开一轮侦查。最后他只留一句：先顺着高赏金 AI 岗和官网入口去查团队真实需求。",'
+            '再配上可直接进官网与原帖的入口，足够先开一轮侦查。最后他只留一句：先顺着高优先级 AI 岗和官网入口去查团队真实需求。",'
             '"sections":['
             '{"key":"lead","title":"为什么现在值得查","content":"OpenGradient 同时挂出 Principal AI Engineer 和 Growth Engineer。"},'
             '{"key":"evidence","title":"最能代表需求的岗位","content":"Principal AI Engineer 带时间压力与关键岗位信号，Growth Engineer 指向增长推进。"},'
@@ -218,7 +211,6 @@ def test_generate_company_clue_letter_uses_exact_company_match(db_session, monke
 
 
 def test_generate_company_clue_letter_passes_structured_context_only(db_session, monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
     db_session.add(
         build_job(
             company="OpenGradient",
@@ -269,7 +261,8 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     llm_input = captured_context[0]
     assert set(llm_input.keys()) == {"company", "window", "summary", "role_clusters", "evidence_cards", "entry_points"}
     assert llm_input["window"]["window_days"] == 14
-    assert llm_input["summary"]["estimated_bounty"]["amount"] == 12600
+    assert "estimated_bounty" not in llm_input["summary"]
+    assert llm_input["evidence_cards"][0]["bounty_grade"] == "high"
     assert llm_input["evidence_cards"][0]["entry_points"]["company_url"] == "https://opengradient.ai"
     assert llm_input["evidence_cards"][0]["entry_points"]["hiring_page"] == "https://opengradient.ai/careers"
     assert llm_input["evidence_cards"][0]["entry_points"]["email"] == "careers@opengradient.ai"
@@ -277,8 +270,7 @@ def test_generate_company_clue_letter_passes_structured_context_only(db_session,
     assert "description" not in llm_input["summary"]
 
 
-def test_build_company_clue_context_uses_first_complete_estimate_in_summary(monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
+def test_build_company_clue_context_excludes_complete_estimate_from_summary():
     jobs = [
         build_job(
             company="OpenGradient",
@@ -320,11 +312,12 @@ def test_build_company_clue_context_uses_first_complete_estimate_in_summary(monk
 
     llm_input = build_company_clue_context(company="OpenGradient", jobs=jobs, today=datetime(2026, 4, 23).date())
 
-    assert llm_input["summary"]["estimated_bounty"]["amount"] == 6000
-    assert llm_input["summary"]["estimated_bounty"]["label"] == "¥4,000-¥8,000"
+    assert "estimated_bounty" not in llm_input["summary"]
+    assert llm_input["evidence_cards"][0]["title"] == "Operations Coordinator"
+    assert llm_input["evidence_cards"][1]["bounty_grade"] == "high"
 
 
-def test_build_company_clue_context_hides_estimated_bounty_when_rollout_flag_disabled(monkeypatch):
+def test_build_company_clue_context_excludes_estimated_bounty_without_read_flag():
     jobs = [
         build_job(
             company="OpenGradient",
@@ -345,18 +338,12 @@ def test_build_company_clue_context_hides_estimated_bounty_when_rollout_flag_dis
             },
         )
     ]
-    monkeypatch.setattr(
-        "app.services.company_clue_context.should_expose_estimated_bounty",
-        lambda: False,
-    )
-
     llm_input = build_company_clue_context(company="OpenGradient", jobs=jobs, today=datetime(2026, 4, 23).date())
 
-    assert llm_input["summary"]["estimated_bounty"] is None
+    assert "estimated_bounty" not in llm_input["summary"]
 
 
-def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_session, monkeypatch):
-    enable_estimated_bounty_read(monkeypatch)
+def test_generate_company_clue_letter_excludes_partial_estimate_snapshot(db_session, monkeypatch):
     db_session.add(
         build_job(
             company="OpenGradient",
@@ -397,7 +384,7 @@ def test_generate_company_clue_letter_ignores_partial_estimate_snapshot(db_sessi
     result = generate_company_clue_letter(db_session, company="OpenGradient")
 
     assert result["status"] == "success"
-    assert captured_context[0]["summary"]["estimated_bounty"] is None
+    assert "estimated_bounty" not in captured_context[0]["summary"]
 
 
 def test_generate_company_clue_letter_falls_back_to_rule_clue_when_llm_generation_fails(db_session, monkeypatch):

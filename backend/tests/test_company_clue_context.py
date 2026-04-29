@@ -59,11 +59,7 @@ def test_load_company_jobs_for_clue_uses_same_14_day_window_as_home_feed(db_sess
     assert [job.title for job in jobs] == ["Recent Role"]
 
 
-def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch):
-    monkeypatch.setattr(
-        "app.services.company_clue_context.should_expose_estimated_bounty",
-        lambda: True,
-    )
+def test_build_company_clue_context_exposes_grounded_evidence_cards():
     jobs = [
         build_job(
             company="OpenGradient",
@@ -96,8 +92,10 @@ def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch)
 
     assert context["window"]["window_days"] == 14
     assert context["summary"]["total_jobs"] == 1
-    assert context["summary"]["estimated_bounty"]["amount"] == 12600
+    assert "estimated_bounty" not in context["summary"]
+    assert context["summary"]["high_priority_jobs"] == 1
     assert context["evidence_cards"][0]["title"] == "Principal AI Engineer"
+    assert context["evidence_cards"][0]["bounty_grade"] == "high"
     assert context["evidence_cards"][0]["entry_points"]["hiring_page"] == "https://opengradient.ai/careers"
     assert context["evidence_cards"][0]["evidence_snippets"]
     assert context["entry_points"]["job_posts"] == [jobs[0].canonical_url]

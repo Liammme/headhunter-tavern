@@ -95,12 +95,12 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
     )
     leading_tag = tag_counter.most_common(1)[0][0] if tag_counter else "核心"
     focus_companies = [company for company in companies if company.company_grade == "focus"]
-    high_bounty_jobs = [job for job in jobs if job.bounty_grade == "high"]
+    high_priority_jobs = [job for job in jobs if job.bounty_grade == "high"]
     claimed_jobs = [job for job in jobs if job.claimed_names]
 
     findings = [
         f"重点公司 {len(focus_companies)} 家，优先顺着公司卡往下打。",
-        f"已认领 {len(claimed_jobs)} 个岗位，继续优先补齐未认领高赏金岗位。",
+        f"已认领 {len(claimed_jobs)} 个岗位，继续优先补齐未认领高优先级岗位。",
     ]
     if leading_tag == "AI":
         findings.insert(0, "AI 相关岗位仍是当前窗口内最强主线。")
@@ -111,7 +111,7 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
         "headline": f"今日重点：{leading_tag} 核心岗位仍是当前窗口内最明确的主线。",
         "summary": (
             f"基于近 14 天统一聚合结果生成：{len(companies)} 家公司，"
-            f"{len(jobs)} 个岗位，{len(high_bounty_jobs)} 个高赏金岗位。"
+            f"{len(jobs)} 个岗位，{len(high_priority_jobs)} 个高优先级岗位。"
         ),
         "analysis_version": meta.analysis_version,
         "rule_version": meta.rule_version,
@@ -120,7 +120,7 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
         "generated_at": meta.generated_at,
         "findings": findings,
         "actions": [
-            "先看重点公司，再优先认领其中的高赏金岗位。",
+            "先看重点公司，再优先认领其中的高优先级岗位。",
             f"围绕 {leading_tag} 主线继续筛出未认领的核心岗位。",
             "对已认领岗位继续补充公司和团队判断，避免只盯单个职位。",
         ],
@@ -145,7 +145,7 @@ def _build_rule_intelligence_snapshot_from_change_context(change_context: dict, 
         headline = "今天暂无可验证的新升温信号，先不要把旧盘面解读成新变化。"
         summary = "今天没有可验证的新公司、新类目或新领域升温，情报降级为稳定提示。"
         findings = ["今天的岗位池没有给出足够证据证明盘面发生了新变化。"]
-        actions = ["今天先复核既有重点公司和高赏金岗位，等新增信号出现后再切换主线。"]
+        actions = ["今天先复核既有重点公司和高优先级岗位，等新增信号出现后再切换主线。"]
     else:
         evidence = first_change["evidence"][0] if first_change["evidence"] else {}
         company = evidence.get("company", "当前公司")
@@ -157,7 +157,7 @@ def _build_rule_intelligence_snapshot_from_change_context(change_context: dict, 
         findings = [
             f"这不是复述近14天总量，而是今天在 {category} / {domain} 上出现了可点名的新增或升温证据。"
         ]
-        actions = [f"今天先盯 {company} 这类公司，以及 {category} 里的高赏金核心岗。"]
+        actions = [f"今天先盯 {company} 这类公司，以及 {category} 里的高优先级核心岗。"]
 
     return {
         "headline": headline,
@@ -246,7 +246,7 @@ def build_llm_intelligence_input(day_payloads: list[DayBucketSnapshot], meta: Fe
         "overview": {
             "company_count": len(companies),
             "job_count": len(feed_jobs),
-            "high_bounty_job_count": sum(1 for job in feed_jobs if job.bounty_grade == "high"),
+            "high_priority_job_count": sum(1 for job in feed_jobs if job.bounty_grade == "high"),
             "claimed_job_count": sum(1 for job in feed_jobs if job.claimed_names),
             "focus_company_count": sum(1 for company in companies if company.company_grade == "focus"),
         },
@@ -351,11 +351,11 @@ def build_intelligence_system_prompt() -> str:
         "认领人只表示内部占坑状态，不是联系人，不是候选人，不是行动线索。"
         "禁止引用任何认领人名字，禁止写“联系已报备的人”“利用已报备线索”。"
         "请严格模仿下面这个 JSON 风格，只替换成当前输入对应的内容："
-        '{"narrative":"今天先看重新抬头的核心产研岗。和近14天基线相比，今天真正冒头的不是热闹标签，而是更集中地压在高赏金、业务关键、时间压力更高的岗位上。这说明市场不是单纯变热，而是企业更愿意把真正卡节奏的岗位先往外放，尤其是技术、AI和产品里带负责人属性的岗位。下一步更该先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。",'
+        '{"narrative":"今天先看重新抬头的核心产研岗。和近14天基线相比，今天真正冒头的不是热闹标签，而是更集中地压在高优先级、业务关键、时间压力更高的岗位上。这说明市场不是单纯变热，而是企业更愿意把真正卡节奏的岗位先往外放，尤其是技术、AI和产品里带负责人属性的岗位。下一步更该先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高优先级核心岗。",'
         '"headline":"今天先看重新抬头的核心产研岗。",'
-        '"summary":"和近14天基线相比，今天真正冒头的是高赏金、业务关键、时间压力更高的核心岗位。",'
+        '"summary":"和近14天基线相比，今天真正冒头的是高优先级、业务关键、时间压力更高的核心岗位。",'
         '"findings":["这说明企业更愿意把真正卡节奏的岗位先往外放，尤其是技术、AI和产品里带负责人属性的岗位。"],'
-        '"actions":["下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高赏金核心岗。"]}'
+        '"actions":["下一步先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高优先级核心岗。"]}'
     )
 
 
