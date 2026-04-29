@@ -1140,6 +1140,7 @@ h5,
 
 .company-posted-at {
   justify-self: end;
+  margin-top: 8px;
   color: var(--muted);
   font-family: var(--font-mono-stack);
   font-size: 12px;
@@ -1361,7 +1362,7 @@ h5,
 
   .company-posted-at,
   .job-actions {
-    justify-items: start;
+    justify-self: start;
   }
 }
 
