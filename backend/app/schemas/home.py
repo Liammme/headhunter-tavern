@@ -16,6 +16,7 @@ class CompanyCardOut(BaseModel):
     company: str
     company_url: str | None = None
     company_grade: str
+    latest_posted_at: str | None = None
     total_jobs: int
     claimed_names: list[str]
     jobs: list[JobCardOut]

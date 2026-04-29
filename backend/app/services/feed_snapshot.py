@@ -34,6 +34,7 @@ class CompanyFeedSnapshot:
     total_jobs: int
     claimed_names: list[str]
     jobs: list[JobFeedSnapshot]
+    latest_posted_at: str | None = None
     claimed_by: str | None = None
     claim_status: str | None = None
 

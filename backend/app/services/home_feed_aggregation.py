@@ -64,6 +64,7 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     company=company["company"],
                     company_url=company["company_url"],
                     company_grade=company_grade,
+                    latest_posted_at=_latest_posted_at(sorted_jobs),
                     total_jobs=len(jobs_payload),
                     claimed_names=company_claims,
                     jobs=[JobFeedSnapshot(**job_item) for job_item in jobs_payload],
@@ -93,3 +94,10 @@ def _build_job_payload(job: Job) -> dict:
         "tags": list(job.signal_tags.get("display_tags", [])),
         "claimed_names": [],
     }
+
+
+def _latest_posted_at(jobs: list[Job]) -> str | None:
+    if not jobs:
+        return None
+    latest = max((job.posted_at or job.collected_at for job in jobs), default=None)
+    return latest.replace(microsecond=0).isoformat() if latest else None

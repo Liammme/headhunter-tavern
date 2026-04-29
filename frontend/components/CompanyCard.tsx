@@ -112,6 +112,12 @@ export default function CompanyCard({
             <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
         </div>
+        {companyState.latest_posted_at ? (
+          <time className="company-posted-at" dateTime={companyState.latest_posted_at}>
+            <span>发布时间</span>
+            <strong>{formatPostedAt(companyState.latest_posted_at)}</strong>
+          </time>
+        ) : null}
       </div>
       {isClueOpen && clueState ? (
         <CompanyCluePanel
@@ -162,6 +168,16 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
+}
+
+function formatPostedAt(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) {
+    return value;
+  }
+
+  const [, year, month, day, hour, minute] = match;
+  return hour && minute ? `${year}/${month}/${day} ${hour}:${minute}` : `${year}/${month}/${day}`;
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {

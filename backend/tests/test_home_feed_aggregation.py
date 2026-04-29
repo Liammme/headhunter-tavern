@@ -264,6 +264,31 @@ def test_build_day_payloads_emits_company_level_claim_subject():
     assert [job.claimed_names for job in company.jobs] == [[], []]
 
 
+def test_build_day_payloads_exposes_company_latest_posted_at():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=2,
+        ),
+        build_job(
+            job_id=2,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Product Manager",
+            bounty_grade="medium",
+            days_ago=0,
+        ),
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].latest_posted_at == "2026-04-18T09:00:00"
+
+
 def test_build_day_payloads_ignores_persisted_estimated_bounty_signal_tags():
     jobs = [
         build_job(

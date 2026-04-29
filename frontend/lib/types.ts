@@ -68,6 +68,7 @@ export type CompanyCardPayload = {
   company: string;
   company_url?: string | null;
   company_grade: "focus" | "watch" | "normal";
+  latest_posted_at?: string | null;
   total_jobs: number;
   claimed_names: string[];
   jobs: JobCardPayload[];

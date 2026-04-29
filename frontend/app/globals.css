@@ -1142,6 +1142,29 @@ h5,
   font-size: 14px;
 }
 
+.company-posted-at {
+  justify-self: end;
+  min-width: 156px;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 246, 0.88));
+  color: var(--muted);
+  font-family: var(--font-mono-stack);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.company-posted-at strong {
+  color: var(--foreground);
+  font-family: var(--font-heading-stack);
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
 .company-grade,
 .job-badge {
   display: inline-flex;
@@ -1388,6 +1411,7 @@ h5,
     grid-template-columns: 1fr;
   }
 
+  .company-posted-at,
   .job-actions {
     justify-items: start;
   }

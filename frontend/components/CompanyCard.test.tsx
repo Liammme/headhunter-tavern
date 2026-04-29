@@ -15,6 +15,7 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
   return {
     company: "OpenGradient",
     company_grade: "focus",
+    latest_posted_at: "2026-04-18T09:00:00",
     total_jobs: 1,
     claimed_names: [],
     jobs: [
@@ -58,6 +59,8 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText(/已认领/)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("发布时间")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("2026/04/18 09:00")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();

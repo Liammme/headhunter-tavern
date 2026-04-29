@@ -57,6 +57,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                         "company": "OpenGradient",
                         "company_url": "https://example.com/company/opengradient",
                         "company_grade": "focus",
+                        "latest_posted_at": None,
                         "total_jobs": 1,
                         "claimed_names": ["Liam"],
                         "claimed_by": None,
