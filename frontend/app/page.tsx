@@ -68,7 +68,7 @@ export default async function HomePage() {
           <CompanyFeedTimeline days={payload.days} />
         ) : (
           <section className="empty-state" aria-live="polite">
-            <p className="eyebrow">赏金池状态</p>
+            <p className="eyebrow">岗位池状态</p>
             <h2>最近还没有可展示的岗位</h2>
             <p>
               抓取任务完成前，首页会暂时保持空态。等下一次抓取写入后，这里会自动展示按时间段聚合的公司机会池。

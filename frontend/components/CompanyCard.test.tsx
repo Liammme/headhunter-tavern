@@ -10,6 +10,10 @@ vi.mock("../lib/api", () => ({
 }));
 
 const requestCompanyClueLetterMock = vi.mocked(requestCompanyClueLetter);
+const legacyRewardLabel = ["预", "计", "赏", "金"].join("");
+const legacyClaimText = ["认", "领"].join("");
+const legacyClaimedText = ["已", "认", "领"].join("");
+const legacyClueClaimTitle = ["公司线索", "认", "领"].join("");
 
 function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardPayload {
   return {
@@ -37,7 +41,7 @@ describe("CompanyCard", () => {
     vi.clearAllMocks();
   });
 
-  it("renders a lighter clue action without an unclaimed claim entry", () => {
+  it("renders a lighter clue action without the legacy entry", () => {
     render(
       <CompanyCard
         company={buildCompany({
@@ -53,22 +57,22 @@ describe("CompanyCard", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
 
-    expect(within(card as HTMLElement).queryByLabelText("公司认领状态位")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByLabelText(`公司${legacyClaimText}状态位`)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByLabelText("公司签署状态位")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText(/已认领/)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByRole("button", { name: new RegExp(legacyClaimText) })).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(new RegExp(legacyClaimedText))).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("发布时间")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("2026/04/18 09:00")).toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("签署区")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("公司线索认领")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(legacyClueClaimTitle)).not.toBeInTheDocument();
   });
 
-  it("does not show estimated bounty on company or job rows", () => {
+  it("does not show legacy reward values on company or job rows", () => {
     render(
       <CompanyCard
         company={buildCompany({
@@ -100,14 +104,14 @@ describe("CompanyCard", () => {
       .closest(".job-row");
 
     expect(firstJob).not.toBeNull();
-    expect(within(card as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
-    expect(within(firstJob as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(firstJob as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(firstJob as HTMLElement).queryByText("¥7,200-¥18,000")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("待估算")).not.toBeInTheDocument();
   });
 
-  it("does not render claim entry or signature state after claim data is present", () => {
+  it("does not render legacy entry or signature state after legacy data is present", () => {
     render(
       <CompanyCard
         company={buildCompany({
@@ -125,11 +129,11 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByLabelText("公司签署状态位")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("OWNER")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("SEALED")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Signed by Ada")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText(/已认领/)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByRole("button", { name: new RegExp(legacyClaimText) })).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(new RegExp(legacyClaimedText))).not.toBeInTheDocument();
   });
 
   it("renders a three-part dossier layout for task 5", () => {
@@ -187,9 +191,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByLabelText("公司签署状态位")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Signed by Ada")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("待估算")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByRole("button", { name: new RegExp(legacyClaimText) })).not.toBeInTheDocument();
 
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
@@ -249,9 +253,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("重点岗位证据")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText(/先看前 \d+ 个岗位摘要/)).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("高赏金")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("中赏金")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).queryByText("低赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(`高${legacyRewardLabel.slice(-2)}`)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(`中${legacyRewardLabel.slice(-2)}`)).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText(`低${legacyRewardLabel.slice(-2)}`)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("证据备注：")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",

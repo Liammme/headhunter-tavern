@@ -85,8 +85,8 @@ def test_build_intelligence_snapshot_uses_day_payloads_as_shared_baseline(monkey
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
     assert "重点公司 1 家，优先顺着公司卡往下打。" in snapshot["findings"]
-    assert "已认领 1 个岗位，继续优先补齐未认领高优先级岗位。" in snapshot["findings"]
-    assert snapshot["actions"][0] == "先看重点公司，再优先认领其中的高优先级岗位。"
+    assert "高优先级岗位 1 个，继续优先补齐关键团队和岗位判断。" in snapshot["findings"]
+    assert snapshot["actions"][0] == "先看重点公司，再优先跟进其中的高优先级岗位。"
 
 
 def test_build_narrative_from_fields_excludes_summary_text():
@@ -94,13 +94,13 @@ def test_build_narrative_from_fields_excludes_summary_text():
         headline="今日重点：AI 核心岗位仍是当前窗口内最明确的主线。",
         summary="基于近 14 天统一聚合结果生成：2 家公司，3 个岗位，1 个高优先级岗位。",
         findings=["重点公司 1 家，优先顺着公司卡往下打。"],
-        actions=["先看重点公司，再优先认领其中的高优先级岗位。"],
+        actions=["先看重点公司，再优先跟进其中的高优先级岗位。"],
     )
 
     assert "基于近 14 天统一聚合结果生成" not in narrative
     assert "你抬眼示意他继续" not in narrative
     assert not narrative.startswith("James侦探")
-    assert "先看重点公司，再优先认领其中的高优先级岗位。" in narrative
+    assert "先看重点公司，再优先跟进其中的高优先级岗位。" in narrative
 
 
 def test_build_intelligence_snapshot_handles_empty_day_payloads(monkeypatch):
@@ -188,7 +188,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
             "headline": "LLM 判断今天先打 AI 核心产研。",
             "summary": "真实模型基于统一聚合结果判断，建议先打重点公司与高优先级岗位。",
             "findings": ["AI 主线继续增强。"],
-            "actions": ["优先认领未认领高优先级岗位。"],
+            "actions": ["优先跟进高优先级岗位。"],
         }
 
     monkeypatch.setattr("app.services.intelligence.generate_llm_intelligence_fields", fake_generate)
@@ -234,7 +234,7 @@ def test_build_intelligence_snapshot_prefers_llm_when_project_key_is_configured(
     assert snapshot["headline"] == "LLM 判断今天先打 AI 核心产研。"
     assert snapshot["summary"] == "真实模型基于统一聚合结果判断，建议先打重点公司与高优先级岗位。"
     assert snapshot["findings"] == ["AI 主线继续增强。"]
-    assert snapshot["actions"] == ["优先认领未认领高优先级岗位。"]
+    assert snapshot["actions"] == ["优先跟进高优先级岗位。"]
     assert snapshot["analysis_version"] == "feed-v1"
     assert snapshot["rule_version"] == "score-v2"
 
@@ -349,7 +349,7 @@ def test_rule_intelligence_uses_change_context_when_jobs_are_available(monkeypat
 def test_parse_llm_intelligence_fields_accepts_json_code_fence():
     payload = parse_llm_intelligence_fields(
         """```json
-{"narrative":"James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高优先级岗位继续走强。","headline":"今天先盯 AI 核心岗","summary":"重点公司和高优先级岗位继续走强。","findings":["AI 产研是主线","重点公司集中出现","未认领高优先级仍有空间"],"actions":["先扫重点公司","优先认领高优先级","补公司判断"]}
+{"narrative":"James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高优先级岗位继续走强。","headline":"今天先盯 AI 核心岗","summary":"重点公司和高优先级岗位继续走强。","findings":["AI 产研是主线","重点公司集中出现","高优先级岗位仍有空间"],"actions":["先扫重点公司","优先跟进高优先级","补公司判断"]}
 ```"""
     )
 
@@ -357,8 +357,8 @@ def test_parse_llm_intelligence_fields_accepts_json_code_fence():
         "narrative": "James侦探把杯子往桌上一放，说今天先盯 AI 核心岗。你示意他继续，他说重点公司和高优先级岗位继续走强。",
         "headline": "今天先盯 AI 核心岗",
         "summary": "重点公司和高优先级岗位继续走强。",
-        "findings": ["AI 产研是主线", "重点公司集中出现", "未认领高优先级仍有空间"],
-        "actions": ["先扫重点公司", "优先认领高优先级", "补公司判断"],
+        "findings": ["AI 产研是主线", "重点公司集中出现", "高优先级岗位仍有空间"],
+        "actions": ["先扫重点公司", "优先跟进高优先级", "补公司判断"],
     }
 
 
@@ -678,7 +678,7 @@ def test_intelligence_prompts_use_plain_business_style_and_banned_rules():
     assert "James侦探" not in system_prompt
     assert "酒馆" not in system_prompt
     assert "narrative" in system_prompt
-    assert "认领人只表示内部占坑状态" in system_prompt
+    assert "内部状态只用于去重和背景判断" in system_prompt
     assert "禁止纯统计播报" in system_prompt
     assert "禁止空泛建议" in system_prompt
     assert "只能根据 change_context" in system_prompt
@@ -690,10 +690,10 @@ def test_intelligence_prompts_use_plain_business_style_and_banned_rules():
 
 def test_validate_llm_intelligence_fields_rejects_claimed_names():
     payload = {
-        "narrative": "今天先看高优先级产研岗。验收测试员已经认领了这条线。",
+        "narrative": "今天先看高优先级产研岗。验收测试员负责了这条线。",
         "headline": "今天先盯高优先级产研岗。",
         "summary": "他说今天真正冒头的是高优先级核心岗。",
-        "findings": ["验收测试员已经认领了这条线。"],
+        "findings": ["验收测试员负责了这条线。"],
         "actions": ["先盯重点公司。"],
     }
 

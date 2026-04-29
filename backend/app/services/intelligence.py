@@ -96,11 +96,10 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
     leading_tag = tag_counter.most_common(1)[0][0] if tag_counter else "核心"
     focus_companies = [company for company in companies if company.company_grade == "focus"]
     high_priority_jobs = [job for job in jobs if job.bounty_grade == "high"]
-    claimed_jobs = [job for job in jobs if job.claimed_names]
 
     findings = [
         f"重点公司 {len(focus_companies)} 家，优先顺着公司卡往下打。",
-        f"已认领 {len(claimed_jobs)} 个岗位，继续优先补齐未认领高优先级岗位。",
+        f"高优先级岗位 {len(high_priority_jobs)} 个，继续优先补齐关键团队和岗位判断。",
     ]
     if leading_tag == "AI":
         findings.insert(0, "AI 相关岗位仍是当前窗口内最强主线。")
@@ -120,9 +119,9 @@ def build_rule_intelligence_snapshot(day_payloads: list[DayBucketSnapshot], meta
         "generated_at": meta.generated_at,
         "findings": findings,
         "actions": [
-            "先看重点公司，再优先认领其中的高优先级岗位。",
-            f"围绕 {leading_tag} 主线继续筛出未认领的核心岗位。",
-            "对已认领岗位继续补充公司和团队判断，避免只盯单个职位。",
+            "先看重点公司，再优先跟进其中的高优先级岗位。",
+            f"围绕 {leading_tag} 主线继续筛出值得优先看的核心岗位。",
+            "继续补充公司和团队判断，避免只盯单个职位。",
         ],
     }
     snapshot["narrative"] = build_narrative_from_fields(
@@ -348,8 +347,8 @@ def build_intelligence_system_prompt() -> str:
         "禁止纯统计播报，不能只重复标签次数、公司数量、岗位数量。"
         "禁止报告腔，例如“根据数据分析可得”“本周市场动态显示”“综合来看”。"
         "禁止空泛建议，例如“制定专项方案”“加强关注”“主动接触候选人”。"
-        "认领人只表示内部占坑状态，不是联系人，不是候选人，不是行动线索。"
-        "禁止引用任何认领人名字，禁止写“联系已报备的人”“利用已报备线索”。"
+        "输入里的内部状态只用于去重和背景判断，不是联系人，不是候选人，不是行动线索。"
+        "禁止引用任何内部人员名字，禁止写“联系已报备的人”“利用已报备线索”。"
         "请严格模仿下面这个 JSON 风格，只替换成当前输入对应的内容："
         '{"narrative":"今天先看重新抬头的核心产研岗。和近14天基线相比，今天真正冒头的不是热闹标签，而是更集中地压在高优先级、业务关键、时间压力更高的岗位上。这说明市场不是单纯变热，而是企业更愿意把真正卡节奏的岗位先往外放，尤其是技术、AI和产品里带负责人属性的岗位。下一步更该先盯重点公司和持续招不动的团队，优先看技术、AI、产品里的高优先级核心岗。",'
         '"headline":"今天先看重新抬头的核心产研岗。",'

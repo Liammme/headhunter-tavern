@@ -4,8 +4,8 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "赏金池",
-  description: "内部猎头赏金池首页",
+  title: "Talent Signal",
+  description: "AI talent market signal dashboard",
 };
 
 const headingFont = localFont({

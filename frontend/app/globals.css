@@ -1012,8 +1012,6 @@ h5,
 }
 
 .feed-more-button,
-.claim-trigger,
-.claim-form button,
 .company-footer button,
 .company-clue-retry,
 .text-button,
@@ -1035,8 +1033,6 @@ h5,
 }
 
 .feed-more-button:hover,
-.claim-trigger:hover,
-.claim-form button:hover,
 .company-footer button:hover,
 .company-clue-retry:hover,
 .company-clue-tag:hover {
@@ -1247,40 +1243,6 @@ h5,
 .company-footer {
   display: flex;
   justify-content: flex-end;
-}
-
-.claim-dialog {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-lift);
-}
-
-.claim-dialog h4 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.claim-form {
-  display: grid;
-  gap: 10px;
-}
-
-.claim-form input {
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--foreground);
-  padding: 8px 11px;
-}
-
-.claim-form input:focus {
-  border-color: var(--foreground);
 }
 
 .company-clue-panel {
@@ -1577,8 +1539,7 @@ h5,
 
   .day-section,
   .company-card,
-  .company-clue-panel,
-  .claim-dialog {
+  .company-clue-panel {
     padding: 12px;
   }
 
@@ -1596,7 +1557,6 @@ h5,
   .company-clue-actions button,
   .dialog-actions button,
   .company-footer button,
-  .claim-trigger,
   .feed-more-button,
   .text-button {
     width: 100%;
@@ -1615,8 +1575,6 @@ h5,
 
   .company-card:hover,
   .feed-more-button:hover,
-  .claim-trigger:hover,
-  .claim-form button:hover,
   .company-footer button:hover,
   .company-clue-retry:hover,
   .company-clue-tag:hover,
