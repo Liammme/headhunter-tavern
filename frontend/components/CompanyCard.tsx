@@ -114,8 +114,7 @@ export default function CompanyCard({
         </div>
         {companyState.latest_posted_at ? (
           <time className="company-posted-at" dateTime={companyState.latest_posted_at}>
-            <span>发布时间</span>
-            <strong>{formatPostedAt(companyState.latest_posted_at)}</strong>
+            {formatPostedAt(companyState.latest_posted_at)}
           </time>
         ) : null}
       </div>
@@ -171,13 +170,13 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
 }
 
 function formatPostedAt(value: string) {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  const match = value.match(/^\d{4}-(\d{2})-(\d{2})/);
   if (!match) {
     return value;
   }
 
-  const [, year, month, day, hour, minute] = match;
-  return hour && minute ? `${year}/${month}/${day} ${hour}:${minute}` : `${year}/${month}/${day}`;
+  const [, month, day] = match;
+  return `${Number(month)}月${Number(day)}日`;
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {

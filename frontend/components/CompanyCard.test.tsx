@@ -63,8 +63,8 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText(new RegExp(legacyClaimedText))).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("发布时间")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("2026/04/18 09:00")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("发布时间")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("4月18日")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText(legacyRewardLabel)).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
