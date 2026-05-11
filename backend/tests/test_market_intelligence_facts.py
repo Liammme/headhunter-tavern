@@ -26,6 +26,13 @@ class StaticAdapter:
         return self._jobs
 
 
+class FailingAdapter:
+    source_name = "failing"
+
+    def fetch(self) -> list[NormalizedJob]:
+        raise RuntimeError("upstream blocked")
+
+
 def _normalized_job(
     *,
     canonical_url: str = "https://jobs.example.com/opening/1?token=secret",
@@ -90,6 +97,8 @@ def test_backfill_market_intelligence_facts_supports_dry_run_without_jobs_pollut
         "skipped_duplicate": 0,
         "skipped_out_of_window": 0,
         "skipped_invalid": 0,
+        "skipped_source_errors": 0,
+        "source_errors": [],
     }
     assert db_session.execute(select(MarketIntelligenceFact)).scalars().all() == []
     assert db_session.execute(select(Job)).scalars().all() == []
@@ -134,6 +143,28 @@ def test_backfill_market_intelligence_facts_filters_by_days(db_session):
     assert summary["skipped_out_of_window"] == 1
     assert len(facts) == 1
     assert facts[0].title == recent.title
+
+
+def test_backfill_market_intelligence_facts_continues_when_source_fails(db_session):
+    summary = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[FailingAdapter(), StaticAdapter([_normalized_job()])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+    )
+
+    facts = db_session.execute(select(MarketIntelligenceFact)).scalars().all()
+    assert summary["fetched"] == 1
+    assert summary["inserted"] == 1
+    assert summary["skipped_source_errors"] == 1
+    assert summary["source_errors"] == [
+        {
+            "source": "failing",
+            "error": "RuntimeError: upstream blocked",
+        }
+    ]
+    assert len(facts) == 1
 
 
 def test_generate_market_baseline_report_uses_facts_without_sensitive_terms(db_session, monkeypatch):

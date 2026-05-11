@@ -24,7 +24,7 @@ def backfill_market_intelligence_facts(
         raise ValueError("days must be one of 30, 90, or 180")
 
     collected_at = (collected_at or datetime.now()).replace(microsecond=0)
-    fetched_jobs = _fetch_jobs(adapters)
+    fetched_jobs, source_errors = _fetch_jobs(adapters)
     summary = {
         "days": days,
         "dry_run": dry_run,
@@ -34,6 +34,8 @@ def backfill_market_intelligence_facts(
         "skipped_duplicate": 0,
         "skipped_out_of_window": 0,
         "skipped_invalid": 0,
+        "skipped_source_errors": len(source_errors),
+        "source_errors": source_errors,
     }
 
     extracted_facts = []
@@ -78,15 +80,26 @@ def backfill_market_intelligence_facts(
     return summary
 
 
-def _fetch_jobs(adapters: Iterable[SourceAdapter] | None) -> list[NormalizedJob]:
+def _fetch_jobs(adapters: Iterable[SourceAdapter] | None) -> tuple[list[NormalizedJob], list[dict]]:
     active_adapters = list(adapters) if adapters is not None else [adapter_class() for adapter_class in ADAPTERS.values()]
     jobs: list[NormalizedJob] = []
+    source_errors: list[dict] = []
     for adapter in active_adapters:
-        for job in adapter.fetch():
+        try:
+            fetched = adapter.fetch()
+        except Exception as exc:
+            source_errors.append(
+                {
+                    "source": adapter.source_name,
+                    "error": f"{type(exc).__name__}: {str(exc)}",
+                }
+            )
+            continue
+        for job in fetched:
             if isinstance(job.raw_payload, dict) and "site" not in job.raw_payload:
                 job.raw_payload["site"] = adapter.source_name
             jobs.append(job)
-    return jobs
+    return jobs, source_errors
 
 
 def _is_in_window(value: datetime, collected_at: datetime, days: int) -> bool:
