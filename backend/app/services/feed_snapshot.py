@@ -38,6 +38,7 @@ class CompanyFeedSnapshot:
     claim_status: str | None = None
     estimated_bounty_amount: int | None = None
     estimated_bounty_label: str | None = None
+    jd_trust: dict | None = None
 
 
 @dataclass(frozen=True)

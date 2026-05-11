@@ -275,6 +275,30 @@ describe("CompanyCard", () => {
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
   });
 
+  it("shows backend jd trust summary without computing job risk on the client", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          jd_trust: {
+            legacy_job_id: 1,
+            risk_level: "needs_review",
+            trust_score: 55,
+            reason_codes: ["weak_job_page_evidence"],
+            recommended_checks: ["核对项目官网招聘页"],
+            evidence_refs: ["canonical_post"],
+          },
+        })}
+      />,
+    );
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+
+    expect(within(card as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("55")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("核对项目官网招聘页")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("weak_job_page_evidence")).not.toBeInTheDocument();
+  });
+
   it("keeps clue content hidden until the clue action is triggered", () => {
     render(<CompanyCard company={buildCompany()} />);
 

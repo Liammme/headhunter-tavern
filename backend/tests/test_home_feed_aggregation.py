@@ -438,3 +438,72 @@ def test_build_day_payloads_falls_back_to_pending_estimate_when_missing():
     company = payloads[0].companies[0]
     assert company.estimated_bounty_amount is None
     assert company.estimated_bounty_label == "待估算"
+
+
+def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_order():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Staff AI Engineer",
+            bounty_grade="high",
+            days_ago=0,
+        ),
+        build_job(
+            job_id=2,
+            company="OpenGradient",
+            company_normalized="opengradient",
+            title="Community Lead",
+            bounty_grade="medium",
+            days_ago=0,
+        ),
+    ]
+    jdtrust_assessments = {
+        1: {
+            "legacy_job_id": 1,
+            "canonical_url": "https://jobs.example.com/opengradient/1",
+            "source_name": "web3jobs",
+            "title": "Staff AI Engineer",
+            "company": "OpenGradient",
+            "risk_level": "low",
+            "trust_score": 88,
+            "reason_codes": [],
+            "recommended_checks": [],
+            "evidence_refs": ["company_site"],
+        },
+        2: {
+            "legacy_job_id": 2,
+            "canonical_url": "https://jobs.example.com/opengradient/2",
+            "source_name": "web3jobs",
+            "title": "Community Lead",
+            "company": "OpenGradient",
+            "risk_level": "needs_review",
+            "trust_score": 55,
+            "reason_codes": ["weak_job_page_evidence"],
+            "recommended_checks": ["核对项目官网招聘页"],
+            "evidence_refs": ["canonical_post"],
+        },
+    }
+
+    payloads = build_day_payloads(
+        jobs,
+        [],
+        today=datetime(2026, 4, 18).date(),
+        jdtrust_assessments=jdtrust_assessments,
+    )
+
+    company = payloads[0].companies[0]
+    assert [job.id for job in company.jobs] == [1, 2]
+    assert company.jd_trust == {
+        "legacy_job_id": 2,
+        "canonical_url": "https://jobs.example.com/opengradient/2",
+        "source_name": "web3jobs",
+        "title": "Community Lead",
+        "company": "OpenGradient",
+        "risk_level": "needs_review",
+        "trust_score": 55,
+        "reason_codes": ["weak_job_page_evidence"],
+        "recommended_checks": ["核对项目官网招聘页"],
+        "evidence_refs": ["canonical_post"],
+    }

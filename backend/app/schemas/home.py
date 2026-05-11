@@ -12,6 +12,19 @@ class JobCardOut(BaseModel):
     claimed_names: list[str]
 
 
+class JdTrustOut(BaseModel):
+    legacy_job_id: int
+    canonical_url: str | None = None
+    source_name: str | None = None
+    title: str | None = None
+    company: str | None = None
+    risk_level: Literal["low", "needs_review", "high"]
+    trust_score: int | None = None
+    reason_codes: list[str]
+    recommended_checks: list[str]
+    evidence_refs: list[str]
+
+
 class CompanyCardOut(BaseModel):
     company: str
     company_url: str | None = None
@@ -23,6 +36,7 @@ class CompanyCardOut(BaseModel):
     claim_status: str | None = None
     estimated_bounty_amount: int | None = None
     estimated_bounty_label: str | None = None
+    jd_trust: JdTrustOut | None = None
 
 
 class DayBucketOut(BaseModel):

@@ -1177,6 +1177,48 @@ h5,
   height: 14px;
 }
 
+.jdtrust-summary {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.jdtrust-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.jdtrust-risk,
+.jdtrust-score {
+  color: var(--muted-strong);
+}
+
+.jdtrust-risk-high {
+  color: var(--danger);
+}
+
+.jdtrust-risk-needs_review {
+  color: var(--warning);
+}
+
+.jdtrust-score strong {
+  color: var(--foreground);
+}
+
+.jdtrust-checks {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .company-claim-seal {
   width: 100%;
   display: grid;
