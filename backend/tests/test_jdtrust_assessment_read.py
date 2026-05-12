@@ -153,7 +153,7 @@ def test_load_jdtrust_assessments_extracts_only_abnormal_domain_facts(tmp_path):
     ]
 
 
-def test_load_jdtrust_assessments_builds_job_level_verification_tags(tmp_path):
+def test_load_jdtrust_assessments_builds_job_level_verification_tags_from_validation_results(tmp_path):
     output_path = tmp_path / "assessments.jsonl"
     output_path.write_text(
         json.dumps(
@@ -189,6 +189,4 @@ def test_load_jdtrust_assessments_builds_job_level_verification_tags(tmp_path):
     assert assessments[12]["verification_tags"] == [
         {"label": "RootData未命中", "tone": "warning"},
         {"label": "身份链偏薄", "tone": "warning"},
-        {"label": "原帖可访问", "tone": "positive"},
-        {"label": "Ashby申请入口", "tone": "positive"},
     ]

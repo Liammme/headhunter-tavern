@@ -34,8 +34,8 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
         bounty_grade: "high",
         tags: ["AI"],
         verification_tags: [
-          { label: "原帖可访问", tone: "positive" },
           { label: "RootData未命中", tone: "warning" },
+          { label: "身份链偏薄", tone: "warning" },
         ],
         claimed_names: [],
       },
@@ -160,8 +160,8 @@ describe("CompanyCard", () => {
               bounty_grade: "high",
               tags: ["AI", "Infra"],
               verification_tags: [
-                { label: "原帖可访问", tone: "positive" },
                 { label: "RootData未命中", tone: "warning" },
+                { label: "身份链偏薄", tone: "warning" },
               ],
               claimed_names: ["Lin"],
             },
@@ -233,8 +233,8 @@ describe("CompanyCard", () => {
               bounty_grade: "high",
               tags: ["AI", "Infra"],
               verification_tags: [
-                { label: "原帖可访问", tone: "positive" },
                 { label: "RootData未命中", tone: "warning" },
+                { label: "身份链偏薄", tone: "warning" },
               ],
               claimed_names: ["Lin"],
             },
@@ -275,8 +275,8 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText("中赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("低赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("AI")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getAllByText("原帖可访问")[0]).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText("RootData未命中")[0]).toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText("身份链偏薄")[0]).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("证据备注：")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",

@@ -16,9 +16,6 @@ DOMAIN_WARNING_LABELS = {
 REASON_WARNING_LABELS = {
     "rootdata_status_not_found": "RootData未命中",
     "identity_evidence_thin": "身份链偏薄",
-    "apply_url_missing": "缺少申请入口",
-    "source_internal_apply_needs_review": "站内申请需核验",
-    "source_internal_company_url_needs_review": "来源站公司页需核验",
 }
 REPUTATION_TAG_LABELS = {
     ("rootdata_status", "matched"): ("RootData命中", "positive"),
@@ -30,17 +27,6 @@ REPUTATION_TAG_LABELS = {
     ("identity_evidence", "strong"): ("身份链较强", "positive"),
     ("identity_evidence", "moderate"): ("身份证据一般", "neutral"),
     ("identity_evidence", "thin"): ("身份链偏薄", "warning"),
-    ("apply_link_status", "external_present"): ("外部申请入口", "positive"),
-    ("job_page_social_status", "links_present"): ("社交链接存在", "neutral"),
-}
-LINK_FACT_TAG_LABELS = {
-    "ats_ashby": "Ashby申请入口",
-    "ats_lever": "Lever申请入口",
-    "ats_greenhouse": "Greenhouse申请入口",
-    "apply_url": "外部申请入口",
-    "company_url": "公司官网链接",
-    "github": "GitHub链接",
-    "twitter_x": "X账号链接",
 }
 TAG_TONE_ORDER = {"danger": 0, "warning": 1, "positive": 2, "neutral": 3}
 MAX_VERIFICATION_TAGS = 4
@@ -166,14 +152,6 @@ def _verification_tags(row: dict, *, reason_codes: list[str], domain_warnings: l
     tags: list[dict] = []
     seen: set[tuple[str, str]] = set()
 
-    evidence = row.get("evidence")
-    if isinstance(evidence, dict):
-        is_accessible = evidence.get("is_accessible")
-        if is_accessible is False:
-            _append_tag(tags, seen, "原帖不可访问", "danger")
-        elif is_accessible is True:
-            _append_tag(tags, seen, "原帖可访问", "positive")
-
     for warning in domain_warnings:
         label = _optional_str(warning.get("label"))
         if label is not None:
@@ -196,20 +174,6 @@ def _verification_tags(row: dict, *, reason_codes: list[str], domain_warnings: l
             tag = REPUTATION_TAG_LABELS.get((fact_name, fact_value))
             if tag is not None:
                 _append_tag(tags, seen, tag[0], tag[1])
-
-    link_facts = row.get("link_facts")
-    if isinstance(link_facts, list):
-        for fact in link_facts:
-            if not isinstance(fact, dict):
-                continue
-            kind = _optional_str(fact.get("kind"))
-            if kind is None:
-                continue
-            label = LINK_FACT_TAG_LABELS.get(kind)
-            if label is None and kind.startswith("ats_"):
-                label = "ATS申请入口"
-            if label is not None:
-                _append_tag(tags, seen, label, "positive")
 
     tags.sort(key=lambda item: TAG_TONE_ORDER.get(item["tone"], len(TAG_TONE_ORDER)))
     return tags[:MAX_VERIFICATION_TAGS]

@@ -473,7 +473,7 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
             "evidence_refs": ["company_site"],
             "domain_warnings": [],
             "verification_tags": [
-                {"label": "原帖可访问", "tone": "positive"},
+                {"label": "RootData命中", "tone": "positive"},
             ],
         },
         2: {
@@ -510,7 +510,7 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
 
     company = payloads[0].companies[0]
     assert [job.id for job in company.jobs] == [1, 2]
-    assert company.jobs[0].verification_tags == [{"label": "原帖可访问", "tone": "positive"}]
+    assert company.jobs[0].verification_tags == [{"label": "RootData命中", "tone": "positive"}]
     assert company.jobs[1].verification_tags == [
         {"label": "RootData未命中", "tone": "warning"},
         {"label": "身份链偏薄", "tone": "warning"},
