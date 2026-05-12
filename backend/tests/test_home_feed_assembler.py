@@ -63,6 +63,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                         "claim_status": None,
                         "estimated_bounty_amount": None,
                         "estimated_bounty_label": None,
+                        "jd_trust": None,
                         "jobs": [
                             {
                                 "id": 1,
@@ -71,6 +72,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                                 "bounty_grade": "high",
                                 "tags": ["AI", "Senior"],
                                 "claimed_names": ["Liam"],
+                                "verification_tags": [],
                             }
                         ],
                     }

@@ -61,7 +61,13 @@ export type JobCardPayload = {
   canonical_url: string;
   bounty_grade: "high" | "medium" | "low";
   tags: string[];
+  verification_tags?: VerificationTagPayload[];
   claimed_names: string[];
+};
+
+export type VerificationTagPayload = {
+  label: string;
+  tone: "positive" | "warning" | "danger" | "neutral";
 };
 
 export type CompanyCardPayload = {
@@ -90,6 +96,7 @@ export type JdTrustPayload = {
   recommended_checks: string[];
   evidence_refs: string[];
   domain_warnings?: JdTrustDomainWarning[];
+  verification_tags?: VerificationTagPayload[];
 };
 
 export type JdTrustDomainWarning = {

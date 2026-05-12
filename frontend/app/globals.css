@@ -1356,6 +1356,30 @@ h5,
   background: var(--surface-raised);
 }
 
+.job-badge-positive {
+  border-color: rgba(36, 138, 85, 0.28);
+  background: rgba(36, 138, 85, 0.08);
+  color: #1c6b44;
+}
+
+.job-badge-warning {
+  border-color: rgba(184, 114, 27, 0.3);
+  background: rgba(184, 114, 27, 0.08);
+  color: #8a5517;
+}
+
+.job-badge-danger {
+  border-color: rgba(188, 62, 62, 0.32);
+  background: rgba(188, 62, 62, 0.08);
+  color: #9d2f2f;
+}
+
+.job-badge-neutral {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--muted-strong);
+}
+
 .job-actions {
   display: grid;
   justify-items: end;

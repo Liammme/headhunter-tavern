@@ -124,27 +124,32 @@ export default function CompanyCard({
         />
       ) : null}
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
-        {jobs.map((job) => (
-          <div key={job.id} className="job-row">
-            <div>
-              <h4 className="job-title">{job.title}</h4>
-              <div className="job-evidence">
-                <div className="job-badges">
-                  {job.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="job-badge">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+        {jobs.map((job) => {
+          const verificationTags = job.verification_tags ?? [];
+          return (
+            <div key={job.id} className="job-row">
+              <div>
+                <h4 className="job-title">{job.title}</h4>
+                {verificationTags.length > 0 ? (
+                  <div className="job-evidence">
+                    <div className="job-badges">
+                      {verificationTags.slice(0, 4).map((tag) => (
+                        <span key={`${tag.tone}-${tag.label}`} className={`job-badge job-badge-${tag.tone}`}>
+                          {tag.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="job-actions">
+                <a href={job.canonical_url} target="_blank" rel="noreferrer">
+                  查看原帖
+                </a>
               </div>
             </div>
-            <div className="job-actions">
-              <a href={job.canonical_url} target="_blank" rel="noreferrer">
-                查看原帖
-              </a>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
       {showJobExpand && companyState.jobs.length > defaultVisibleJobs ? (
         <div className="company-footer">

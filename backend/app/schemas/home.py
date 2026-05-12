@@ -3,12 +3,18 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+class VerificationTagOut(BaseModel):
+    label: str
+    tone: Literal["positive", "warning", "danger", "neutral"]
+
+
 class JobCardOut(BaseModel):
     id: int
     title: str
     canonical_url: str
     bounty_grade: str
     tags: list[str]
+    verification_tags: list[VerificationTagOut] = Field(default_factory=list)
     claimed_names: list[str]
 
 
@@ -24,6 +30,7 @@ class JdTrustOut(BaseModel):
     recommended_checks: list[str]
     evidence_refs: list[str]
     domain_warnings: list[dict] = Field(default_factory=list)
+    verification_tags: list[VerificationTagOut] = Field(default_factory=list)
 
 
 class CompanyCardOut(BaseModel):

@@ -40,6 +40,7 @@ def test_load_jdtrust_assessments_indexes_combined_assessment_by_legacy_job_id(t
         "recommended_checks": ["核对官网招聘页"],
         "evidence_refs": ["apply_link"],
         "domain_warnings": [],
+        "verification_tags": [],
     }
 
 
@@ -149,4 +150,45 @@ def test_load_jdtrust_assessments_extracts_only_abnormal_domain_facts(tmp_path):
             "fact_value": "new_domain_30d",
             "label": "岗位页外部域名注册未满 30 天",
         },
+    ]
+
+
+def test_load_jdtrust_assessments_builds_job_level_verification_tags(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": 12,
+                "evidence": {"is_accessible": True},
+                "link_facts": [
+                    {
+                        "kind": "ats_ashby",
+                        "is_same_domain": False,
+                    }
+                ],
+                "combined_assessment": {
+                    "risk_level": "needs_review",
+                    "trust_score": 77,
+                    "reason_codes": ["rootdata_status_not_found", "identity_evidence_thin"],
+                    "recommended_checks": [],
+                    "evidence_refs": [],
+                },
+                "reputation_facts": [
+                    {"fact_name": "rootdata_status", "fact_value": "not_found"},
+                    {"fact_name": "identity_evidence", "fact_value": "thin"},
+                    {"fact_name": "domain_age_status", "fact_value": "established"},
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assessments = load_jdtrust_assessments(output_path)
+
+    assert assessments[12]["verification_tags"] == [
+        {"label": "RootData未命中", "tone": "warning"},
+        {"label": "身份链偏薄", "tone": "warning"},
+        {"label": "原帖可访问", "tone": "positive"},
+        {"label": "Ashby申请入口", "tone": "positive"},
     ]

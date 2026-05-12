@@ -66,7 +66,7 @@ def build_day_payloads(
                 company["jobs"],
                 key=lambda current_job: (JOB_GRADE_ORDER[current_job.bounty_grade], current_job.title.lower()),
             )
-            jobs_payload = [_build_job_payload(job) for job in sorted_jobs]
+            jobs_payload = [_build_job_payload(job, jdtrust_assessments.get(job.id)) for job in sorted_jobs]
             company_claims: list[str] = []
             for job_item in jobs_payload:
                 for name in claim_map.get(job_item["id"], []):
@@ -135,6 +135,7 @@ def _select_company_jdtrust(jobs: list[Job], assessments: dict[int, dict]) -> di
         "recommended_checks": list(selected.get("recommended_checks") or []),
         "evidence_refs": list(selected.get("evidence_refs") or []),
         "domain_warnings": list(selected.get("domain_warnings") or []),
+        "verification_tags": list(selected.get("verification_tags") or []),
     }
 
 
@@ -142,12 +143,13 @@ def _trust_score_sort_value(value) -> int:
     return value if isinstance(value, int) else 101
 
 
-def _build_job_payload(job: Job) -> dict:
+def _build_job_payload(job: Job, jdtrust_assessment: dict | None = None) -> dict:
     return {
         "id": job.id,
         "title": job.title,
         "canonical_url": job.canonical_url,
         "bounty_grade": job.bounty_grade,
         "tags": list(job.signal_tags.get("display_tags", [])),
+        "verification_tags": list((jdtrust_assessment or {}).get("verification_tags") or []),
         "claimed_names": [],
     }
