@@ -9,7 +9,7 @@ from app.services.estimated_bounty_read import (
 )
 from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
 from app.services.grouping import bucket_posted_date
-from app.services.job_category_classifier import JOB_CATEGORIES
+from app.services.job_category_classifier import JOB_CATEGORIES, classify_job_category_result
 from app.services.scoring import derive_company_grade
 
 BUCKET_ORDER = {"within_3_days": 0, "within_7_days": 1, "earlier": 2}
@@ -118,19 +118,31 @@ def _build_job_payload(job: Job) -> dict:
 
 
 def _resolve_job_category(job: Job) -> str:
-    normalized_job_category = _normalize_job_category(job.job_category)
-    if normalized_job_category and normalized_job_category != "其他":
-        return normalized_job_category
-
     normalized_signal_category = _normalize_job_category(job.signal_tags.get("job_category"))
     if normalized_signal_category and normalized_signal_category != "其他":
         return normalized_signal_category
+
+    classifier_result = classify_job_category_result(job.title, "")
+    classifier_category = _normalize_job_category(classifier_result.primary)
+    if (
+        classifier_category
+        and classifier_category != "其他"
+        and classifier_result.confidence == "high"
+    ):
+        return classifier_category
+
+    normalized_job_category = _normalize_job_category(job.job_category)
+    if normalized_job_category and normalized_job_category != "其他":
+        return normalized_job_category
 
     display_tags = job.signal_tags.get("display_tags", [])
     for tag in display_tags:
         normalized_tag = _normalize_job_category(tag)
         if normalized_tag and normalized_tag != "其他":
             return normalized_tag
+
+    if classifier_category and classifier_category != "其他":
+        return classifier_category
 
     return normalized_job_category or "其他"
 

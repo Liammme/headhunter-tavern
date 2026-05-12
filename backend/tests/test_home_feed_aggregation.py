@@ -174,6 +174,64 @@ def test_build_day_payloads_normalizes_legacy_growth_category():
     assert payloads[0].companies[0].jobs[0].job_category == "市场"
 
 
+def test_build_day_payloads_falls_back_to_title_classifier_for_legacy_jobs():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Design Co",
+            company_normalized="legacy-design-co",
+            title="Graphic Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="其他",
+            tags=["Web3", "长期挂岗"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "设计"
+
+
+def test_build_day_payloads_uses_high_confidence_title_category_over_legacy_category():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Product Co",
+            company_normalized="legacy-product-co",
+            title="Product Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="产品",
+            tags=["Web3", "产品", "长期挂岗"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "设计"
+
+
+def test_build_day_payloads_keeps_explicit_signal_category_before_title_classifier():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Signal Category Co",
+            company_normalized="signal-category-co",
+            title="Product Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="产品",
+            tags=["Web3", "产品", "长期挂岗"],
+        )
+    ]
+    jobs[0].signal_tags["job_category"] = "产品"
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "产品"
+
+
 def test_build_day_payloads_uses_non_overlapping_recent_buckets():
     jobs = [
         build_job(
