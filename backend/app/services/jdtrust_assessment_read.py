@@ -163,7 +163,8 @@ def _domain_warnings(value: Any, row: dict | None = None, project_website_domain
     project_website_domains = project_website_domains or set()
     warnings: list[dict] = []
     seen: set[tuple[str, str]] = set()
-    for item in value:
+    domain_age_facts = _combined_domain_age_facts(value)
+    for item in [*value, *domain_age_facts]:
         if not isinstance(item, dict):
             continue
         fact_name = _optional_str(item.get("fact_name"))

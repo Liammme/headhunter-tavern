@@ -356,6 +356,65 @@ def test_load_jdtrust_assessments_combines_split_domain_age_facts(tmp_path):
     ]
 
 
+def test_load_jdtrust_assessments_combines_split_domain_age_warning_facts(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": 17,
+                "canonical_url": "https://dejob.ai/jobDetail?id=7000",
+                "combined_assessment": {
+                    "risk_level": "needs_review",
+                    "trust_score": 62,
+                    "reason_codes": [],
+                    "recommended_checks": [],
+                    "evidence_refs": [],
+                },
+                "link_facts": [
+                    {
+                        "kind": "company_url",
+                        "domain": "newproject.example",
+                        "url": "https://newproject.example/",
+                    }
+                ],
+                "reputation_facts": [
+                    {
+                        "fact_name": "domain_age_status",
+                        "fact_value": "new_domain_30d",
+                    },
+                    {
+                        "fact_name": "domain_age_domain",
+                        "fact_value": "newproject.example",
+                    },
+                    {
+                        "fact_name": "domain_age_days",
+                        "fact_value": "12",
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assessments = load_jdtrust_assessments(output_path)
+
+    assert assessments[17]["domain_warnings"] == [
+        {
+            "fact_name": "domain_age_status",
+            "fact_value": "new_domain_30d",
+            "label": "项目域名注册未满 30 天",
+        }
+    ]
+    assert assessments[17]["verification_tags"] == [
+        {
+            "label": "项目域名注册未满 30 天",
+            "tone": "warning",
+            "description": "项目相关域名注册时间很短，需要额外核验来源。",
+        }
+    ]
+
+
 def test_load_jdtrust_assessments_builds_job_level_verification_tags_from_validation_results(tmp_path):
     output_path = tmp_path / "assessments.jsonl"
     output_path.write_text(
