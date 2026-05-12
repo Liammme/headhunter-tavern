@@ -3,6 +3,7 @@ from datetime import datetime
 import re
 
 from app.crawlers.base import NormalizedJob
+from app.services.job_category_classifier import classify_job_category_result
 from app.services.scoring import JobScoreInput, JobScoreV2Input
 
 LONG_RUNNING_DAYS = 7
@@ -49,6 +50,10 @@ class JobFacts:
     company_signal: str
     time_pressure_signals: tuple[str, ...]
     annual_salary_range: tuple[int, int] | None = None
+    secondary_categories: tuple[str, ...] = ()
+    category_confidence: str = "medium"
+    category_reason: str = ""
+    mixed_job_posting: bool = False
 
 
 def standardize_job_input(job: NormalizedJob, *, now: datetime | None = None) -> StandardizedJobInput:
@@ -77,12 +82,13 @@ def extract_job_facts(job: StandardizedJobInput, *, now: datetime | None = None)
     now = (now or datetime.now()).replace(microsecond=0)
     text = f"{job.title} {job.description}".lower()
     title_text = job.title.lower()
-    category = classify_job_category(job.title, job.description)
+    category_result = classify_job_category_result(job.title, job.description)
+    category = category_result.primary
     domain_tag = classify_domain_tag(job.title, job.description, job.canonical_url)
     seniority = classify_seniority(title_text)
     urgent = has_any_keyword(text, ("urgent", "asap", "immediately", "hiring fast"))
     critical = seniority in {"staff", "principal", "lead", "head", "director", "vp", "architect"}
-    bd_entry = category in {"商务", "增长", "产品"}
+    bd_entry = category in {"销售", "商务", "市场", "产品", "DevRel/社区"}
 
     hard_to_fill = critical or (
         category in {"AI/算法", "数据"} and has_any_keyword(text, ("llm", "ml", "algorithm", "infra", "platform"))
@@ -123,6 +129,10 @@ def extract_job_facts(job: StandardizedJobInput, *, now: datetime | None = None)
         company_signal=classify_company_signal(domain_tag, text),
         time_pressure_signals=tuple(time_pressure_signals),
         annual_salary_range=parse_annual_salary_range(text),
+        secondary_categories=category_result.secondary,
+        category_confidence=category_result.confidence,
+        category_reason=category_result.reason,
+        mixed_job_posting=category_result.mixed_job_posting,
     )
 
 
@@ -160,6 +170,11 @@ def build_legacy_signal_tags(facts: JobFacts) -> dict:
         "urgent": facts.urgent,
         "critical": facts.critical,
         "bd_entry": facts.bd_entry,
+        "job_category": facts.category,
+        "secondary_categories": list(facts.secondary_categories),
+        "category_confidence": facts.category_confidence,
+        "category_reason": facts.category_reason,
+        "mixed_job_posting": facts.mixed_job_posting,
     }
 
 
@@ -183,14 +198,22 @@ def build_display_tags(facts: JobFacts) -> list[str]:
 def build_secondary_tag(facts: JobFacts) -> str:
     if facts.seniority != "none":
         return "Senior"
-    if facts.category == "产品":
-        return "产品"
-    if facts.category == "商务":
-        return "商务"
-    if facts.category == "增长":
-        return "增长"
-    if facts.category == "数据":
-        return "数据"
+    if facts.category in {
+        "设计",
+        "运营",
+        "市场",
+        "销售",
+        "商务",
+        "产品",
+        "数据",
+        "安全",
+        "DevRel/社区",
+        "财务/法务/HR",
+        "其他",
+    }:
+        return facts.category
+    if facts.category == "AI/算法":
+        return "AI"
     return "技术"
 
 
@@ -216,20 +239,7 @@ def derive_company_name(canonical_url: str) -> str:
 
 
 def classify_job_category(title: str, description: str) -> str:
-    text = f"{title} {description}".lower()
-    if has_any_keyword(text, ("ai", "ml", "machine learning", "llm", "algorithm", "algorithms")):
-        return "AI/算法"
-    if has_any_keyword(text, ("data scientist", "data engineer", "analytics", "analyst")):
-        return "数据"
-    if "product" in text or "产品" in text:
-        return "产品"
-    if has_any_keyword(text, ("growth", "marketing", "go-to-market")):
-        return "增长"
-    if has_any_keyword(text, ("partnership", "business development", "ecosystem", "bd")):
-        return "商务"
-    if has_any_keyword(text, ("operations", "运营", "community")):
-        return "运营"
-    return "技术"
+    return classify_job_category_result(title, description).primary
 
 
 def classify_domain_tag(title: str, description: str, canonical_url: str) -> str:
@@ -280,7 +290,7 @@ def classify_business_criticality(text: str, *, category: str) -> str:
         ("launch", "delivery", "revenue", "growth", "roadmap", "platform", "core", "founding"),
     ):
         return "high"
-    if category in {"AI/算法", "产品", "增长"}:
+    if category in {"AI/算法", "产品", "市场", "销售"}:
         return "medium"
     return "low"
 

@@ -31,9 +31,33 @@ def test_build_job_payload_derives_company_and_analysis_fields():
     assert payload["domain_tag"] == "AI"
     assert payload["bounty_grade"] == "medium"
     assert payload["signal_tags"]["display_tags"][0] == "AI"
+    assert payload["signal_tags"]["job_category"] == "AI/算法"
+    assert payload["signal_tags"]["category_confidence"] in {"high", "medium"}
+    assert payload["signal_tags"]["mixed_job_posting"] is False
     assert "job_facts" not in payload
     assert "score_inputs" not in payload
     assert "score_results" not in payload
+
+
+def test_build_job_payload_marks_mixed_job_postings_for_filter_safety():
+    job = NormalizedJob(
+        source_job_id="mixed",
+        canonical_url="https://jobs.example.com/mixed",
+        title="以下岗位投递 @hr\n产品经理\nUI Designer\nBackend Engineer\nBD Manager",
+        company="Mixed Co",
+        location="Remote",
+        remote_type="remote",
+        employment_type="full-time",
+        description="",
+        posted_at=datetime.now().replace(microsecond=0),
+        raw_payload={"site": "demo-board"},
+    )
+
+    payload = build_job_payload(job)
+
+    assert payload["job_category"] == "其他"
+    assert payload["signal_tags"]["mixed_job_posting"] is True
+    assert payload["signal_tags"]["category_confidence"] == "low"
 
 
 def test_build_job_payload_preserves_company_url_when_present():
