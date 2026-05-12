@@ -73,3 +73,27 @@ def test_load_jdtrust_assessments_ignores_malformed_rows(tmp_path):
 
 def test_load_jdtrust_assessments_returns_empty_when_path_missing(tmp_path):
     assert load_jdtrust_assessments(tmp_path / "missing.jsonl") == {}
+
+
+def test_load_jdtrust_assessments_excludes_aijobs_source(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": 9,
+                "source_name": "aijobsnet",
+                "company": "Aijobs",
+                "combined_assessment": {
+                    "risk_level": "needs_review",
+                    "trust_score": 61,
+                    "reason_codes": ["job_board_identity"],
+                    "recommended_checks": ["Verify the employer outside the job board."],
+                    "evidence_refs": [],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert load_jdtrust_assessments(output_path) == {}

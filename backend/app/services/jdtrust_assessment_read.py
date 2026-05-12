@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 JDTRUST_RISK_LEVELS = {"low", "needs_review", "high"}
+EXCLUDED_SOURCE_NAMES = {"aijobsnet"}
 
 
 def load_jdtrust_assessments(path: str | Path | None) -> dict[int, dict]:
@@ -37,8 +38,11 @@ def _parse_assessment_line(line: str) -> dict | None:
         return None
 
     legacy_job_id = _coerce_int(row.get("legacy_job_id"))
+    source_name = _optional_str(row.get("source_name"))
     combined_assessment = row.get("combined_assessment")
     if legacy_job_id is None or not isinstance(combined_assessment, dict):
+        return None
+    if source_name and source_name.lower() in EXCLUDED_SOURCE_NAMES:
         return None
 
     risk_level = combined_assessment.get("risk_level")
@@ -48,7 +52,7 @@ def _parse_assessment_line(line: str) -> dict | None:
     return {
         "legacy_job_id": legacy_job_id,
         "canonical_url": _optional_str(row.get("canonical_url")),
-        "source_name": _optional_str(row.get("source_name")),
+        "source_name": source_name,
         "title": _optional_str(row.get("title")),
         "company": _optional_str(row.get("company")),
         "risk_level": risk_level,
