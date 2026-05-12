@@ -136,6 +136,44 @@ def test_build_day_payloads_filters_jobs_outside_window():
     assert [company.company for company in payloads[0].companies] == ["OpenGradient"]
 
 
+def test_build_day_payloads_derives_category_from_legacy_display_tags():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Data Co",
+            company_normalized="legacy-data-co",
+            title="Data Engineer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="其他",
+            tags=["AI", "数据", "关键扩张"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "数据"
+
+
+def test_build_day_payloads_normalizes_legacy_growth_category():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Growth Co",
+            company_normalized="legacy-growth-co",
+            title="Growth Manager",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="增长",
+            tags=["Web3", "增长"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "市场"
+
+
 def test_build_day_payloads_uses_non_overlapping_recent_buckets():
     jobs = [
         build_job(

@@ -8,6 +8,7 @@ class JobCardOut(BaseModel):
     title: str
     canonical_url: str
     bounty_grade: str
+    job_category: str
     tags: list[str]
     claimed_names: list[str]
 
