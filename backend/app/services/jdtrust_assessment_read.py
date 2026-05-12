@@ -301,9 +301,49 @@ def _verification_tags(
             domain_age_label = _domain_age_positive_label(fact, fact_name, fact_value, project_website_domains)
             if domain_age_label is not None:
                 _append_tag(tags, seen, domain_age_label, "positive")
+        for fact in _combined_domain_age_facts(reputation_facts):
+            domain_age_label = _domain_age_positive_label(
+                fact,
+                _optional_str(fact.get("fact_name")) or "",
+                _optional_str(fact.get("fact_value")) or "",
+                project_website_domains,
+            )
+            if domain_age_label is not None:
+                _append_tag(tags, seen, domain_age_label, "positive")
 
     tags.sort(key=lambda item: TAG_TONE_ORDER.get(item["tone"], len(TAG_TONE_ORDER)))
     return tags[:MAX_VERIFICATION_TAGS]
+
+
+def _combined_domain_age_facts(reputation_facts: list) -> list[dict]:
+    status: str | None = None
+    domain: str | None = None
+    age_days: str | None = None
+    for fact in reputation_facts:
+        if not isinstance(fact, dict):
+            continue
+        fact_name = _optional_str(fact.get("fact_name"))
+        fact_value = _optional_str(fact.get("fact_value"))
+        if fact_name is None or fact_value is None:
+            continue
+        if fact_name == "domain_age_status":
+            status = fact_value
+        elif fact_name in {"domain_age_domain", "registered_domain"} and domain is None:
+            domain = fact_value
+        elif fact_name in {"domain_age_days", "age_days"} and age_days is None:
+            age_days = fact_value
+
+    if status is None or domain is None:
+        return []
+
+    return [
+        {
+            "fact_name": "domain_age_status",
+            "fact_value": status,
+            "domain": domain,
+            "domain_age_days": age_days,
+        }
+    ]
 
 
 def _domain_age_positive_label(

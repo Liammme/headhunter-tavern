@@ -304,6 +304,58 @@ def test_load_jdtrust_assessments_shows_project_website_domain_age_only_when_off
     assert assessments[15]["verification_tags"] == []
 
 
+def test_load_jdtrust_assessments_combines_split_domain_age_facts(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": 16,
+                "canonical_url": "https://dejob.ai/jobDetail?id=6882",
+                "combined_assessment": {
+                    "risk_level": "low",
+                    "trust_score": 90,
+                    "reason_codes": [],
+                    "recommended_checks": [],
+                    "evidence_refs": [],
+                },
+                "link_facts": [
+                    {
+                        "kind": "company_url",
+                        "domain": "fermah.xyz",
+                        "url": "https://fermah.xyz/",
+                    }
+                ],
+                "reputation_facts": [
+                    {
+                        "fact_name": "domain_age_status",
+                        "fact_value": "established",
+                    },
+                    {
+                        "fact_name": "domain_age_domain",
+                        "fact_value": "fermah.xyz",
+                    },
+                    {
+                        "fact_name": "domain_age_days",
+                        "fact_value": "664",
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assessments = load_jdtrust_assessments(output_path)
+
+    assert assessments[16]["verification_tags"] == [
+        {
+            "label": "官网域名注册超过 1 年",
+            "tone": "positive",
+            "description": "原帖抓到了项目官网，并确认该官网域名注册时间超过 1 年。",
+        }
+    ]
+
+
 def test_load_jdtrust_assessments_builds_job_level_verification_tags_from_validation_results(tmp_path):
     output_path = tmp_path / "assessments.jsonl"
     output_path.write_text(
