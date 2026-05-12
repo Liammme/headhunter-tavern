@@ -89,6 +89,13 @@ export type JdTrustPayload = {
   reason_codes: string[];
   recommended_checks: string[];
   evidence_refs: string[];
+  domain_warnings?: JdTrustDomainWarning[];
+};
+
+export type JdTrustDomainWarning = {
+  fact_name: string;
+  fact_value: string;
+  label: string;
 };
 
 export type DayBucketPayload = {

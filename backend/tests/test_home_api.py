@@ -185,6 +185,7 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
                             "reason_codes": ["weak_job_page_evidence"],
                             "recommended_checks": ["核对项目官网招聘页"],
                             "evidence_refs": ["canonical_post"],
+                            "domain_warnings": [],
                         },
                         "company_grade": "focus",
                         "total_jobs": 1,

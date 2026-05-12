@@ -471,6 +471,7 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
             "reason_codes": [],
             "recommended_checks": [],
             "evidence_refs": ["company_site"],
+            "domain_warnings": [],
         },
         2: {
             "legacy_job_id": 2,
@@ -483,6 +484,13 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
             "reason_codes": ["weak_job_page_evidence"],
             "recommended_checks": ["核对项目官网招聘页"],
             "evidence_refs": ["canonical_post"],
+            "domain_warnings": [
+                {
+                    "fact_name": "email_domain_relation",
+                    "fact_value": "mismatches_company_domain",
+                    "label": "邮箱域名与公司域名不一致",
+                }
+            ],
         },
     }
 
@@ -506,4 +514,11 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
         "reason_codes": ["weak_job_page_evidence"],
         "recommended_checks": ["核对项目官网招聘页"],
         "evidence_refs": ["canonical_post"],
+        "domain_warnings": [
+            {
+                "fact_name": "email_domain_relation",
+                "fact_value": "mismatches_company_domain",
+                "label": "邮箱域名与公司域名不一致",
+            }
+        ],
     }

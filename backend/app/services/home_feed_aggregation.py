@@ -134,6 +134,7 @@ def _select_company_jdtrust(jobs: list[Job], assessments: dict[int, dict]) -> di
         "reason_codes": list(selected.get("reason_codes") or []),
         "recommended_checks": list(selected.get("recommended_checks") or []),
         "evidence_refs": list(selected.get("evidence_refs") or []),
+        "domain_warnings": list(selected.get("domain_warnings") or []),
     }
 
 

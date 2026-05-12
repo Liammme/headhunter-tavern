@@ -127,6 +127,7 @@ def test_build_home_payload_reads_configured_jdtrust_assessment_jsonl(db_session
         "reason_codes": ["weak_job_page_evidence"],
         "recommended_checks": ["核对官网招聘页"],
         "evidence_refs": ["canonical_post"],
+        "domain_warnings": [],
     }
 
 

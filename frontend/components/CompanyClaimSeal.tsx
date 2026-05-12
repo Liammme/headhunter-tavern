@@ -58,6 +58,7 @@ function JdTrustRail({ jdTrust }: { jdTrust: CompanyCardPayload["jd_trust"] | nu
   }
 
   const checks = jdTrust.recommended_checks.slice(0, 2);
+  const domainWarnings = (jdTrust.domain_warnings ?? []).slice(0, 3);
 
   return (
     <section className="jdtrust-rail" aria-label="JD可信度甄别结果">
@@ -71,6 +72,16 @@ function JdTrustRail({ jdTrust }: { jdTrust: CompanyCardPayload["jd_trust"] | nu
             <li key={check}>{check}</li>
           ))}
         </ul>
+      ) : null}
+      {domainWarnings.length ? (
+        <div className="jdtrust-domain-warnings">
+          <span>域名验证异常</span>
+          <ul>
+            {domainWarnings.map((warning) => (
+              <li key={`${warning.fact_name}:${warning.fact_value}`}>{warning.label}</li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </section>
   );

@@ -24,6 +24,7 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
       reason_codes: ["weak_job_page_evidence"],
       recommended_checks: ["核对项目官网招聘页"],
       evidence_refs: ["canonical_post"],
+      domain_warnings: [],
     },
     jobs: [
       {
@@ -295,6 +296,13 @@ describe("CompanyCard", () => {
             reason_codes: ["weak_job_page_evidence"],
             recommended_checks: ["核对项目官网招聘页"],
             evidence_refs: ["canonical_post"],
+            domain_warnings: [
+              {
+                fact_name: "email_domain_status",
+                fact_value: "mx_missing",
+                label: "邮箱域名缺少 MX 记录",
+              },
+            ],
           },
         })}
       />,
@@ -307,6 +315,8 @@ describe("CompanyCard", () => {
     expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("55")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("核对项目官网招聘页")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("域名验证异常")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("邮箱域名缺少 MX 记录")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("weak_job_page_evidence")).not.toBeInTheDocument();
   });
 

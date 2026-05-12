@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JobCardOut(BaseModel):
@@ -23,6 +23,7 @@ class JdTrustOut(BaseModel):
     reason_codes: list[str]
     recommended_checks: list[str]
     evidence_refs: list[str]
+    domain_warnings: list[dict] = Field(default_factory=list)
 
 
 class CompanyCardOut(BaseModel):

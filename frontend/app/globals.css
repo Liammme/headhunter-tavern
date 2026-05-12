@@ -1230,6 +1230,27 @@ h5,
   line-height: 1.45;
 }
 
+.jdtrust-domain-warnings {
+  display: grid;
+  gap: 5px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.jdtrust-domain-warnings span {
+  color: var(--muted-strong);
+  font-family: var(--font-mono-stack);
+  font-size: 12px;
+}
+
+.jdtrust-domain-warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .company-claim-seal {
   width: 100%;
   display: grid;
