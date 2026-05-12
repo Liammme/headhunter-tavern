@@ -61,7 +61,14 @@ export type JobCardPayload = {
   canonical_url: string;
   bounty_grade: "high" | "medium" | "low";
   tags: string[];
+  verification_tags?: VerificationTagPayload[];
   claimed_names: string[];
+};
+
+export type VerificationTagPayload = {
+  label: string;
+  tone: "positive" | "warning" | "danger" | "neutral";
+  description: string;
 };
 
 export type CompanyCardPayload = {
@@ -75,6 +82,28 @@ export type CompanyCardPayload = {
   claim_status?: string | null;
   estimated_bounty_amount?: number | null;
   estimated_bounty_label?: string | null;
+  jd_trust?: JdTrustPayload | null;
+};
+
+export type JdTrustPayload = {
+  legacy_job_id: number;
+  canonical_url?: string | null;
+  source_name?: string | null;
+  title?: string | null;
+  company?: string | null;
+  risk_level: "low" | "needs_review" | "high";
+  trust_score?: number | null;
+  reason_codes: string[];
+  recommended_checks: string[];
+  evidence_refs: string[];
+  domain_warnings?: JdTrustDomainWarning[];
+  verification_tags?: VerificationTagPayload[];
+};
+
+export type JdTrustDomainWarning = {
+  fact_name: string;
+  fact_value: string;
+  label: string;
 };
 
 export type DayBucketPayload = {

@@ -5,10 +5,6 @@ import CompanyCard from "./CompanyCard";
 import { requestCompanyClueLetter } from "../lib/api";
 import type { CompanyCardPayload } from "../lib/types";
 
-vi.mock("./ClaimDialog", () => ({
-  default: () => <button type="button">认领</button>,
-}));
-
 vi.mock("../lib/api", () => ({
   requestCompanyClueLetter: vi.fn(),
 }));
@@ -21,6 +17,15 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
     company_grade: "focus",
     total_jobs: 1,
     claimed_names: [],
+    jd_trust: {
+      legacy_job_id: 1,
+      risk_level: "needs_review",
+      trust_score: 55,
+      reason_codes: ["weak_job_page_evidence"],
+      recommended_checks: ["核对项目官网招聘页"],
+      evidence_refs: ["canonical_post"],
+      domain_warnings: [],
+    },
     jobs: [
       {
         id: 1,
@@ -28,6 +33,18 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
         canonical_url: "https://jobs.example.com/1",
         bounty_grade: "high",
         tags: ["AI"],
+        verification_tags: [
+          {
+            label: "RootData未命中",
+            tone: "warning",
+            description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+          },
+          {
+            label: "身份链偏薄",
+            tone: "warning",
+            description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+          },
+        ],
         claimed_names: [],
       },
     ],
@@ -59,8 +76,10 @@ describe("CompanyCard", () => {
 
     const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
     expect(rightRail).not.toBeNull();
-    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
-    expect(within(rightRail as HTMLElement).getByRole("button", { name: /认领/ })).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("55")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
@@ -100,7 +119,7 @@ describe("CompanyCard", () => {
       .getByRole("heading", { level: 4, name: "Principal AI Engineer" })
       .closest(".job-row");
 
-    expect(within(card as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(firstJob).not.toBeNull();
     expect(within(firstJob as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
     expect(within(firstJob as HTMLElement).queryByText("¥7,200-¥18,000")).not.toBeInTheDocument();
@@ -125,7 +144,8 @@ describe("CompanyCard", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(rightRail).not.toBeNull();
-    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("OWNER")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("SEALED")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("Signed by Ada")).toBeInTheDocument();
@@ -147,6 +167,18 @@ describe("CompanyCard", () => {
               canonical_url: "https://jobs.example.com/1",
               bounty_grade: "high",
               tags: ["AI", "Infra"],
+              verification_tags: [
+                {
+                  label: "RootData未命中",
+                  tone: "warning",
+                  description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+                },
+                {
+                  label: "身份链偏薄",
+                  tone: "warning",
+                  description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+                },
+              ],
               claimed_names: ["Lin"],
             },
             {
@@ -186,8 +218,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByText("共 4 个岗位")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
-    expect(within(seal).getByText("预计赏金")).toBeInTheDocument();
-    expect(within(seal).getByText("待估算")).toBeInTheDocument();
+    expect(within(seal).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(seal).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(seal).queryByText("待估算")).not.toBeInTheDocument();
     expect(within(seal).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
 
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
@@ -215,6 +248,18 @@ describe("CompanyCard", () => {
               canonical_url: "https://jobs.example.com/1",
               bounty_grade: "high",
               tags: ["AI", "Infra"],
+              verification_tags: [
+                {
+                  label: "RootData未命中",
+                  tone: "warning",
+                  description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+                },
+                {
+                  label: "身份链偏薄",
+                  tone: "warning",
+                  description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+                },
+              ],
               claimed_names: ["Lin"],
             },
             {
@@ -244,7 +289,8 @@ describe("CompanyCard", () => {
     const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
-    expect(within(seal).getByText("待估算")).toBeInTheDocument();
+    expect(within(seal).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(seal).queryByText("待估算")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("重点岗位证据")).not.toBeInTheDocument();
@@ -252,6 +298,12 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText("高赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("中赏金")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("低赏金")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("AI")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText("RootData未命中")[0]).toBeInTheDocument();
+    expect(within(card as HTMLElement).getAllByText("身份链偏薄")[0]).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getAllByText("RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。")[0],
+    ).toHaveClass("job-badge-tooltip");
     expect(within(card as HTMLElement).queryByText("证据备注：")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",
@@ -273,6 +325,51 @@ describe("CompanyCard", () => {
 
     expect(screen.queryByRole("link", { name: "OpenGradient" })).not.toBeInTheDocument();
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
+  });
+
+  it("shows backend jd trust summary in the right rail without computing job risk on the client", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          jd_trust: {
+            legacy_job_id: 1,
+            risk_level: "needs_review",
+            trust_score: 55,
+            reason_codes: ["weak_job_page_evidence"],
+            recommended_checks: ["核对项目官网招聘页"],
+            evidence_refs: ["canonical_post"],
+            domain_warnings: [
+              {
+                fact_name: "email_domain_status",
+                fact_value: "mx_missing",
+                label: "邮箱域名缺少 MX 记录",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+
+    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
+
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("55")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("核对项目官网招聘页")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("域名验证异常")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("邮箱域名缺少 MX 记录")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("weak_job_page_evidence")).not.toBeInTheDocument();
+  });
+
+  it("shows pending jd trust state when the backend has no assessment", () => {
+    render(<CompanyCard company={buildCompany({ jd_trust: null })} />);
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
+
+    expect(within(rightRail as HTMLElement).getByText("JD可信度待评估")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
   });
 
   it("keeps clue content hidden until the clue action is triggered", () => {

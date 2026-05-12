@@ -1,6 +1,12 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class VerificationTagOut(BaseModel):
+    label: str
+    tone: Literal["positive", "warning", "danger", "neutral"]
+    description: str
 
 
 class JobCardOut(BaseModel):
@@ -9,7 +15,23 @@ class JobCardOut(BaseModel):
     canonical_url: str
     bounty_grade: str
     tags: list[str]
+    verification_tags: list[VerificationTagOut] = Field(default_factory=list)
     claimed_names: list[str]
+
+
+class JdTrustOut(BaseModel):
+    legacy_job_id: int
+    canonical_url: str | None = None
+    source_name: str | None = None
+    title: str | None = None
+    company: str | None = None
+    risk_level: Literal["low", "needs_review", "high"]
+    trust_score: int | None = None
+    reason_codes: list[str]
+    recommended_checks: list[str]
+    evidence_refs: list[str]
+    domain_warnings: list[dict] = Field(default_factory=list)
+    verification_tags: list[VerificationTagOut] = Field(default_factory=list)
 
 
 class CompanyCardOut(BaseModel):
@@ -23,6 +45,7 @@ class CompanyCardOut(BaseModel):
     claim_status: str | None = None
     estimated_bounty_amount: int | None = None
     estimated_bounty_label: str | None = None
+    jd_trust: JdTrustOut | None = None
 
 
 class DayBucketOut(BaseModel):

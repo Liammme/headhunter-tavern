@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import CompanyClaimSeal from "./CompanyClaimSeal";
 import CompanyCluePanel from "./CompanyCluePanel";
 import { requestCompanyClueLetter } from "../lib/api";
-import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState, JobCardPayload } from "../lib/types";
+import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState } from "../lib/types";
 
 export default function CompanyCard({
   company,
@@ -34,45 +34,6 @@ export default function CompanyCard({
     }
     return companyState.jobs.slice(0, defaultVisibleJobs);
   }, [companyState.jobs, defaultVisibleJobs, expanded]);
-
-  function handleClaimCreated(jobId: number, claimerName: string) {
-    setCompanyState((current) => {
-      const normalizedName = claimerName.trim();
-      if (!normalizedName) {
-        return current;
-      }
-
-      return {
-        ...current,
-        claimed_by: current.claimed_by ?? normalizedName,
-        claim_status: "已签署",
-        claimed_names: appendClaimer(current.claimed_names, normalizedName),
-        jobs: current.jobs.map((job) =>
-          job.id === jobId
-            ? {
-                ...job,
-                claimed_names: appendClaimer(job.claimed_names, normalizedName),
-              }
-            : job,
-        ),
-      };
-    });
-  }
-
-  const claimJob = companyState.jobs[0]
-    ? {
-        ...companyState.jobs[0],
-        claimed_names: companyState.claimed_names,
-      }
-    : null;
-
-  function handleSealClaimCreated(claimerName: string) {
-    if (!claimJob) {
-      return;
-    }
-
-    handleClaimCreated(claimJob.id, claimerName);
-  }
 
   async function requestClueLetter() {
     const requestId = clueRequestIdRef.current + 1;
@@ -153,7 +114,7 @@ export default function CompanyCard({
             <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
         </div>
-        <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
+        <CompanyClaimSeal company={companyState} />
       </div>
       {isClueOpen && clueState ? (
         <CompanyCluePanel
@@ -163,27 +124,39 @@ export default function CompanyCard({
         />
       ) : null}
       <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
-        {jobs.map((job) => (
-          <div key={job.id} className="job-row">
-            <div>
-              <h4 className="job-title">{job.title}</h4>
-              <div className="job-evidence">
-                <div className="job-badges">
-                  {job.tags.slice(0, 3).map((tag) => (
-                    <span key={tag} className="job-badge">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+        {jobs.map((job) => {
+          const verificationTags = job.verification_tags ?? [];
+          return (
+            <div key={job.id} className="job-row">
+              <div>
+                <h4 className="job-title">{job.title}</h4>
+                {verificationTags.length > 0 ? (
+                  <div className="job-evidence">
+                    <div className="job-badges">
+                      {verificationTags.slice(0, 4).map((tag) => (
+                        <span
+                          key={`${tag.tone}-${tag.label}`}
+                          className={`job-badge job-badge-${tag.tone}`}
+                          tabIndex={0}
+                        >
+                          {tag.label}
+                          <span className="job-badge-tooltip" role="tooltip">
+                            {tag.description}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="job-actions">
+                <a href={job.canonical_url} target="_blank" rel="noreferrer">
+                  查看原帖
+                </a>
               </div>
             </div>
-            <div className="job-actions">
-              <a href={job.canonical_url} target="_blank" rel="noreferrer">
-                查看原帖
-              </a>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
       {showJobExpand && companyState.jobs.length > defaultVisibleJobs ? (
         <div className="company-footer">
@@ -204,10 +177,6 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
-}
-
-function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
-  return claimedNames.includes(claimerName) ? claimedNames : [...claimedNames, claimerName];
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {

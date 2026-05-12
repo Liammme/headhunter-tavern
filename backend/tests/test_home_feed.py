@@ -1,4 +1,5 @@
 from datetime import date, datetime
+import json
 from importlib import reload
 
 from app.models import Job, MarketIntelligenceSnapshot
@@ -70,6 +71,64 @@ def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_sess
     assert payload["intelligence"]["generated_at"] == "2026-04-26T15:00:00"
     assert payload["meta"]["generated_at"] == "2026-04-26T14:32:21"
     assert payload["days"][0]["companies"][0]["company"] == "OpenGradient"
+
+
+def test_build_home_payload_reads_configured_jdtrust_assessment_jsonl(db_session, tmp_path, monkeypatch):
+    now = datetime.now().replace(microsecond=0)
+    job = Job(
+        canonical_url="https://jobs.example.com/opengradient/staff-ai-engineer",
+        source_name="test",
+        title="Staff AI Engineer",
+        company="OpenGradient",
+        company_normalized="opengradient",
+        description="test",
+        posted_at=now,
+        collected_at=now,
+        bounty_grade="high",
+        signal_tags={"display_tags": ["AI", "Senior"]},
+    )
+    db_session.add(job)
+    db_session.commit()
+
+    assessment_path = tmp_path / "jdtrust.jsonl"
+    assessment_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": job.id,
+                "canonical_url": "https://jobs.example.com/opengradient/staff-ai-engineer",
+                "source_name": "test",
+                "title": "Staff AI Engineer",
+                "company": "OpenGradient",
+                "combined_assessment": {
+                    "risk_level": "needs_review",
+                    "trust_score": 58,
+                    "reason_codes": ["weak_job_page_evidence"],
+                    "recommended_checks": ["核对官网招聘页"],
+                    "evidence_refs": ["canonical_post"],
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("app.services.home_feed.settings.bounty_pool_jdtrust_read_enabled", True)
+    monkeypatch.setattr("app.services.home_feed.settings.bounty_pool_jdtrust_assessments_path", str(assessment_path))
+
+    payload = build_home_payload(db_session)
+
+    assert payload["days"][0]["companies"][0]["jd_trust"] == {
+        "legacy_job_id": job.id,
+        "canonical_url": "https://jobs.example.com/opengradient/staff-ai-engineer",
+        "source_name": "test",
+        "title": "Staff AI Engineer",
+        "company": "OpenGradient",
+        "risk_level": "needs_review",
+        "trust_score": 58,
+        "reason_codes": ["weak_job_page_evidence"],
+        "recommended_checks": ["核对官网招聘页"],
+        "evidence_refs": ["canonical_post"],
+        "domain_warnings": [],
+    }
 
 
 def test_settings_default_database_url_points_to_backend_db(monkeypatch):
