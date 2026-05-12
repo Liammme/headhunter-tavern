@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class VerificationTagOut(BaseModel):
     label: str
     tone: Literal["positive", "warning", "danger", "neutral"]
+    description: str
 
 
 class JobCardOut(BaseModel):

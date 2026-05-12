@@ -68,6 +68,7 @@ export type JobCardPayload = {
 export type VerificationTagPayload = {
   label: string;
   tone: "positive" | "warning" | "danger" | "neutral";
+  description: string;
 };
 
 export type CompanyCardPayload = {

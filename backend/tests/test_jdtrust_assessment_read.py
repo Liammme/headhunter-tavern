@@ -187,6 +187,14 @@ def test_load_jdtrust_assessments_builds_job_level_verification_tags_from_valida
     assessments = load_jdtrust_assessments(output_path)
 
     assert assessments[12]["verification_tags"] == [
-        {"label": "RootData未命中", "tone": "warning"},
-        {"label": "身份链偏薄", "tone": "warning"},
+        {
+            "label": "RootData未命中",
+            "tone": "warning",
+            "description": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+        },
+        {
+            "label": "身份链偏薄",
+            "tone": "warning",
+            "description": "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+        },
     ]

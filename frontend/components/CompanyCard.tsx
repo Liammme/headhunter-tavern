@@ -134,8 +134,15 @@ export default function CompanyCard({
                   <div className="job-evidence">
                     <div className="job-badges">
                       {verificationTags.slice(0, 4).map((tag) => (
-                        <span key={`${tag.tone}-${tag.label}`} className={`job-badge job-badge-${tag.tone}`}>
+                        <span
+                          key={`${tag.tone}-${tag.label}`}
+                          className={`job-badge job-badge-${tag.tone}`}
+                          tabIndex={0}
+                        >
                           {tag.label}
+                          <span className="job-badge-tooltip" role="tooltip">
+                            {tag.description}
+                          </span>
                         </span>
                       ))}
                     </div>

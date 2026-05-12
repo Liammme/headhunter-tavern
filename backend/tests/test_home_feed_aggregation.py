@@ -473,7 +473,11 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
             "evidence_refs": ["company_site"],
             "domain_warnings": [],
             "verification_tags": [
-                {"label": "RootData命中", "tone": "positive"},
+                {
+                    "label": "RootData命中",
+                    "tone": "positive",
+                    "description": "在 RootData 中找到了与公司/项目匹配的记录，可作为外部身份佐证。",
+                },
             ],
         },
         2: {
@@ -495,8 +499,16 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
                 }
             ],
             "verification_tags": [
-                {"label": "RootData未命中", "tone": "warning"},
-                {"label": "身份链偏薄", "tone": "warning"},
+                {
+                    "label": "RootData未命中",
+                    "tone": "warning",
+                    "description": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+                },
+                {
+                    "label": "身份链偏薄",
+                    "tone": "warning",
+                    "description": "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+                },
             ],
         },
     }
@@ -510,10 +522,24 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
 
     company = payloads[0].companies[0]
     assert [job.id for job in company.jobs] == [1, 2]
-    assert company.jobs[0].verification_tags == [{"label": "RootData命中", "tone": "positive"}]
+    assert company.jobs[0].verification_tags == [
+        {
+            "label": "RootData命中",
+            "tone": "positive",
+            "description": "在 RootData 中找到了与公司/项目匹配的记录，可作为外部身份佐证。",
+        }
+    ]
     assert company.jobs[1].verification_tags == [
-        {"label": "RootData未命中", "tone": "warning"},
-        {"label": "身份链偏薄", "tone": "warning"},
+        {
+            "label": "RootData未命中",
+            "tone": "warning",
+            "description": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+        },
+        {
+            "label": "身份链偏薄",
+            "tone": "warning",
+            "description": "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+        },
     ]
     assert company.jd_trust == {
         "legacy_job_id": 2,
@@ -534,7 +560,15 @@ def test_build_day_payloads_adds_company_level_jdtrust_summary_without_changing_
             }
         ],
         "verification_tags": [
-            {"label": "RootData未命中", "tone": "warning"},
-            {"label": "身份链偏薄", "tone": "warning"},
+            {
+                "label": "RootData未命中",
+                "tone": "warning",
+                "description": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+            },
+            {
+                "label": "身份链偏薄",
+                "tone": "warning",
+                "description": "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+            },
         ],
     }

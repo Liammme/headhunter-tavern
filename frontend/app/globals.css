@@ -1353,7 +1353,37 @@ h5,
 }
 
 .job-badge {
+  position: relative;
   background: var(--surface-raised);
+}
+
+.job-badge-tooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  width: max-content;
+  max-width: min(320px, 80vw);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--foreground);
+  color: var(--background);
+  box-shadow: 0 12px 30px rgba(28, 28, 28, 0.18);
+  font-family: var(--font-sans-stack);
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: normal;
+}
+
+.job-badge:hover .job-badge-tooltip,
+.job-badge:focus-visible .job-badge-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .job-badge-positive {

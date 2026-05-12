@@ -13,6 +13,22 @@ DOMAIN_WARNING_LABELS = {
     ("domain_age_status", "new_domain_30d"): "岗位页外部域名注册未满 30 天",
     ("domain_age_status", "new_domain_90d"): "岗位页外部域名注册未满 90 天",
 }
+TAG_DESCRIPTIONS = {
+    "RootData命中": "在 RootData 中找到了与公司/项目匹配的记录，可作为外部身份佐证。",
+    "RootData未命中": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+    "CMC命中": "在 CoinMarketCap 中找到了匹配记录，可作为项目公开资料佐证。",
+    "GitHub活跃": "关联 GitHub 存在近期活动，可作为项目持续维护的佐证。",
+    "X账号已验证": "关联 X/Twitter 账号通过外部验证，可作为公开身份佐证。",
+    "外部社交已验证": "关联社交账号通过外部验证，可作为公开身份佐证。",
+    "身份链较强": "岗位页、公司链接、社交或外部声誉信息之间有较多一致佐证。",
+    "身份证据一般": "找到部分身份佐证，但还不足以形成强确认。",
+    "身份链偏薄": "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+    "邮箱域名缺少 MX 记录": "招聘邮箱域名缺少邮件服务记录，可能需要核验邮箱真实性。",
+    "邮箱域名与公司域名不一致": "招聘邮箱域名和公司域名不一致，需要确认是否为官方招聘渠道。",
+    "招聘邮箱使用个人邮箱服务": "招聘邮箱使用个人邮箱服务，建议确认是否为官方联系人。",
+    "岗位页外部域名注册未满 30 天": "相关外部域名注册时间很短，需要额外核验来源。",
+    "岗位页外部域名注册未满 90 天": "相关外部域名注册时间较短，建议结合其他证据判断。",
+}
 REASON_WARNING_LABELS = {
     "rootdata_status_not_found": "RootData未命中",
     "identity_evidence_thin": "身份链偏薄",
@@ -184,4 +200,4 @@ def _append_tag(tags: list[dict], seen: set[tuple[str, str]], label: str, tone: 
     if key in seen:
         return
     seen.add(key)
-    tags.append({"label": label, "tone": tone})
+    tags.append({"label": label, "tone": tone, "description": TAG_DESCRIPTIONS.get(label, label)})

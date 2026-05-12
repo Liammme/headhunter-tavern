@@ -34,8 +34,16 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
         bounty_grade: "high",
         tags: ["AI"],
         verification_tags: [
-          { label: "RootData未命中", tone: "warning" },
-          { label: "身份链偏薄", tone: "warning" },
+          {
+            label: "RootData未命中",
+            tone: "warning",
+            description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+          },
+          {
+            label: "身份链偏薄",
+            tone: "warning",
+            description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+          },
         ],
         claimed_names: [],
       },
@@ -160,8 +168,16 @@ describe("CompanyCard", () => {
               bounty_grade: "high",
               tags: ["AI", "Infra"],
               verification_tags: [
-                { label: "RootData未命中", tone: "warning" },
-                { label: "身份链偏薄", tone: "warning" },
+                {
+                  label: "RootData未命中",
+                  tone: "warning",
+                  description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+                },
+                {
+                  label: "身份链偏薄",
+                  tone: "warning",
+                  description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+                },
               ],
               claimed_names: ["Lin"],
             },
@@ -233,8 +249,16 @@ describe("CompanyCard", () => {
               bounty_grade: "high",
               tags: ["AI", "Infra"],
               verification_tags: [
-                { label: "RootData未命中", tone: "warning" },
-                { label: "身份链偏薄", tone: "warning" },
+                {
+                  label: "RootData未命中",
+                  tone: "warning",
+                  description: "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
+                },
+                {
+                  label: "身份链偏薄",
+                  tone: "warning",
+                  description: "当前岗位页缺少足够的公司/项目外部佐证，建议进一步核验。",
+                },
               ],
               claimed_names: ["Lin"],
             },
@@ -277,6 +301,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText("AI")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText("RootData未命中")[0]).toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByText("身份链偏薄")[0]).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getAllByText("RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。")[0],
+    ).toHaveClass("job-badge-tooltip");
     expect(within(card as HTMLElement).queryByText("证据备注：")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getAllByRole("link", { name: "查看原帖" })[0]).toHaveAttribute(
       "href",
