@@ -152,7 +152,6 @@ export default function CompanyCard({
             </button>
             <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
-          {companyState.jd_trust ? <JdTrustSummary jdTrust={companyState.jd_trust} /> : null}
         </div>
         <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
       </div>
@@ -205,40 +204,6 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
-}
-
-function JdTrustSummary({ jdTrust }: { jdTrust: NonNullable<CompanyCardPayload["jd_trust"]> }) {
-  const checks = jdTrust.recommended_checks.slice(0, 2);
-
-  return (
-    <section className="jdtrust-summary" aria-label="JD可信度甄别结果">
-      <div className="jdtrust-heading">
-        <span className={`jdtrust-risk jdtrust-risk-${jdTrust.risk_level}`}>JD可信度：{renderJdTrustRisk(jdTrust.risk_level)}</span>
-        {typeof jdTrust.trust_score === "number" ? (
-          <span className="jdtrust-score">
-            可信度分 <strong>{jdTrust.trust_score}</strong>
-          </span>
-        ) : null}
-      </div>
-      {checks.length ? (
-        <ul className="jdtrust-checks">
-          {checks.map((check) => (
-            <li key={check}>{check}</li>
-          ))}
-        </ul>
-      ) : null}
-    </section>
-  );
-}
-
-function renderJdTrustRisk(riskLevel: NonNullable<CompanyCardPayload["jd_trust"]>["risk_level"]) {
-  if (riskLevel === "high") {
-    return "高风险";
-  }
-  if (riskLevel === "needs_review") {
-    return "需核验";
-  }
-  return "较可信";
 }
 
 function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {

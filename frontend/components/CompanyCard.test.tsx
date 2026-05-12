@@ -21,6 +21,14 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
     company_grade: "focus",
     total_jobs: 1,
     claimed_names: [],
+    jd_trust: {
+      legacy_job_id: 1,
+      risk_level: "needs_review",
+      trust_score: 55,
+      reason_codes: ["weak_job_page_evidence"],
+      recommended_checks: ["核对项目官网招聘页"],
+      evidence_refs: ["canonical_post"],
+    },
     jobs: [
       {
         id: 1,
@@ -59,7 +67,9 @@ describe("CompanyCard", () => {
 
     const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
     expect(rightRail).not.toBeNull();
-    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("55")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByRole("button", { name: /认领/ })).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
@@ -100,7 +110,7 @@ describe("CompanyCard", () => {
       .getByRole("heading", { level: 4, name: "Principal AI Engineer" })
       .closest(".job-row");
 
-    expect(within(card as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(firstJob).not.toBeNull();
     expect(within(firstJob as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
     expect(within(firstJob as HTMLElement).queryByText("¥7,200-¥18,000")).not.toBeInTheDocument();
@@ -125,7 +135,8 @@ describe("CompanyCard", () => {
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(rightRail).not.toBeNull();
-    expect(within(rightRail as HTMLElement).getByText("¥3,000+")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("OWNER")).toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("SEALED")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).getByText("Signed by Ada")).toBeInTheDocument();
@@ -186,8 +197,9 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).getByText("共 4 个岗位")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
-    expect(within(seal).getByText("预计赏金")).toBeInTheDocument();
-    expect(within(seal).getByText("待估算")).toBeInTheDocument();
+    expect(within(seal).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(seal).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(within(seal).queryByText("待估算")).not.toBeInTheDocument();
     expect(within(seal).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
 
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
@@ -244,7 +256,8 @@ describe("CompanyCard", () => {
     const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
-    expect(within(seal).getByText("待估算")).toBeInTheDocument();
+    expect(within(seal).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(seal).queryByText("待估算")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Principal AI Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("heading", { level: 4, name: "Growth Engineer" })).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("重点岗位证据")).not.toBeInTheDocument();
@@ -275,7 +288,7 @@ describe("CompanyCard", () => {
     expect(screen.getByText("OpenGradient")).toBeInTheDocument();
   });
 
-  it("shows backend jd trust summary without computing job risk on the client", () => {
+  it("shows backend jd trust summary in the right rail without computing job risk on the client", () => {
     render(
       <CompanyCard
         company={buildCompany({
@@ -293,10 +306,22 @@ describe("CompanyCard", () => {
 
     const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
 
-    expect(within(card as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("55")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("核对项目官网招聘页")).toBeInTheDocument();
+    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
+
+    expect(within(rightRail as HTMLElement).getByText("JD可信度：需核验")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("55")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).getByText("核对项目官网招聘页")).toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("weak_job_page_evidence")).not.toBeInTheDocument();
+  });
+
+  it("shows pending jd trust state when the backend has no assessment", () => {
+    render(<CompanyCard company={buildCompany({ jd_trust: null })} />);
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
+
+    expect(within(rightRail as HTMLElement).getByText("JD可信度待评估")).toBeInTheDocument();
+    expect(within(rightRail as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
   });
 
   it("keeps clue content hidden until the clue action is triggered", () => {

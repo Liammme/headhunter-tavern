@@ -1177,25 +1177,27 @@ h5,
   height: 14px;
 }
 
-.jdtrust-summary {
+.jdtrust-rail {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--surface-raised);
 }
 
-.jdtrust-heading {
+.jdtrust-rail-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   font-size: 13px;
 }
 
 .jdtrust-risk,
-.jdtrust-score {
+.jdtrust-rail-label,
+.jdtrust-rail p {
   color: var(--muted-strong);
 }
 
@@ -1207,14 +1209,23 @@ h5,
   color: var(--warning);
 }
 
-.jdtrust-score strong {
+.jdtrust-rail-head strong {
   color: var(--foreground);
+  font-family: var(--font-mono-stack);
+  font-size: 24px;
+  line-height: 1;
 }
 
 .jdtrust-checks {
   margin: 0;
   padding-left: 18px;
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.jdtrust-rail-pending p {
+  margin: 0;
   font-size: 13px;
   line-height: 1.45;
 }

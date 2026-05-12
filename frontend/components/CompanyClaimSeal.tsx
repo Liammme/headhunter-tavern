@@ -8,7 +8,7 @@ import type { CompanyCardPayload } from "../lib/types";
 type CompanyClaimSealProps = {
   company: Pick<
     CompanyCardPayload,
-    "claimed_by" | "claim_status" | "claimed_names" | "estimated_bounty_amount" | "estimated_bounty_label" | "jobs"
+    "claimed_by" | "claim_status" | "claimed_names" | "jd_trust" | "jobs"
   >;
   claimJob: CompanyCardPayload["jobs"][number] | null;
   onClaimCreated?: (claimerName: string) => void;
@@ -16,7 +16,6 @@ type CompanyClaimSealProps = {
 
 export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: CompanyClaimSealProps) {
   const signerName = company.claimed_by ?? company.claimed_names[0] ?? null;
-  const estimatedBounty = renderEstimatedBounty(company);
   const isClaimed = Boolean(company.claim_status || company.claimed_names.length || company.claimed_by);
 
   return (
@@ -31,37 +30,17 @@ export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: 
               <dt>Signature</dt>
               <dd className="seal-signature">{renderEnglishSignature(signerName)}</dd>
             </div>
-            <div>
-              <dt>预计赏金</dt>
-              <dd>{estimatedBounty}</dd>
-            </div>
           </dl>
+          <JdTrustRail jdTrust={company.jd_trust ?? null} />
         </>
       ) : (
         <div className="seal-unclaimed-row">
-          <div className="seal-bounty">
-            <span className="seal-bounty-label">预计赏金</span>
-            <strong>{estimatedBounty}</strong>
-          </div>
+          <JdTrustRail jdTrust={company.jd_trust ?? null} />
           {claimJob ? <ClaimDialog job={claimJob} onClaimCreated={onClaimCreated} /> : null}
         </div>
       )}
     </aside>
   );
-}
-
-function renderEstimatedBounty(company: CompanyClaimSealProps["company"]) {
-  const bountyLabel = company.estimated_bounty_label?.trim();
-
-  if (bountyLabel) {
-    return bountyLabel;
-  }
-
-  if (typeof company.estimated_bounty_amount === "number" && Number.isFinite(company.estimated_bounty_amount)) {
-    return `¥${company.estimated_bounty_amount.toLocaleString("zh-CN")}`;
-  }
-
-  return "待估算";
 }
 
 function renderEnglishSignature(signerName: string | null) {
@@ -70,4 +49,43 @@ function renderEnglishSignature(signerName: string | null) {
   }
 
   return `Signed by ${signerName}`;
+}
+
+function JdTrustRail({ jdTrust }: { jdTrust: CompanyCardPayload["jd_trust"] | null }) {
+  if (!jdTrust) {
+    return (
+      <section className="jdtrust-rail jdtrust-rail-pending" aria-label="JD可信度甄别结果">
+        <span className="jdtrust-rail-label">JD可信度待评估</span>
+        <p>等待可信度层完成原帖证据和外部声誉核验。</p>
+      </section>
+    );
+  }
+
+  const checks = jdTrust.recommended_checks.slice(0, 2);
+
+  return (
+    <section className="jdtrust-rail" aria-label="JD可信度甄别结果">
+      <div className="jdtrust-rail-head">
+        <span className={`jdtrust-risk jdtrust-risk-${jdTrust.risk_level}`}>JD可信度：{renderJdTrustRisk(jdTrust.risk_level)}</span>
+        {typeof jdTrust.trust_score === "number" ? <strong>{jdTrust.trust_score}</strong> : null}
+      </div>
+      {checks.length ? (
+        <ul className="jdtrust-checks">
+          {checks.map((check) => (
+            <li key={check}>{check}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
+function renderJdTrustRisk(riskLevel: NonNullable<CompanyCardPayload["jd_trust"]>["risk_level"]) {
+  if (riskLevel === "high") {
+    return "高风险";
+  }
+  if (riskLevel === "needs_review") {
+    return "需核验";
+  }
+  return "较可信";
 }
