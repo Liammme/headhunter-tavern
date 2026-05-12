@@ -21,6 +21,14 @@ DOMAIN_WARNING_LABELS = {
     ("domain_age_status", "new_domain_30d"): "项目域名注册未满 30 天",
     ("domain_age_status", "new_domain_90d"): "项目域名注册未满 90 天",
 }
+DOMAIN_AGE_POSITIVE_LABELS = {
+    "older_than_30d": "官网域名注册超过 1 个月",
+    "over_30d": "官网域名注册超过 1 个月",
+    "gt_30d": "官网域名注册超过 1 个月",
+    "older_than_1y": "官网域名注册超过 1 年",
+    "over_1y": "官网域名注册超过 1 年",
+    "gt_1y": "官网域名注册超过 1 年",
+}
 TAG_DESCRIPTIONS = {
     "RootData命中": "在 RootData 中找到了与公司/项目匹配的记录，可作为外部身份佐证。",
     "RootData未命中": "RootData 未找到匹配记录，不代表一定有风险，但需要更多外部佐证。",
@@ -36,6 +44,8 @@ TAG_DESCRIPTIONS = {
     "招聘邮箱使用个人邮箱服务": "招聘邮箱使用个人邮箱服务，建议确认是否为官方联系人。",
     "项目域名注册未满 30 天": "项目相关域名注册时间很短，需要额外核验来源。",
     "项目域名注册未满 90 天": "项目相关域名注册时间较短，建议结合其他证据判断。",
+    "官网域名注册超过 1 个月": "原帖抓到了项目官网，并确认该官网域名注册时间超过 1 个月。",
+    "官网域名注册超过 1 年": "原帖抓到了项目官网，并确认该官网域名注册时间超过 1 年。",
 }
 REASON_WARNING_LABELS = {
     "rootdata_status_not_found": "RootData未命中",
@@ -97,7 +107,8 @@ def _parse_assessment_line(line: str) -> dict | None:
     if risk_level not in JDTRUST_RISK_LEVELS:
         return None
 
-    domain_warnings = _domain_warnings(row.get("reputation_facts"), row)
+    project_website_domains = _project_website_domains(row)
+    domain_warnings = _domain_warnings(row.get("reputation_facts"), row, project_website_domains)
 
     return {
         "legacy_job_id": legacy_job_id,
@@ -115,6 +126,7 @@ def _parse_assessment_line(line: str) -> dict | None:
             row,
             reason_codes=_string_list(combined_assessment.get("reason_codes")),
             domain_warnings=domain_warnings,
+            project_website_domains=project_website_domains,
         ),
     }
 
@@ -144,10 +156,11 @@ def _string_list(value: Any) -> list[str]:
     return [item for item in value if isinstance(item, str) and item.strip()]
 
 
-def _domain_warnings(value: Any, row: dict | None = None) -> list[dict]:
+def _domain_warnings(value: Any, row: dict | None = None, project_website_domains: set[str] | None = None) -> list[dict]:
     if not isinstance(value, list):
         return []
 
+    project_website_domains = project_website_domains or set()
     warnings: list[dict] = []
     seen: set[tuple[str, str]] = set()
     for item in value:
@@ -163,6 +176,8 @@ def _domain_warnings(value: Any, row: dict | None = None) -> list[dict]:
             continue
         if _is_source_site_domain_fact(item, row):
             continue
+        if fact_name == "domain_age_status" and not _is_project_website_domain_fact(item, project_website_domains):
+            continue
         seen.add(key)
         warnings.append(
             {
@@ -174,11 +189,39 @@ def _domain_warnings(value: Any, row: dict | None = None) -> list[dict]:
     return warnings
 
 
+def _project_website_domains(row: dict) -> set[str]:
+    link_facts = row.get("link_facts")
+    if not isinstance(link_facts, list):
+        return set()
+
+    domains: set[str] = set()
+    for item in link_facts:
+        if not isinstance(item, dict):
+            continue
+        if _optional_str(item.get("kind")) != "company_url":
+            continue
+        domain = _fact_domain(item)
+        if domain is None or _is_source_site_domain(domain, row):
+            continue
+        domains.add(domain)
+    return domains
+
+
+def _is_project_website_domain_fact(item: dict, project_website_domains: set[str]) -> bool:
+    domain = _fact_domain(item)
+    if domain is None:
+        return False
+    return any(domain == project_domain or domain.endswith(f".{project_domain}") for project_domain in project_website_domains)
+
+
 def _is_source_site_domain_fact(item: dict, row: dict | None) -> bool:
     domain = _fact_domain(item)
     if domain is None:
         return False
+    return _is_source_site_domain(domain, row)
 
+
+def _is_source_site_domain(domain: str, row: dict | None) -> bool:
     source_domains = set(SOURCE_SITE_DOMAINS)
     if row is not None:
         canonical_domain = _domain_from_url(_optional_str(row.get("canonical_url")))
@@ -223,7 +266,13 @@ def _normalize_domain(value: str | None) -> str | None:
     return cleaned or None
 
 
-def _verification_tags(row: dict, *, reason_codes: list[str], domain_warnings: list[dict]) -> list[dict]:
+def _verification_tags(
+    row: dict,
+    *,
+    reason_codes: list[str],
+    domain_warnings: list[dict],
+    project_website_domains: set[str],
+) -> list[dict]:
     tags: list[dict] = []
     seen: set[tuple[str, str]] = set()
 
@@ -249,9 +298,33 @@ def _verification_tags(row: dict, *, reason_codes: list[str], domain_warnings: l
             tag = REPUTATION_TAG_LABELS.get((fact_name, fact_value))
             if tag is not None:
                 _append_tag(tags, seen, tag[0], tag[1])
+            domain_age_label = _domain_age_positive_label(fact, fact_name, fact_value, project_website_domains)
+            if domain_age_label is not None:
+                _append_tag(tags, seen, domain_age_label, "positive")
 
     tags.sort(key=lambda item: TAG_TONE_ORDER.get(item["tone"], len(TAG_TONE_ORDER)))
     return tags[:MAX_VERIFICATION_TAGS]
+
+
+def _domain_age_positive_label(
+    fact: dict,
+    fact_name: str,
+    fact_value: str,
+    project_website_domains: set[str],
+) -> str | None:
+    if fact_name != "domain_age_status" or not _is_project_website_domain_fact(fact, project_website_domains):
+        return None
+
+    age_days = _coerce_int(fact.get("domain_age_days") or fact.get("age_days") or fact.get("days_since_registration"))
+    if age_days is not None:
+        if age_days >= 365:
+            return "官网域名注册超过 1 年"
+        if age_days >= 30:
+            return "官网域名注册超过 1 个月"
+
+    if fact_value == "established":
+        return "官网域名注册超过 1 个月"
+    return DOMAIN_AGE_POSITIVE_LABELS.get(fact_value)
 
 
 def _append_tag(tags: list[dict], seen: set[tuple[str, str]], label: str, tone: str) -> None:

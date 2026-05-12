@@ -114,6 +114,13 @@ def test_load_jdtrust_assessments_extracts_only_abnormal_domain_facts(tmp_path):
                     "recommended_checks": [],
                     "evidence_refs": [],
                 },
+                "link_facts": [
+                    {
+                        "kind": "company_url",
+                        "domain": "opengradient.ai",
+                        "url": "https://opengradient.ai",
+                    }
+                ],
                 "reputation_facts": [
                     {
                         "fact_name": "email_domain_status",
@@ -168,6 +175,18 @@ def test_load_jdtrust_assessments_does_not_show_source_site_domain_age_as_projec
                     "recommended_checks": [],
                     "evidence_refs": [],
                 },
+                "link_facts": [
+                    {
+                        "kind": "company_url",
+                        "domain": "ethena.fi",
+                        "url": "https://www.ethena.fi/",
+                    },
+                    {
+                        "kind": "company_url",
+                        "domain": "cryptocurrencyjobs.co",
+                        "url": "https://cryptocurrencyjobs.co/startups/ethena-labs/",
+                    },
+                ],
                 "reputation_facts": [
                     {
                         "fact_name": "domain_age_status",
@@ -204,6 +223,85 @@ def test_load_jdtrust_assessments_does_not_show_source_site_domain_age_as_projec
             "description": "项目相关域名注册时间较短，建议结合其他证据判断。",
         }
     ]
+
+
+def test_load_jdtrust_assessments_shows_project_website_domain_age_only_when_official_site_is_found(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "legacy_job_id": 14,
+                        "canonical_url": "https://cryptocurrencyjobs.co/engineering/ethena-labs/",
+                        "combined_assessment": {
+                            "risk_level": "low",
+                            "trust_score": 90,
+                            "reason_codes": [],
+                            "recommended_checks": [],
+                            "evidence_refs": [],
+                        },
+                        "link_facts": [
+                            {
+                                "kind": "company_url",
+                                "domain": "ethena.fi",
+                                "url": "https://www.ethena.fi/",
+                            }
+                        ],
+                        "reputation_facts": [
+                            {
+                                "fact_name": "domain_age_status",
+                                "fact_value": "established",
+                                "domain": "ethena.fi",
+                                "domain_age_days": 420,
+                            }
+                        ],
+                    }
+                ),
+                json.dumps(
+                    {
+                        "legacy_job_id": 15,
+                        "canonical_url": "https://cryptocurrencyjobs.co/engineering/risk-labs/",
+                        "combined_assessment": {
+                            "risk_level": "needs_review",
+                            "trust_score": 70,
+                            "reason_codes": [],
+                            "recommended_checks": [],
+                            "evidence_refs": [],
+                        },
+                        "link_facts": [
+                            {
+                                "kind": "company_url",
+                                "domain": "cryptocurrencyjobs.co",
+                                "url": "https://cryptocurrencyjobs.co/startups/risk-labs/",
+                            }
+                        ],
+                        "reputation_facts": [
+                            {
+                                "fact_name": "domain_age_status",
+                                "fact_value": "established",
+                                "domain": "cryptocurrencyjobs.co",
+                                "domain_age_days": 420,
+                            }
+                        ],
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assessments = load_jdtrust_assessments(output_path)
+
+    assert assessments[14]["verification_tags"] == [
+        {
+            "label": "官网域名注册超过 1 年",
+            "tone": "positive",
+            "description": "原帖抓到了项目官网，并确认该官网域名注册时间超过 1 年。",
+        }
+    ]
+    assert assessments[15]["verification_tags"] == []
 
 
 def test_load_jdtrust_assessments_builds_job_level_verification_tags_from_validation_results(tmp_path):
