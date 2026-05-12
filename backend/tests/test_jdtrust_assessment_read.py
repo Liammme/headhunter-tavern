@@ -128,6 +128,7 @@ def test_load_jdtrust_assessments_extracts_only_abnormal_domain_facts(tmp_path):
                     {
                         "fact_name": "domain_age_status",
                         "fact_value": "new_domain_30d",
+                        "domain": "opengradient.ai",
                         "note": "domain registered recently",
                     },
                 ],
@@ -148,8 +149,60 @@ def test_load_jdtrust_assessments_extracts_only_abnormal_domain_facts(tmp_path):
         {
             "fact_name": "domain_age_status",
             "fact_value": "new_domain_30d",
-            "label": "岗位页外部域名注册未满 30 天",
+            "label": "项目域名注册未满 30 天",
         },
+    ]
+
+
+def test_load_jdtrust_assessments_does_not_show_source_site_domain_age_as_project_domain(tmp_path):
+    output_path = tmp_path / "assessments.jsonl"
+    output_path.write_text(
+        json.dumps(
+            {
+                "legacy_job_id": 13,
+                "canonical_url": "https://cryptocurrencyjobs.co/engineering/risk-labs-analytics-engineer/",
+                "combined_assessment": {
+                    "risk_level": "needs_review",
+                    "trust_score": 64,
+                    "reason_codes": [],
+                    "recommended_checks": [],
+                    "evidence_refs": [],
+                },
+                "reputation_facts": [
+                    {
+                        "fact_name": "domain_age_status",
+                        "fact_value": "new_domain_30d",
+                        "domain": "cryptocurrencyjobs.co",
+                        "note": "source site domain should not be treated as project domain",
+                    },
+                    {
+                        "fact_name": "domain_age_status",
+                        "fact_value": "new_domain_90d",
+                        "domain": "ethena.fi",
+                        "note": "project website domain registered recently",
+                    },
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assessments = load_jdtrust_assessments(output_path)
+
+    assert assessments[13]["domain_warnings"] == [
+        {
+            "fact_name": "domain_age_status",
+            "fact_value": "new_domain_90d",
+            "label": "项目域名注册未满 90 天",
+        }
+    ]
+    assert assessments[13]["verification_tags"] == [
+        {
+            "label": "项目域名注册未满 90 天",
+            "tone": "warning",
+            "description": "项目相关域名注册时间较短，建议结合其他证据判断。",
+        }
     ]
 
 

@@ -3,15 +3,23 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 JDTRUST_RISK_LEVELS = {"low", "needs_review", "high"}
 EXCLUDED_SOURCE_NAMES = {"aijobsnet"}
+SOURCE_SITE_DOMAINS = {
+    "aijobs.net",
+    "cryptocurrencyjobs.co",
+    "cryptojobslist.com",
+    "dejob.ai",
+    "web3.career",
+}
 DOMAIN_WARNING_LABELS = {
     ("email_domain_status", "mx_missing"): "邮箱域名缺少 MX 记录",
     ("email_domain_relation", "mismatches_company_domain"): "邮箱域名与公司域名不一致",
     ("email_domain_relation", "personal_email_provider"): "招聘邮箱使用个人邮箱服务",
-    ("domain_age_status", "new_domain_30d"): "岗位页外部域名注册未满 30 天",
-    ("domain_age_status", "new_domain_90d"): "岗位页外部域名注册未满 90 天",
+    ("domain_age_status", "new_domain_30d"): "项目域名注册未满 30 天",
+    ("domain_age_status", "new_domain_90d"): "项目域名注册未满 90 天",
 }
 TAG_DESCRIPTIONS = {
     "RootData命中": "在 RootData 中找到了与公司/项目匹配的记录，可作为外部身份佐证。",
@@ -26,8 +34,8 @@ TAG_DESCRIPTIONS = {
     "邮箱域名缺少 MX 记录": "招聘邮箱域名缺少邮件服务记录，可能需要核验邮箱真实性。",
     "邮箱域名与公司域名不一致": "招聘邮箱域名和公司域名不一致，需要确认是否为官方招聘渠道。",
     "招聘邮箱使用个人邮箱服务": "招聘邮箱使用个人邮箱服务，建议确认是否为官方联系人。",
-    "岗位页外部域名注册未满 30 天": "相关外部域名注册时间很短，需要额外核验来源。",
-    "岗位页外部域名注册未满 90 天": "相关外部域名注册时间较短，建议结合其他证据判断。",
+    "项目域名注册未满 30 天": "项目相关域名注册时间很短，需要额外核验来源。",
+    "项目域名注册未满 90 天": "项目相关域名注册时间较短，建议结合其他证据判断。",
 }
 REASON_WARNING_LABELS = {
     "rootdata_status_not_found": "RootData未命中",
@@ -89,7 +97,7 @@ def _parse_assessment_line(line: str) -> dict | None:
     if risk_level not in JDTRUST_RISK_LEVELS:
         return None
 
-    domain_warnings = _domain_warnings(row.get("reputation_facts"))
+    domain_warnings = _domain_warnings(row.get("reputation_facts"), row)
 
     return {
         "legacy_job_id": legacy_job_id,
@@ -136,7 +144,7 @@ def _string_list(value: Any) -> list[str]:
     return [item for item in value if isinstance(item, str) and item.strip()]
 
 
-def _domain_warnings(value: Any) -> list[dict]:
+def _domain_warnings(value: Any, row: dict | None = None) -> list[dict]:
     if not isinstance(value, list):
         return []
 
@@ -153,6 +161,8 @@ def _domain_warnings(value: Any) -> list[dict]:
         label = DOMAIN_WARNING_LABELS.get(key)
         if label is None or key in seen:
             continue
+        if _is_source_site_domain_fact(item, row):
+            continue
         seen.add(key)
         warnings.append(
             {
@@ -162,6 +172,55 @@ def _domain_warnings(value: Any) -> list[dict]:
             }
         )
     return warnings
+
+
+def _is_source_site_domain_fact(item: dict, row: dict | None) -> bool:
+    domain = _fact_domain(item)
+    if domain is None:
+        return False
+
+    source_domains = set(SOURCE_SITE_DOMAINS)
+    if row is not None:
+        canonical_domain = _domain_from_url(_optional_str(row.get("canonical_url")))
+        if canonical_domain is not None:
+            source_domains.add(canonical_domain)
+
+    return any(domain == source_domain or domain.endswith(f".{source_domain}") for source_domain in source_domains)
+
+
+def _fact_domain(item: dict) -> str | None:
+    for key in ("domain", "hostname", "host", "subject_domain", "email_domain", "company_domain", "registered_domain"):
+        domain = _normalize_domain(_optional_str(item.get(key)))
+        if domain is not None:
+            return domain
+
+    for key in ("url", "final_url", "evidence"):
+        domain = _domain_from_url(_optional_str(item.get(key)))
+        if domain is not None:
+            return domain
+
+    return None
+
+
+def _domain_from_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    parsed = urlparse(value)
+    return _normalize_domain(parsed.netloc)
+
+
+def _normalize_domain(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip().lower()
+    if not cleaned:
+        return None
+    if "://" in cleaned:
+        return _domain_from_url(cleaned)
+    cleaned = cleaned.split("/", 1)[0].split(":", 1)[0]
+    if cleaned.startswith("www."):
+        cleaned = cleaned[4:]
+    return cleaned or None
 
 
 def _verification_tags(row: dict, *, reason_codes: list[str], domain_warnings: list[dict]) -> list[dict]:
