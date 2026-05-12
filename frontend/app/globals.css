@@ -868,6 +868,46 @@ h5,
   justify-items: center;
 }
 
+.job-category-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 2px 0 4px;
+}
+
+.job-category-chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--muted-strong);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.job-category-chip:hover {
+  border-color: rgba(20, 20, 20, 0.34);
+  color: var(--foreground);
+  transform: translateY(-1px);
+}
+
+.job-category-chip[aria-pressed="true"] {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--surface-raised);
+}
+
 .animated-tabs {
   position: relative;
   width: fit-content;

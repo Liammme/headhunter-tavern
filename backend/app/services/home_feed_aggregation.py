@@ -109,6 +109,7 @@ def _build_job_payload(job: Job) -> dict:
         "title": job.title,
         "canonical_url": job.canonical_url,
         "bounty_grade": job.bounty_grade,
+        "job_category": job.job_category or "其他",
         "tags": list(job.signal_tags.get("display_tags", [])),
         "claimed_names": [],
     }

@@ -21,6 +21,7 @@ def build_job(
     title: str,
     bounty_grade: str,
     days_ago: int,
+    job_category: str = "技术",
     tags: list[str] | None = None,
     company_url: str | None = None,
 ) -> Job:
@@ -37,6 +38,7 @@ def build_job(
         posted_at=posted_at,
         collected_at=posted_at,
         bounty_grade=bounty_grade,
+        job_category=job_category,
         signal_tags={
             "display_tags": tags or [],
             **({"company_url": company_url} if company_url else {}),
@@ -62,6 +64,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Staff AI Engineer",
             bounty_grade="high",
             days_ago=0,
+            job_category="AI/算法",
             tags=["AI", "Senior"],
         ),
         build_job(
@@ -71,6 +74,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Product Manager",
             bounty_grade="medium",
             days_ago=0,
+            job_category="产品",
             tags=["产品"],
         ),
         build_job(
@@ -80,6 +84,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Backend Engineer",
             bounty_grade="low",
             days_ago=0,
+            job_category="技术",
             tags=["技术"],
         ),
     ]
@@ -97,6 +102,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
     assert companies[0].company_grade == "watch"
     assert companies[0].company_url is None
     assert [job.id for job in companies[0].jobs] == [1, 2]
+    assert [job.job_category for job in companies[0].jobs] == ["AI/算法", "产品"]
     assert companies[0].claimed_names == ["Leo", "Mina"]
     assert companies[0].claimed_by == "Leo"
     assert companies[0].claim_status == "claimed"

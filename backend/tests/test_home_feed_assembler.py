@@ -21,6 +21,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                             bounty_grade="high",
                             tags=["AI", "Senior"],
                             claimed_names=["Liam"],
+                            job_category="AI/算法",
                         )
                     ],
                 )
@@ -69,6 +70,7 @@ def test_assemble_home_payload_serializes_feed_snapshots_without_changing_contra
                                 "title": "Principal AI Engineer",
                                 "canonical_url": "https://example.com/1",
                                 "bounty_grade": "high",
+                                "job_category": "AI/算法",
                                 "tags": ["AI", "Senior"],
                                 "claimed_names": ["Liam"],
                             }
