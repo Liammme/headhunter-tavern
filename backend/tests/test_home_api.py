@@ -107,6 +107,7 @@ def test_home_endpoint_allows_market_intelligence_null_window_start(client, db_s
 
 def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session, monkeypatch):
     monkeypatch.setattr("app.services.home_feed_aggregation._should_expose_estimated_bounty", lambda: True)
+    posted_at = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     job = Job(
         canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
         source_name="demo-board",
@@ -114,8 +115,8 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
         company="OpenGradient",
         company_normalized="opengradient",
         description="Build LLM platform and hiring roadmap.",
-        posted_at=datetime(2026, 4, 18, 9, 0, 0),
-        collected_at=datetime(2026, 4, 18, 9, 0, 0),
+        posted_at=posted_at,
+        collected_at=posted_at,
         bounty_grade="medium",
         signal_tags={
             "display_tags": ["AI", "Senior", "核心岗位"],
