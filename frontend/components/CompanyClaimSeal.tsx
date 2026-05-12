@@ -2,7 +2,6 @@
 
 import React from "react";
 
-import ClaimDialog from "./ClaimDialog";
 import type { CompanyCardPayload } from "../lib/types";
 
 type CompanyClaimSealProps = {
@@ -10,11 +9,9 @@ type CompanyClaimSealProps = {
     CompanyCardPayload,
     "claimed_by" | "claim_status" | "claimed_names" | "jd_trust" | "jobs"
   >;
-  claimJob: CompanyCardPayload["jobs"][number] | null;
-  onClaimCreated?: (claimerName: string) => void;
 };
 
-export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: CompanyClaimSealProps) {
+export default function CompanyClaimSeal({ company }: CompanyClaimSealProps) {
   const signerName = company.claimed_by ?? company.claimed_names[0] ?? null;
   const isClaimed = Boolean(company.claim_status || company.claimed_names.length || company.claimed_by);
 
@@ -36,7 +33,6 @@ export default function CompanyClaimSeal({ company, claimJob, onClaimCreated }: 
       ) : (
         <div className="seal-unclaimed-row">
           <JdTrustRail jdTrust={company.jd_trust ?? null} />
-          {claimJob ? <ClaimDialog job={claimJob} onClaimCreated={onClaimCreated} /> : null}
         </div>
       )}
     </aside>

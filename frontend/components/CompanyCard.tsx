@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import CompanyClaimSeal from "./CompanyClaimSeal";
 import CompanyCluePanel from "./CompanyCluePanel";
 import { requestCompanyClueLetter } from "../lib/api";
-import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState, JobCardPayload } from "../lib/types";
+import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState } from "../lib/types";
 
 export default function CompanyCard({
   company,
@@ -34,45 +34,6 @@ export default function CompanyCard({
     }
     return companyState.jobs.slice(0, defaultVisibleJobs);
   }, [companyState.jobs, defaultVisibleJobs, expanded]);
-
-  function handleClaimCreated(jobId: number, claimerName: string) {
-    setCompanyState((current) => {
-      const normalizedName = claimerName.trim();
-      if (!normalizedName) {
-        return current;
-      }
-
-      return {
-        ...current,
-        claimed_by: current.claimed_by ?? normalizedName,
-        claim_status: "已签署",
-        claimed_names: appendClaimer(current.claimed_names, normalizedName),
-        jobs: current.jobs.map((job) =>
-          job.id === jobId
-            ? {
-                ...job,
-                claimed_names: appendClaimer(job.claimed_names, normalizedName),
-              }
-            : job,
-        ),
-      };
-    });
-  }
-
-  const claimJob = companyState.jobs[0]
-    ? {
-        ...companyState.jobs[0],
-        claimed_names: companyState.claimed_names,
-      }
-    : null;
-
-  function handleSealClaimCreated(claimerName: string) {
-    if (!claimJob) {
-      return;
-    }
-
-    handleClaimCreated(claimJob.id, claimerName);
-  }
 
   async function requestClueLetter() {
     const requestId = clueRequestIdRef.current + 1;
@@ -153,7 +114,7 @@ export default function CompanyCard({
             <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
         </div>
-        <CompanyClaimSeal company={companyState} claimJob={claimJob} onClaimCreated={handleSealClaimCreated} />
+        <CompanyClaimSeal company={companyState} />
       </div>
       {isClueOpen && clueState ? (
         <CompanyCluePanel
@@ -204,10 +165,6 @@ function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
     return "关注公司";
   }
   return "普通公司";
-}
-
-function appendClaimer(claimedNames: JobCardPayload["claimed_names"], claimerName: string) {
-  return claimedNames.includes(claimerName) ? claimedNames : [...claimedNames, claimerName];
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {
