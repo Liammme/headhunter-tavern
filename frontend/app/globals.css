@@ -1367,8 +1367,8 @@ h5,
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--foreground);
-  color: var(--background);
+  background: #ffffff;
+  color: var(--foreground);
   box-shadow: 0 12px 30px rgba(28, 28, 28, 0.18);
   font-family: var(--font-sans-stack);
   font-size: 12px;
