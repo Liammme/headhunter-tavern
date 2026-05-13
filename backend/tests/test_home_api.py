@@ -107,6 +107,7 @@ def test_home_endpoint_allows_market_intelligence_null_window_start(client, db_s
 
 def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client, db_session, monkeypatch):
     monkeypatch.setattr("app.services.home_feed_aggregation._should_expose_estimated_bounty", lambda: True)
+    posted_at = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     job = Job(
         canonical_url="https://jobs.example.com/opengradient/principal-ai-engineer",
         source_name="demo-board",
@@ -114,8 +115,8 @@ def test_home_payload_exposes_estimated_bounty_from_persisted_signal_tags(client
         company="OpenGradient",
         company_normalized="opengradient",
         description="Build LLM platform and hiring roadmap.",
-        posted_at=datetime(2026, 4, 18, 9, 0, 0),
-        collected_at=datetime(2026, 4, 18, 9, 0, 0),
+        posted_at=posted_at,
+        collected_at=posted_at,
         bounty_grade="medium",
         signal_tags={
             "display_tags": ["AI", "Senior", "核心岗位"],
@@ -174,6 +175,19 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
                         "claim_status": "claimed",
                         "estimated_bounty_amount": 1500,
                         "estimated_bounty_label": "¥1,500",
+                        "jd_trust": {
+                            "legacy_job_id": 1,
+                            "canonical_url": "https://jobs.example.com/1",
+                            "source_name": "web3jobs",
+                            "title": "Community Lead",
+                            "company": "OpenGradient",
+                            "risk_level": "needs_review",
+                            "trust_score": 55,
+                            "reason_codes": ["weak_job_page_evidence"],
+                            "recommended_checks": ["核对项目官网招聘页"],
+                            "evidence_refs": ["canonical_post"],
+                            "domain_warnings": [],
+                        },
                         "company_grade": "focus",
                         "total_jobs": 1,
                         "claimed_names": [],
@@ -203,6 +217,7 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
         "claim_status",
         "estimated_bounty_amount",
         "estimated_bounty_label",
+        "jd_trust",
         "company_grade",
         "total_jobs",
         "claimed_names",

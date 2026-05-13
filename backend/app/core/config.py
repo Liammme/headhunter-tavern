@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     bounty_pool_estimated_bounty_read_enabled: bool = True
     bounty_pool_estimated_bounty_startup_audit_enabled: bool = False
     bounty_pool_estimated_bounty_audit_window_days: int = 14
+    bounty_pool_jdtrust_read_enabled: bool = False
+    bounty_pool_jdtrust_assessments_path: str | None = None
+    bounty_pool_jdtrust_trigger_enabled: bool = False
+    bounty_pool_jdtrust_trigger_command: str | None = None
+    bounty_pool_jdtrust_trigger_cwd: str | None = None
+    bounty_pool_jdtrust_trigger_lock_path: str | None = None
     bounty_pool_intelligence_llm_enabled: bool = True
     bounty_pool_llm_api_key: str | None = None
     bounty_pool_llm_model: str | None = None

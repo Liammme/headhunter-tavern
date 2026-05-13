@@ -122,3 +122,39 @@ def test_claim_persists_and_surfaces_in_home_payload(client, monkeypatch):
     assert "Liam" in first_company["claimed_names"]
     assert first_company["claimed_by"] == "Liam"
     assert first_company["claim_status"] == "claimed"
+
+
+def test_trigger_crawl_starts_jdtrust_sidecar_when_new_jobs_are_inserted(client, monkeypatch):
+    install_fake_adapters(monkeypatch)
+    trigger_calls = []
+
+    def fake_trigger(new_jobs):
+        trigger_calls.append(new_jobs)
+        return {"status": "started", "pid": 123}
+
+    monkeypatch.setattr("app.services.crawl_pipeline.trigger_jdtrust_sidecar_after_crawl", fake_trigger)
+
+    response = client.post("/api/v1/crawl/trigger")
+
+    assert response.status_code == 200
+    assert response.json()["jdtrust_trigger"] == {"status": "started", "pid": 123}
+    assert trigger_calls == [4]
+
+
+def test_trigger_crawl_skips_jdtrust_sidecar_when_no_new_jobs_are_inserted(client, monkeypatch):
+    install_fake_adapters(monkeypatch)
+    client.post("/api/v1/crawl/trigger")
+    trigger_calls = []
+
+    def fake_trigger(new_jobs):
+        trigger_calls.append(new_jobs)
+        return {"status": "skipped", "reason": "no_new_jobs"}
+
+    monkeypatch.setattr("app.services.crawl_pipeline.trigger_jdtrust_sidecar_after_crawl", fake_trigger)
+
+    response = client.post("/api/v1/crawl/trigger")
+
+    assert response.status_code == 200
+    assert response.json()["new_jobs"] == 0
+    assert response.json()["jdtrust_trigger"] == {"status": "skipped", "reason": "no_new_jobs"}
+    assert trigger_calls == [0]

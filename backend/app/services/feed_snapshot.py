@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
 
 from app.services.scoring import DEFAULT_BOUNTY_RULE_VERSION
@@ -25,6 +25,7 @@ class JobFeedSnapshot:
     tags: list[str]
     claimed_names: list[str]
     job_category: str = "其他"
+    verification_tags: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class CompanyFeedSnapshot:
     claim_status: str | None = None
     estimated_bounty_amount: int | None = None
     estimated_bounty_label: str | None = None
+    jd_trust: dict | None = None
 
 
 @dataclass(frozen=True)

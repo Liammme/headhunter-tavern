@@ -15,6 +15,7 @@ from app.services.scoring import derive_company_grade
 BUCKET_ORDER = {"within_3_days": 0, "within_7_days": 1, "earlier": 2}
 JOB_GRADE_ORDER = {"high": 0, "medium": 1, "low": 2}
 COMPANY_GRADE_ORDER = {"focus": 0, "watch": 1, "normal": 2}
+JDTRUST_RISK_ORDER = {"high": 0, "needs_review": 1, "low": 2}
 WINDOW_DAYS = 14
 LEGACY_CATEGORY_ALIASES = {"增长": "市场"}
 
@@ -27,8 +28,15 @@ def build_claim_map(claims: list[JobClaim]) -> dict[int, list[str]]:
     return claim_map
 
 
-def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) -> list[DayBucketSnapshot]:
+def build_day_payloads(
+    jobs: list[Job],
+    claims: list[JobClaim],
+    *,
+    today: date,
+    jdtrust_assessments: dict[int, dict] | None = None,
+) -> list[DayBucketSnapshot]:
     claim_map = build_claim_map(claims)
+    jdtrust_assessments = jdtrust_assessments or {}
     window_start = today - timedelta(days=WINDOW_DAYS - 1)
     day_groups: dict[str, dict[str, dict]] = defaultdict(dict)
 
@@ -60,7 +68,7 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                 company["jobs"],
                 key=lambda current_job: (JOB_GRADE_ORDER[current_job.bounty_grade], current_job.title.lower()),
             )
-            jobs_payload = [_build_job_payload(job) for job in sorted_jobs]
+            jobs_payload = [_build_job_payload(job, jdtrust_assessments.get(job.id)) for job in sorted_jobs]
             company_claims: list[str] = []
             for job_item in jobs_payload:
                 for name in claim_map.get(job_item["id"], []):
@@ -82,6 +90,7 @@ def build_day_payloads(jobs: list[Job], claims: list[JobClaim], *, today: date) 
                     claim_status="claimed" if company_claims else None,
                     estimated_bounty_amount=company_bounty_estimate.amount if company_bounty_estimate else None,
                     estimated_bounty_label=company_bounty_estimate.label if company_bounty_estimate else PENDING_ESTIMATED_BOUNTY_LABEL,
+                    jd_trust=_select_company_jdtrust(sorted_jobs, jdtrust_assessments),
                 )
             )
 
@@ -105,7 +114,38 @@ def _select_company_bounty_estimate(jobs: list[Job]):
     return select_readable_estimated_bounty(jobs)
 
 
-def _build_job_payload(job: Job) -> dict:
+def _select_company_jdtrust(jobs: list[Job], assessments: dict[int, dict]) -> dict | None:
+    candidates = [assessments[job.id] for job in jobs if job.id in assessments]
+    if not candidates:
+        return None
+    selected = min(
+        candidates,
+        key=lambda assessment: (
+            JDTRUST_RISK_ORDER.get(assessment.get("risk_level"), len(JDTRUST_RISK_ORDER)),
+            _trust_score_sort_value(assessment.get("trust_score")),
+        ),
+    )
+    return {
+        "legacy_job_id": selected["legacy_job_id"],
+        "canonical_url": selected.get("canonical_url"),
+        "source_name": selected.get("source_name"),
+        "title": selected.get("title"),
+        "company": selected.get("company"),
+        "risk_level": selected["risk_level"],
+        "trust_score": selected.get("trust_score"),
+        "reason_codes": list(selected.get("reason_codes") or []),
+        "recommended_checks": list(selected.get("recommended_checks") or []),
+        "evidence_refs": list(selected.get("evidence_refs") or []),
+        "domain_warnings": list(selected.get("domain_warnings") or []),
+        "verification_tags": list(selected.get("verification_tags") or []),
+    }
+
+
+def _trust_score_sort_value(value) -> int:
+    return value if isinstance(value, int) else 101
+
+
+def _build_job_payload(job: Job, jdtrust_assessment: dict | None = None) -> dict:
     return {
         "id": job.id,
         "title": job.title,
@@ -113,6 +153,7 @@ def _build_job_payload(job: Job) -> dict:
         "bounty_grade": job.bounty_grade,
         "job_category": _resolve_job_category(job),
         "tags": list(job.signal_tags.get("display_tags", [])),
+        "verification_tags": list((jdtrust_assessment or {}).get("verification_tags") or []),
         "claimed_names": [],
     }
 
