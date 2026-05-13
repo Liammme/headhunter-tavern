@@ -872,7 +872,7 @@ h5,
   position: relative;
   display: grid;
   justify-items: center;
-  transform: translateX(-16px);
+  transform: translateX(-6px);
 }
 
 .job-category-filter-panel {
@@ -1737,7 +1737,7 @@ h5,
   }
 
   .feed-tabs-row {
-    transform: translateX(-8px);
+    transform: translateX(-2px);
   }
 
   .animated-card-visual,
