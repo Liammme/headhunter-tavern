@@ -18,15 +18,13 @@ const FEED_TABS: Array<{ label: FeedTabLabel; bucket: DayBucketPayload["bucket"]
 ];
 
 const EARLIER_JOB_PREVIEW_LIMIT = 10;
-const ALL_CATEGORY_LABEL = "全部";
 
 type FeedTabLabel = "最新" | "7天内" | "更早";
-type JobCategoryFilter = typeof ALL_CATEGORY_LABEL | JobCategory;
-const CATEGORY_FILTER_OPTIONS: JobCategoryFilter[] = [ALL_CATEGORY_LABEL, ...JOB_CATEGORY_OPTIONS];
 
 export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[] }) {
   const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
-  const [activeCategory, setActiveCategory] = useState<JobCategoryFilter>(ALL_CATEGORY_LABEL);
+  const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
+  const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
   const [showAllEarlier, setShowAllEarlier] = useState(false);
 
   const daysByBucket = useMemo(() => {
@@ -45,7 +43,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
 
   const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "within_3_days";
   const activeCompanies = daysByBucket[activeBucket];
-  const filteredCompanies = filterCompaniesByCategory(activeCompanies, activeCategory);
+  const filteredCompanies = filterCompaniesByCategory(activeCompanies, selectedCategories);
   const isEarlier = activeBucket === "earlier";
   const { companies: visibleCompanies, hasHiddenJobs } =
     isEarlier && !showAllEarlier
@@ -68,22 +66,72 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
         />
       </div>
 
-      <div className="job-category-filter-row" aria-label="岗位类型筛选">
-        {CATEGORY_FILTER_OPTIONS.map((category) => (
+      <div className="job-category-filter">
+        <button
+          type="button"
+          className="job-category-filter-trigger"
+          aria-expanded={categoryPanelOpen}
+          aria-controls="job-category-filter-panel"
+          onClick={() => setCategoryPanelOpen((value) => !value)}
+        >
+          <span>岗位类型</span>
+          <strong>{selectedCategories.length ? `已选 ${selectedCategories.length}` : "全部"}</strong>
+        </button>
+
+        {categoryPanelOpen ? (
+          <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label="岗位类型筛选">
+            <div className="job-category-filter-head">
+              <span>筛选岗位类型</span>
+              <button
+                type="button"
+                className="job-category-filter-clear"
+                disabled={!selectedCategories.length}
+                onClick={() => {
+                  setSelectedCategories([]);
+                  setShowAllEarlier(false);
+                }}
+              >
+                清空
+              </button>
+            </div>
+            <div className="job-category-options">
+              {JOB_CATEGORY_OPTIONS.map((category) => (
+                <label key={category} className="job-category-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(category)}
+                    onChange={() => {
+                      setSelectedCategories((current) => toggleCategory(current, category));
+                      setShowAllEarlier(false);
+                    }}
+                  />
+                  <span>{category}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {selectedCategories.length ? (
+        <div className="job-category-active-list" aria-label="已选择岗位类型">
+          {selectedCategories.map((category) => (
           <button
             key={category}
             type="button"
-            className="job-category-chip"
-            aria-pressed={activeCategory === category}
+            className="job-category-active-chip"
+            aria-label={`移除${category}筛选`}
             onClick={() => {
-              setActiveCategory(category);
+              setSelectedCategories((current) => current.filter((item) => item !== category));
               setShowAllEarlier(false);
             }}
           >
             {category}
+            <span aria-hidden="true">×</span>
           </button>
         ))}
-      </div>
+        </div>
+      ) : null}
 
       {visibleCompanies.length ? (
         <CompanyDaySection
@@ -96,9 +144,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       ) : (
         <section className="empty-state" aria-live="polite">
           <p className="eyebrow">{activeTab}</p>
-          <h2>
-            {activeCategory === ALL_CATEGORY_LABEL ? "这一栏暂时没有岗位" : `这一栏暂时没有${activeCategory}岗位`}
-          </h2>
+          <h2>{selectedCategories.length ? "这一栏暂时没有匹配岗位" : "这一栏暂时没有岗位"}</h2>
           <p>等下一次抓取写入后，这里会自动展示对应时间段的公司机会。</p>
         </section>
       )}
@@ -119,13 +165,21 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
   );
 }
 
-function filterCompaniesByCategory(companies: CompanyCardPayload[], category: JobCategoryFilter): CompanyCardPayload[] {
-  if (category === ALL_CATEGORY_LABEL) {
+function toggleCategory(current: JobCategory[], category: JobCategory): JobCategory[] {
+  if (current.includes(category)) {
+    return current.filter((item) => item !== category);
+  }
+
+  return [...current, category];
+}
+
+function filterCompaniesByCategory(companies: CompanyCardPayload[], categories: JobCategory[]): CompanyCardPayload[] {
+  if (!categories.length) {
     return companies;
   }
 
   return companies.flatMap((company) => {
-    const jobs = company.jobs.filter((job) => job.job_category === category);
+    const jobs = company.jobs.filter((job) => categories.includes(job.job_category));
     if (!jobs.length) {
       return [];
     }
