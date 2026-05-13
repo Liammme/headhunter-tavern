@@ -78,7 +78,6 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
         {categoryPanelOpen ? (
           <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label="岗位类型筛选">
             <div className="job-category-filter-head">
-              <span>筛选岗位类型</span>
               <button
                 type="button"
                 className="job-category-filter-clear"
