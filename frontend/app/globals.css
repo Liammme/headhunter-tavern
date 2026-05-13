@@ -852,6 +852,11 @@ h5,
   margin-top: 4px;
 }
 
+.page-brand-footer a {
+  display: block;
+  line-height: 0;
+}
+
 .page-brand-footer img {
   display: block;
   width: min(245px, 70vw);
@@ -867,6 +872,7 @@ h5,
   position: relative;
   display: grid;
   justify-items: center;
+  transform: translateX(-16px);
 }
 
 .job-category-filter-panel {
@@ -1728,6 +1734,10 @@ h5,
     width: min(340px, calc(100vw - 40px));
     max-width: calc(100vw - 56px);
     margin-inline: auto;
+  }
+
+  .feed-tabs-row {
+    transform: translateX(-8px);
   }
 
   .animated-card-visual,

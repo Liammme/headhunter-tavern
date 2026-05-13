@@ -77,7 +77,9 @@ export default async function HomePage() {
         )}
       </section>
       <footer className="page-brand-footer" aria-label="Powered by Talentverse X">
-        <img src="/assets/talentverse-powered-by.svg" alt="Powered by Talentverse X" width={245} height={25} />
+        <a href="https://www.talent-verse.xyz/zh-hans/talentverse-x" target="_blank" rel="noopener noreferrer">
+          <img src="/assets/talentverse-powered-by.svg" alt="Powered by Talentverse X" width={245} height={25} />
+        </a>
       </footer>
     </main>
   );
