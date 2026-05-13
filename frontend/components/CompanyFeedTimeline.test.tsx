@@ -175,4 +175,24 @@ describe("CompanyFeedTimeline", () => {
     expect(screen.getAllByRole("button", { name: "设计" })).toHaveLength(2);
     expect(screen.queryByLabelText("已选择岗位类型")).not.toBeInTheDocument();
   });
+
+  it("closes the category panel when clicking outside it", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+
+    expect(screen.queryByRole("button", { name: "设计" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the category panel open when clicking inside it", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+  });
 });

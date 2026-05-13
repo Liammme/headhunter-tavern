@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import CompanyDaySection from "./CompanyDaySection";
 import { AnimatedTabs } from "./ui/animated-tabs";
@@ -26,6 +26,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
   const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
   const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
   const [showAllEarlier, setShowAllEarlier] = useState(false);
+  const categoryFilterRef = useRef<HTMLDivElement>(null);
 
   const daysByBucket = useMemo(() => {
     const grouped: Record<DayBucketPayload["bucket"], CompanyCardPayload[]> = {
@@ -51,9 +52,27 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       ? limitCompaniesByJobs(filteredCompanies, EARLIER_JOB_PREVIEW_LIMIT)
       : { companies: filteredCompanies, hasHiddenJobs: false };
 
+  useEffect(() => {
+    if (!categoryPanelOpen) {
+      return;
+    }
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && categoryFilterRef.current?.contains(target)) {
+        return;
+      }
+
+      setCategoryPanelOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [categoryPanelOpen]);
+
   return (
     <div className="feed-timeline">
-      <div className="feed-tabs-row">
+      <div className="feed-tabs-row" ref={categoryFilterRef}>
         <AnimatedTabs
           tabs={FEED_TABS.map(({ label }) => ({ label }))}
           activeLabel={activeTab}
