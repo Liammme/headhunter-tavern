@@ -56,27 +56,24 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
         <AnimatedTabs
           tabs={FEED_TABS.map(({ label }) => ({ label }))}
           activeLabel={activeTab}
+          actions={[
+            {
+              label: selectedCategories.length ? `已选 ${selectedCategories.length}` : "全部岗位",
+              active: selectedCategories.length > 0 || categoryPanelOpen,
+              ariaExpanded: categoryPanelOpen,
+              ariaControls: "job-category-filter-panel",
+              onClick: () => setCategoryPanelOpen((value) => !value),
+            },
+          ]}
           ariaLabel="岗位时间筛选"
           logoSrc="/q.svg"
           logoAlt="赏金猎人"
           onChange={(label) => {
             setActiveTab(label as FeedTabLabel);
             setShowAllEarlier(false);
+            setCategoryPanelOpen(false);
           }}
         />
-      </div>
-
-      <div className="job-category-filter">
-        <button
-          type="button"
-          className="job-category-filter-trigger"
-          aria-expanded={categoryPanelOpen}
-          aria-controls="job-category-filter-panel"
-          onClick={() => setCategoryPanelOpen((value) => !value)}
-        >
-          <span>岗位类型</span>
-          <strong>{selectedCategories.length ? `已选 ${selectedCategories.length}` : "全部"}</strong>
-        </button>
 
         {categoryPanelOpen ? (
           <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label="岗位类型筛选">
@@ -96,17 +93,18 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
             </div>
             <div className="job-category-options">
               {JOB_CATEGORY_OPTIONS.map((category) => (
-                <label key={category} className="job-category-option">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(category)}
-                    onChange={() => {
-                      setSelectedCategories((current) => toggleCategory(current, category));
-                      setShowAllEarlier(false);
-                    }}
-                  />
-                  <span>{category}</span>
-                </label>
+                <button
+                  key={category}
+                  type="button"
+                  className={`job-category-option${selectedCategories.includes(category) ? " job-category-option-selected" : ""}`}
+                  aria-pressed={selectedCategories.includes(category)}
+                  onClick={() => {
+                    setSelectedCategories((current) => toggleCategory(current, category));
+                    setShowAllEarlier(false);
+                  }}
+                >
+                  {category}
+                </button>
               ))}
             </div>
           </div>
@@ -116,20 +114,20 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       {selectedCategories.length ? (
         <div className="job-category-active-list" aria-label="已选择岗位类型">
           {selectedCategories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className="job-category-active-chip"
-            aria-label={`移除${category}筛选`}
-            onClick={() => {
-              setSelectedCategories((current) => current.filter((item) => item !== category));
-              setShowAllEarlier(false);
-            }}
-          >
-            {category}
-            <span aria-hidden="true">×</span>
-          </button>
-        ))}
+            <button
+              key={category}
+              type="button"
+              className="job-category-active-chip"
+              aria-label={`移除${category}筛选`}
+              onClick={() => {
+                setSelectedCategories((current) => current.filter((item) => item !== category));
+                setShowAllEarlier(false);
+              }}
+            >
+              {category}
+              <span aria-hidden="true">×</span>
+            </button>
+          ))}
         </div>
       ) : null}
 

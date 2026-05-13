@@ -110,8 +110,8 @@ describe("CompanyFeedTimeline", () => {
     expect(screen.getByText("Design Co")).toBeInTheDocument();
     expect(screen.getByText("Data Co")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "岗位类型 全部" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "设计" }));
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
 
     expect(screen.getByText("Design Co")).toBeInTheDocument();
     expect(screen.queryByText("Data Co")).not.toBeInTheDocument();
@@ -120,8 +120,8 @@ describe("CompanyFeedTimeline", () => {
   it("shows an empty state when the selected category has no jobs", () => {
     render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Tech Co", ["技术"])]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "岗位类型 全部" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "设计" }));
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
 
     expect(screen.getByText("这一栏暂时没有匹配岗位")).toBeInTheDocument();
     expect(screen.queryByText("Tech Co")).not.toBeInTheDocument();
@@ -130,11 +130,39 @@ describe("CompanyFeedTimeline", () => {
   it("keeps category options hidden until the filter button opens them", () => {
     render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
 
-    expect(screen.queryByRole("checkbox", { name: "设计" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "设计" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "岗位类型 全部" }));
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
 
-    expect(screen.getByRole("checkbox", { name: "设计" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "岗位类型 全部" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "全部岗位" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("allows selecting multiple categories from the same filter panel", () => {
+    render(
+      <CompanyFeedTimeline
+        days={[
+          {
+            bucket: "within_3_days",
+            companies: [
+              buildDay("within_3_days", "Design Co", ["设计"]).companies[0],
+              buildDay("within_3_days", "Data Co", ["数据"]).companies[0],
+              buildDay("within_3_days", "Tech Co", ["技术"]).companies[0],
+            ],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+    fireEvent.click(screen.getByRole("button", { name: "数据" }));
+
+    expect(screen.getByRole("button", { name: "已选 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "设计" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "数据" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Design Co")).toBeInTheDocument();
+    expect(screen.getByText("Data Co")).toBeInTheDocument();
+    expect(screen.queryByText("Tech Co")).not.toBeInTheDocument();
   });
 });
