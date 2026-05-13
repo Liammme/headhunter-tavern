@@ -21,6 +21,7 @@ def build_job(
     title: str,
     bounty_grade: str,
     days_ago: int,
+    job_category: str = "技术",
     tags: list[str] | None = None,
     company_url: str | None = None,
 ) -> Job:
@@ -37,6 +38,7 @@ def build_job(
         posted_at=posted_at,
         collected_at=posted_at,
         bounty_grade=bounty_grade,
+        job_category=job_category,
         signal_tags={
             "display_tags": tags or [],
             **({"company_url": company_url} if company_url else {}),
@@ -62,6 +64,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Staff AI Engineer",
             bounty_grade="high",
             days_ago=0,
+            job_category="AI/算法",
             tags=["AI", "Senior"],
         ),
         build_job(
@@ -71,6 +74,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Product Manager",
             bounty_grade="medium",
             days_ago=0,
+            job_category="产品",
             tags=["产品"],
         ),
         build_job(
@@ -80,6 +84,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
             title="Backend Engineer",
             bounty_grade="low",
             days_ago=0,
+            job_category="技术",
             tags=["技术"],
         ),
     ]
@@ -97,6 +102,7 @@ def test_build_day_payloads_sorts_companies_jobs_and_claims():
     assert companies[0].company_grade == "watch"
     assert companies[0].company_url is None
     assert [job.id for job in companies[0].jobs] == [1, 2]
+    assert [job.job_category for job in companies[0].jobs] == ["AI/算法", "产品"]
     assert companies[0].claimed_names == ["Leo", "Mina"]
     assert companies[0].claimed_by == "Leo"
     assert companies[0].claim_status == "claimed"
@@ -128,6 +134,102 @@ def test_build_day_payloads_filters_jobs_outside_window():
     assert len(payloads) == 1
     assert payloads[0].bucket == "within_3_days"
     assert [company.company for company in payloads[0].companies] == ["OpenGradient"]
+
+
+def test_build_day_payloads_derives_category_from_legacy_display_tags():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Data Co",
+            company_normalized="legacy-data-co",
+            title="Data Engineer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="其他",
+            tags=["AI", "数据", "关键扩张"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "数据"
+
+
+def test_build_day_payloads_normalizes_legacy_growth_category():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Growth Co",
+            company_normalized="legacy-growth-co",
+            title="Growth Manager",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="增长",
+            tags=["Web3", "增长"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "市场"
+
+
+def test_build_day_payloads_falls_back_to_title_classifier_for_legacy_jobs():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Design Co",
+            company_normalized="legacy-design-co",
+            title="Graphic Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="其他",
+            tags=["Web3", "长期挂岗"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "设计"
+
+
+def test_build_day_payloads_uses_high_confidence_title_category_over_legacy_category():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Legacy Product Co",
+            company_normalized="legacy-product-co",
+            title="Product Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="产品",
+            tags=["Web3", "产品", "长期挂岗"],
+        )
+    ]
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "设计"
+
+
+def test_build_day_payloads_keeps_explicit_signal_category_before_title_classifier():
+    jobs = [
+        build_job(
+            job_id=1,
+            company="Signal Category Co",
+            company_normalized="signal-category-co",
+            title="Product Designer",
+            bounty_grade="medium",
+            days_ago=0,
+            job_category="产品",
+            tags=["Web3", "产品", "长期挂岗"],
+        )
+    ]
+    jobs[0].signal_tags["job_category"] = "产品"
+
+    payloads = build_day_payloads(jobs, [], today=datetime(2026, 4, 18).date())
+
+    assert payloads[0].companies[0].jobs[0].job_category == "产品"
 
 
 def test_build_day_payloads_uses_non_overlapping_recent_buckets():

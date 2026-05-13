@@ -55,11 +55,30 @@ export type LivingReportDataQuality = {
   sample_count?: number;
 };
 
+export const JOB_CATEGORY_OPTIONS = [
+  "设计",
+  "运营",
+  "市场",
+  "销售",
+  "商务",
+  "产品",
+  "技术",
+  "AI/算法",
+  "数据",
+  "安全",
+  "DevRel/社区",
+  "财务/法务/HR",
+  "其他",
+] as const;
+
+export type JobCategory = (typeof JOB_CATEGORY_OPTIONS)[number];
+
 export type JobCardPayload = {
   id: number;
   title: string;
   canonical_url: string;
   bounty_grade: "high" | "medium" | "low";
+  job_category: JobCategory;
   tags: string[];
   verification_tags?: VerificationTagPayload[];
   claimed_names: string[];

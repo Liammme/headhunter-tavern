@@ -32,6 +32,7 @@ function buildCompany(overrides: Partial<CompanyCardPayload> = {}): CompanyCardP
         title: "Principal AI Engineer",
         canonical_url: "https://jobs.example.com/1",
         bounty_grade: "high",
+        job_category: "AI/算法",
         tags: ["AI"],
         verification_tags: [
           {
@@ -98,6 +99,7 @@ describe("CompanyCard", () => {
               title: "Principal AI Engineer",
               canonical_url: "https://jobs.example.com/1",
               bounty_grade: "high",
+              job_category: "AI/算法",
               tags: ["AI"],
               claimed_names: [],
             },
@@ -106,6 +108,7 @@ describe("CompanyCard", () => {
               title: "Growth Engineer",
               canonical_url: "https://jobs.example.com/2",
               bounty_grade: "medium",
+              job_category: "技术",
               tags: ["Growth"],
               claimed_names: [],
             },
@@ -166,6 +169,7 @@ describe("CompanyCard", () => {
               title: "Principal AI Engineer",
               canonical_url: "https://jobs.example.com/1",
               bounty_grade: "high",
+              job_category: "AI/算法",
               tags: ["AI", "Infra"],
               verification_tags: [
                 {
@@ -186,6 +190,7 @@ describe("CompanyCard", () => {
               title: "Growth Engineer",
               canonical_url: "https://jobs.example.com/2",
               bounty_grade: "medium",
+              job_category: "市场",
               tags: ["Growth"],
               claimed_names: [],
             },
@@ -194,6 +199,7 @@ describe("CompanyCard", () => {
               title: "Founding ML Engineer",
               canonical_url: "https://jobs.example.com/3",
               bounty_grade: "high",
+              job_category: "AI/算法",
               tags: ["ML"],
               claimed_names: [],
             },
@@ -202,6 +208,7 @@ describe("CompanyCard", () => {
               title: "Operations Analyst",
               canonical_url: "https://jobs.example.com/4",
               bounty_grade: "low",
+              job_category: "运营",
               tags: ["Ops"],
               claimed_names: [],
             },
@@ -247,6 +254,7 @@ describe("CompanyCard", () => {
               title: "Principal AI Engineer",
               canonical_url: "https://jobs.example.com/1",
               bounty_grade: "high",
+              job_category: "AI/算法",
               tags: ["AI", "Infra"],
               verification_tags: [
                 {
@@ -267,6 +275,7 @@ describe("CompanyCard", () => {
               title: "Growth Engineer",
               canonical_url: "https://jobs.example.com/2",
               bounty_grade: "medium",
+              job_category: "技术",
               tags: ["Growth"],
               claimed_names: [],
             },

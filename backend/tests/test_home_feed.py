@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import json
 from importlib import reload
 
@@ -30,6 +30,7 @@ def test_build_home_payload_uses_latest_job_collection_time_as_generated_at(db_s
 
 
 def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_session):
+    job_time = datetime.now().replace(microsecond=0) - timedelta(days=1)
     db_session.add(
         Job(
             canonical_url="https://jobs.example.com/opengradient/staff-ai-engineer",
@@ -38,8 +39,8 @@ def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_sess
             company="OpenGradient",
             company_normalized="opengradient",
             description="test",
-            posted_at=datetime(2026, 4, 26, 9, 0, 0),
-            collected_at=datetime(2026, 4, 26, 14, 32, 21),
+            posted_at=job_time,
+            collected_at=job_time,
             bounty_grade="high",
             signal_tags={"display_tags": ["AI", "Senior"]},
         )
@@ -69,7 +70,7 @@ def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_sess
     assert payload["intelligence"]["headline"] == "Market snapshot headline"
     assert payload["intelligence"]["summary"] == "Market snapshot summary"
     assert payload["intelligence"]["generated_at"] == "2026-04-26T15:00:00"
-    assert payload["meta"]["generated_at"] == "2026-04-26T14:32:21"
+    assert payload["meta"]["generated_at"] == job_time.isoformat()
     assert payload["days"][0]["companies"][0]["company"] == "OpenGradient"
 
 
@@ -128,6 +129,7 @@ def test_build_home_payload_reads_configured_jdtrust_assessment_jsonl(db_session
         "recommended_checks": ["核对官网招聘页"],
         "evidence_refs": ["canonical_post"],
         "domain_warnings": [],
+        "verification_tags": [],
     }
 
 

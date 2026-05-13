@@ -24,6 +24,7 @@ class JobFeedSnapshot:
     bounty_grade: str
     tags: list[str]
     claimed_names: list[str]
+    job_category: str = "其他"
     verification_tags: list[dict] = field(default_factory=list)
 
 

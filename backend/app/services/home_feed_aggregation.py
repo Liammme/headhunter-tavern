@@ -9,6 +9,7 @@ from app.services.estimated_bounty_read import (
 )
 from app.services.feed_snapshot import CompanyFeedSnapshot, DayBucketSnapshot, JobFeedSnapshot
 from app.services.grouping import bucket_posted_date
+from app.services.job_category_classifier import JOB_CATEGORIES, classify_job_category_result
 from app.services.scoring import derive_company_grade
 
 BUCKET_ORDER = {"within_3_days": 0, "within_7_days": 1, "earlier": 2}
@@ -16,6 +17,7 @@ JOB_GRADE_ORDER = {"high": 0, "medium": 1, "low": 2}
 COMPANY_GRADE_ORDER = {"focus": 0, "watch": 1, "normal": 2}
 JDTRUST_RISK_ORDER = {"high": 0, "needs_review": 1, "low": 2}
 WINDOW_DAYS = 14
+LEGACY_CATEGORY_ALIASES = {"增长": "市场"}
 
 
 def build_claim_map(claims: list[JobClaim]) -> dict[int, list[str]]:
@@ -149,7 +151,48 @@ def _build_job_payload(job: Job, jdtrust_assessment: dict | None = None) -> dict
         "title": job.title,
         "canonical_url": job.canonical_url,
         "bounty_grade": job.bounty_grade,
+        "job_category": _resolve_job_category(job),
         "tags": list(job.signal_tags.get("display_tags", [])),
         "verification_tags": list((jdtrust_assessment or {}).get("verification_tags") or []),
         "claimed_names": [],
     }
+
+
+def _resolve_job_category(job: Job) -> str:
+    normalized_signal_category = _normalize_job_category(job.signal_tags.get("job_category"))
+    if normalized_signal_category and normalized_signal_category != "其他":
+        return normalized_signal_category
+
+    classifier_result = classify_job_category_result(job.title, "")
+    classifier_category = _normalize_job_category(classifier_result.primary)
+    if (
+        classifier_category
+        and classifier_category != "其他"
+        and classifier_result.confidence == "high"
+    ):
+        return classifier_category
+
+    normalized_job_category = _normalize_job_category(job.job_category)
+    if normalized_job_category and normalized_job_category != "其他":
+        return normalized_job_category
+
+    display_tags = job.signal_tags.get("display_tags", [])
+    for tag in display_tags:
+        normalized_tag = _normalize_job_category(tag)
+        if normalized_tag and normalized_tag != "其他":
+            return normalized_tag
+
+    if classifier_category and classifier_category != "其他":
+        return classifier_category
+
+    return normalized_job_category or "其他"
+
+
+def _normalize_job_category(value: object) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+
+    normalized = LEGACY_CATEGORY_ALIASES.get(value, value)
+    if normalized in JOB_CATEGORIES:
+        return normalized
+    return None

@@ -8,18 +8,33 @@ export interface AnimatedTabsProps {
   tabs: { label: string }[];
   activeLabel: string;
   onChange: (label: string) => void;
+  actions?: {
+    label: string;
+    onClick: () => void;
+    active?: boolean;
+    ariaExpanded?: boolean;
+    ariaControls?: string;
+  }[];
   ariaLabel?: string;
   logoSrc?: string;
   logoAlt?: string;
 }
 
-export function AnimatedTabs({ tabs, activeLabel, onChange, ariaLabel, logoSrc, logoAlt = "筛选标志" }: AnimatedTabsProps) {
+export function AnimatedTabs({
+  tabs,
+  activeLabel,
+  onChange,
+  actions = [],
+  ariaLabel,
+  logoSrc,
+  logoAlt = "筛选标志",
+}: AnimatedTabsProps) {
   const circleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const timelineRefs = useRef<Array<gsap.core.Timeline | null>>([]);
   const tweenRefs = useRef<Array<gsap.core.Tween | null>>([]);
   const logoImgRef = useRef<HTMLImageElement>(null);
   const logoTweenRef = useRef<gsap.core.Tween | null>(null);
-  const tabsKey = tabs.map((tab) => tab.label).join("|");
+  const tabsKey = [...tabs.map((tab) => tab.label), ...actions.map((action) => action.label)].join("|");
 
   useEffect(() => {
     const layout = () => {
@@ -162,6 +177,36 @@ export function AnimatedTabs({ tabs, activeLabel, onChange, ariaLabel, logoSrc, 
                 <span className="animated-tab-label">{label}</span>
                 <span className="animated-tab-label-hover" aria-hidden="true">
                   {label}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+        {actions.map((action, actionIndex) => {
+          const index = tabs.length + actionIndex;
+
+          return (
+            <button
+              key={action.label}
+              type="button"
+              className={`animated-tab animated-tab-action${action.active ? " animated-tab-active" : ""}`}
+              aria-expanded={action.ariaExpanded}
+              aria-controls={action.ariaControls}
+              onMouseEnter={() => handleMouseEnter(index)}
+              onMouseLeave={() => handleMouseLeave(index)}
+              onClick={action.onClick}
+            >
+              <span
+                className="animated-tab-hover-circle"
+                aria-hidden="true"
+                ref={(element) => {
+                  circleRefs.current[index] = element;
+                }}
+              />
+              <span className="animated-tab-label-stack">
+                <span className="animated-tab-label">{action.label}</span>
+                <span className="animated-tab-label-hover" aria-hidden="true">
+                  {action.label}
                 </span>
               </span>
             </button>

@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import CompanyFeedTimeline from "./CompanyFeedTimeline";
-import type { DayBucketPayload } from "../lib/types";
+import type { DayBucketPayload, JobCategory } from "../lib/types";
 
 vi.mock("./CompanyCard", () => ({
   default: ({ company }: { company: { company: string; jobs: Array<{ title: string }> } }) => (
@@ -15,20 +15,25 @@ vi.mock("./CompanyCard", () => ({
   ),
 }));
 
-function buildDay(bucket: DayBucketPayload["bucket"], company: string, jobCount = 1): DayBucketPayload {
+function buildDay(
+  bucket: DayBucketPayload["bucket"],
+  company: string,
+  jobCategories: JobCategory[] = ["技术"],
+): DayBucketPayload {
   return {
     bucket,
     companies: [
       {
         company,
         company_grade: "focus",
-        total_jobs: jobCount,
+        total_jobs: jobCategories.length,
         claimed_names: [],
-        jobs: Array.from({ length: jobCount }, (_, index) => ({
+        jobs: jobCategories.map((jobCategory, index) => ({
           id: index + 1,
           title: `${company} Job ${index + 1}`,
           canonical_url: `https://jobs.example.com/${company}-${index + 1}`,
           bounty_grade: "medium",
+          job_category: jobCategory,
           tags: [],
           claimed_names: [],
         })),
@@ -65,7 +70,13 @@ describe("CompanyFeedTimeline", () => {
   });
 
   it("limits the earlier tab to ten jobs until expanded", () => {
-    render(<CompanyFeedTimeline days={[buildDay("earlier", "Earlier Co", 12)]} />);
+    render(
+      <CompanyFeedTimeline
+        days={[
+          buildDay("earlier", "Earlier Co", Array.from({ length: 12 }, (): JobCategory => "技术")),
+        ]}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("tab", { name: "更早" }));
 
@@ -79,5 +90,109 @@ describe("CompanyFeedTimeline", () => {
 
     expect(screen.getByText("Earlier Co Job 12")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "收起更早岗位" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("filters visible jobs by backend job category", () => {
+    render(
+      <CompanyFeedTimeline
+        days={[
+          {
+            bucket: "within_3_days",
+            companies: [
+              buildDay("within_3_days", "Design Co", ["设计"]).companies[0],
+              buildDay("within_3_days", "Data Co", ["数据"]).companies[0],
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Design Co")).toBeInTheDocument();
+    expect(screen.getByText("Data Co")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getByText("Design Co")).toBeInTheDocument();
+    expect(screen.queryByText("Data Co")).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when the selected category has no jobs", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Tech Co", ["技术"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getByText("这一栏暂时没有匹配岗位")).toBeInTheDocument();
+    expect(screen.queryByText("Tech Co")).not.toBeInTheDocument();
+  });
+
+  it("keeps category options hidden until the filter button opens them", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    expect(screen.queryByRole("button", { name: "设计" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "全部岗位" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("allows selecting multiple categories from the same filter panel", () => {
+    render(
+      <CompanyFeedTimeline
+        days={[
+          {
+            bucket: "within_3_days",
+            companies: [
+              buildDay("within_3_days", "Design Co", ["设计"]).companies[0],
+              buildDay("within_3_days", "Data Co", ["数据"]).companies[0],
+              buildDay("within_3_days", "Tech Co", ["技术"]).companies[0],
+            ],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+    fireEvent.click(screen.getByRole("button", { name: "数据" }));
+
+    expect(screen.getByRole("button", { name: "设计/数据" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "设计" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "数据" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Design Co")).toBeInTheDocument();
+    expect(screen.getByText("Data Co")).toBeInTheDocument();
+    expect(screen.queryByText("Tech Co")).not.toBeInTheDocument();
+  });
+
+  it("does not render selected category chips below the tab row", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getAllByRole("button", { name: "设计" })).toHaveLength(2);
+    expect(screen.queryByLabelText("已选择岗位类型")).not.toBeInTheDocument();
+  });
+
+  it("closes the category panel when clicking outside it", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+
+    expect(screen.queryByRole("button", { name: "设计" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the category panel open when clicking inside it", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
   });
 });

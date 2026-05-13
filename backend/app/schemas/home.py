@@ -14,6 +14,7 @@ class JobCardOut(BaseModel):
     title: str
     canonical_url: str
     bounty_grade: str
+    job_category: str
     tags: list[str]
     verification_tags: list[VerificationTagOut] = Field(default_factory=list)
     claimed_names: list[str]

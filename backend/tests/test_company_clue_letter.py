@@ -6,6 +6,8 @@ from app.services.company_clue_context import build_company_clue_context
 from app.services.company_clue_letter import generate_company_clue_letter, _company_clue_cache, _should_use_company_clue_llm
 from app.services.intelligence import IntelligenceGenerationError
 
+TEST_JOB_TIME = datetime.now().replace(microsecond=0) - timedelta(days=1)
+
 
 def enable_estimated_bounty_read(monkeypatch) -> None:
     monkeypatch.setattr(
@@ -30,8 +32,8 @@ def build_job(
         company=company,
         company_normalized=company.lower(),
         description=description,
-        posted_at=datetime(2026, 4, 22, 9, 0, 0),
-        collected_at=datetime(2026, 4, 22, 9, 0, 0),
+        posted_at=TEST_JOB_TIME,
+        collected_at=TEST_JOB_TIME,
         bounty_grade=bounty_grade,
         signal_tags=signal_tags
         or {
@@ -42,7 +44,7 @@ def build_job(
 
 
 def build_windowed_job(*, company: str, title: str, days_ago: int) -> Job:
-    current = datetime(2026, 4, 23, 12, 0, 0) - timedelta(days=days_ago)
+    current = datetime.now().replace(microsecond=0) - timedelta(days=days_ago)
     return Job(
         canonical_url=f"https://jobs.example.com/{company.lower()}/{title.lower().replace(' ', '-')}",
         source_name="test",
@@ -120,7 +122,7 @@ def test_generate_company_clue_letter_returns_success_contract(db_session, monke
 
     assert result["status"] == "success"
     assert result["company"] == "OpenGradient"
-    assert result["generated_at"] == "2026-04-22T09:00:00"
+    assert result["generated_at"] == TEST_JOB_TIME.isoformat()
     assert "James侦探" in result["narrative"]
     assert [section["key"] for section in result["sections"]] == ["clue_1", "clue_2", "clue_3"]
 

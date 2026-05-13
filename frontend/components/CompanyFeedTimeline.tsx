@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import CompanyDaySection from "./CompanyDaySection";
 import { AnimatedTabs } from "./ui/animated-tabs";
-import type { CompanyCardPayload, DayBucketPayload } from "../lib/types";
+import {
+  JOB_CATEGORY_OPTIONS,
+  type CompanyCardPayload,
+  type DayBucketPayload,
+  type JobCategory,
+} from "../lib/types";
 
 const FEED_TABS: Array<{ label: FeedTabLabel; bucket: DayBucketPayload["bucket"] }> = [
   { label: "最新", bucket: "within_3_days" },
@@ -18,7 +23,10 @@ type FeedTabLabel = "最新" | "7天内" | "更早";
 
 export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[] }) {
   const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
+  const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
+  const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
   const [showAllEarlier, setShowAllEarlier] = useState(false);
+  const categoryFilterRef = useRef<HTMLDivElement>(null);
 
   const daysByBucket = useMemo(() => {
     const grouped: Record<DayBucketPayload["bucket"], CompanyCardPayload[]> = {
@@ -36,24 +44,77 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
 
   const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "within_3_days";
   const activeCompanies = daysByBucket[activeBucket];
+  const filteredCompanies = filterCompaniesByCategory(activeCompanies, selectedCategories);
+  const categoryActionLabel = formatCategoryActionLabel(selectedCategories);
   const isEarlier = activeBucket === "earlier";
   const { companies: visibleCompanies, hasHiddenJobs } =
-    isEarlier && !showAllEarlier ? limitCompaniesByJobs(activeCompanies, EARLIER_JOB_PREVIEW_LIMIT) : { companies: activeCompanies, hasHiddenJobs: false };
+    isEarlier && !showAllEarlier
+      ? limitCompaniesByJobs(filteredCompanies, EARLIER_JOB_PREVIEW_LIMIT)
+      : { companies: filteredCompanies, hasHiddenJobs: false };
+
+  useEffect(() => {
+    if (!categoryPanelOpen) {
+      return;
+    }
+
+    const closeOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && categoryFilterRef.current?.contains(target)) {
+        return;
+      }
+
+      setCategoryPanelOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+  }, [categoryPanelOpen]);
 
   return (
     <div className="feed-timeline">
-      <div className="feed-tabs-row">
+      <div className="feed-tabs-row" ref={categoryFilterRef}>
         <AnimatedTabs
           tabs={FEED_TABS.map(({ label }) => ({ label }))}
           activeLabel={activeTab}
+          actions={[
+            {
+              label: categoryActionLabel,
+              active: selectedCategories.length > 0 || categoryPanelOpen,
+              ariaExpanded: categoryPanelOpen,
+              ariaControls: "job-category-filter-panel",
+              onClick: () => setCategoryPanelOpen((value) => !value),
+            },
+          ]}
           ariaLabel="岗位时间筛选"
           logoSrc="/q.svg"
           logoAlt="赏金猎人"
           onChange={(label) => {
             setActiveTab(label as FeedTabLabel);
             setShowAllEarlier(false);
+            setCategoryPanelOpen(false);
           }}
         />
+
+        {categoryPanelOpen ? (
+          <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label="岗位类型筛选">
+            <div className="job-category-options">
+              {JOB_CATEGORY_OPTIONS.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={`job-category-option${selectedCategories.includes(category) ? " job-category-option-selected" : ""}`}
+                  aria-pressed={selectedCategories.includes(category)}
+                  onClick={() => {
+                    setSelectedCategories((current) => toggleCategory(current, category));
+                    setShowAllEarlier(false);
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {visibleCompanies.length ? (
@@ -67,7 +128,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       ) : (
         <section className="empty-state" aria-live="polite">
           <p className="eyebrow">{activeTab}</p>
-          <h2>这一栏暂时没有岗位</h2>
+          <h2>{selectedCategories.length ? "这一栏暂时没有匹配岗位" : "这一栏暂时没有岗位"}</h2>
           <p>等下一次抓取写入后，这里会自动展示对应时间段的公司机会。</p>
         </section>
       )}
@@ -86,6 +147,48 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       ) : null}
     </div>
   );
+}
+
+function formatCategoryActionLabel(categories: JobCategory[]): string {
+  if (!categories.length) {
+    return "全部岗位";
+  }
+
+  const label = categories.join("/");
+  if (label.length <= 5) {
+    return label;
+  }
+
+  return `${label.slice(0, 4)}..`;
+}
+
+function toggleCategory(current: JobCategory[], category: JobCategory): JobCategory[] {
+  if (current.includes(category)) {
+    return current.filter((item) => item !== category);
+  }
+
+  return [...current, category];
+}
+
+function filterCompaniesByCategory(companies: CompanyCardPayload[], categories: JobCategory[]): CompanyCardPayload[] {
+  if (!categories.length) {
+    return companies;
+  }
+
+  return companies.flatMap((company) => {
+    const jobs = company.jobs.filter((job) => categories.includes(job.job_category));
+    if (!jobs.length) {
+      return [];
+    }
+
+    return [
+      {
+        ...company,
+        total_jobs: jobs.length,
+        jobs,
+      },
+    ];
+  });
 }
 
 function limitCompaniesByJobs(companies: CompanyCardPayload[], maxJobs: number) {
