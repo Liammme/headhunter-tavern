@@ -158,11 +158,21 @@ describe("CompanyFeedTimeline", () => {
     fireEvent.click(screen.getByRole("button", { name: "设计" }));
     fireEvent.click(screen.getByRole("button", { name: "数据" }));
 
-    expect(screen.getByRole("button", { name: "已选 2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "设计/数据" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "设计" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "数据" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Design Co")).toBeInTheDocument();
     expect(screen.getByText("Data Co")).toBeInTheDocument();
     expect(screen.queryByText("Tech Co")).not.toBeInTheDocument();
+  });
+
+  it("does not render selected category chips below the tab row", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Design Co", ["设计"])]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "全部岗位" }));
+    fireEvent.click(screen.getByRole("button", { name: "设计" }));
+
+    expect(screen.getAllByRole("button", { name: "设计" })).toHaveLength(2);
+    expect(screen.queryByLabelText("已选择岗位类型")).not.toBeInTheDocument();
   });
 });

@@ -44,6 +44,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
   const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "within_3_days";
   const activeCompanies = daysByBucket[activeBucket];
   const filteredCompanies = filterCompaniesByCategory(activeCompanies, selectedCategories);
+  const categoryActionLabel = formatCategoryActionLabel(selectedCategories);
   const isEarlier = activeBucket === "earlier";
   const { companies: visibleCompanies, hasHiddenJobs } =
     isEarlier && !showAllEarlier
@@ -58,7 +59,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
           activeLabel={activeTab}
           actions={[
             {
-              label: selectedCategories.length ? `已选 ${selectedCategories.length}` : "全部岗位",
+              label: categoryActionLabel,
               active: selectedCategories.length > 0 || categoryPanelOpen,
               ariaExpanded: categoryPanelOpen,
               ariaControls: "job-category-filter-panel",
@@ -97,26 +98,6 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
         ) : null}
       </div>
 
-      {selectedCategories.length ? (
-        <div className="job-category-active-list" aria-label="已选择岗位类型">
-          {selectedCategories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              className="job-category-active-chip"
-              aria-label={`移除${category}筛选`}
-              onClick={() => {
-                setSelectedCategories((current) => current.filter((item) => item !== category));
-                setShowAllEarlier(false);
-              }}
-            >
-              {category}
-              <span aria-hidden="true">×</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       {visibleCompanies.length ? (
         <CompanyDaySection
           bucket={activeBucket}
@@ -147,6 +128,19 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
       ) : null}
     </div>
   );
+}
+
+function formatCategoryActionLabel(categories: JobCategory[]): string {
+  if (!categories.length) {
+    return "全部岗位";
+  }
+
+  const label = categories.join("/");
+  if (label.length <= 5) {
+    return label;
+  }
+
+  return `${label.slice(0, 4)}..`;
 }
 
 function toggleCategory(current: JobCategory[], category: JobCategory): JobCategory[] {
