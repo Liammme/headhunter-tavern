@@ -107,7 +107,7 @@ function buildDailyCaptureInfo(days: Awaited<ReturnType<typeof fetchHomePayload>
   const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
 
   return {
-    title: `近3天岗位 ${jobCount} 个`,
+    title: `近3天岗位 ${jobCount} 个 / 点击切换市场报告`,
     description: `分布来源：${sourceSummary}${overflow}。`,
   };
 }

@@ -81,6 +81,7 @@ function buildLivingReport(): NonNullable<IntelligencePayload["living_report"]> 
 }
 
 describe("IntelligencePanel", () => {
+  const captureTitle = "近3天岗位 5 个 / 点击切换市场报告";
   const collectionStats = [
     { label: "3天内", value: 5 },
     { label: "7天内", value: 3 },
@@ -95,13 +96,13 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel={reportDateLabel}
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient、Beta Labs。"
         collectionStats={collectionStats}
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: captureTitle })).toBeInTheDocument();
     expect(screen.getByText("分布来源：OpenGradient、Beta Labs。")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "每日岗位收集数量统计图" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "3天内，5 个岗位" }).length).toBeGreaterThan(0);
@@ -132,7 +133,7 @@ describe("IntelligencePanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "返回" }));
 
-    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: captureTitle })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2, name: intelligence.headline })).not.toBeInTheDocument();
   });
 
@@ -143,13 +144,13 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/27"
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
     );
 
-    expect(screen.getByRole("heading", { level: 3, name: "近3天岗位 5 个" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: captureTitle })).toBeInTheDocument();
     expect(screen.queryByText("第 2 版")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("region", { name: "打开猎场控制台" }));
@@ -172,7 +173,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/27"
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
@@ -193,7 +194,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/27"
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
@@ -211,7 +212,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/27"
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
@@ -224,7 +225,7 @@ describe("IntelligencePanel", () => {
       <IntelligencePanel
         intelligence={intelligence}
         reportDateLabel="2026/4/27"
-        captureTitle="近3天岗位 5 个"
+        captureTitle={captureTitle}
         captureDescription="分布来源：OpenGradient。"
         collectionStats={collectionStats}
       />,
