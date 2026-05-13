@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Talent Signal",
   description: "Talent Signal 猎头酒馆，追踪公开岗位变化与公司招聘信号。",
   icons: {
-    icon: "/talent-signal-icon.svg",
-    shortcut: "/talent-signal-icon.svg",
-    apple: "/talent-signal-icon.svg",
+    icon: "/talent-signal-icon-32.svg",
+    shortcut: "/talent-signal-icon-32.svg",
+    apple: "/talent-signal-icon-32.svg",
   },
 };
 
