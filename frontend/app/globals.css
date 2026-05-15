@@ -1669,9 +1669,9 @@ h5,
   }
 
   .page-shell {
-    width: min(100vw - 16px, var(--page-width));
-    padding: 14px 0 38px;
-    gap: 22px;
+    width: 100%;
+    padding: 12px 14px 42px;
+    gap: 18px;
   }
 
   .page-grid-pattern {
@@ -1682,8 +1682,16 @@ h5,
     mask-image: radial-gradient(460px circle at 50% 10%, white 0%, rgba(255, 255, 255, 0.72) 54%, transparent 88%);
   }
 
+  .hero-shell {
+    gap: 24px;
+  }
+
+  .home-hero-copy {
+    gap: 10px;
+  }
+
   .home-hero-copy h1 {
-    max-width: 17ch;
+    max-width: 16ch;
     font-size: clamp(22px, 6.2vw, 28px);
     line-height: 1.08;
     text-wrap: balance;
@@ -1695,7 +1703,7 @@ h5,
 
   .hero-brand-focus-inner {
     --focus-title-size: clamp(17px, 6vw, 23px);
-    max-width: 47vw;
+    max-width: 70vw;
   }
 
   .home-hero-copy p {
@@ -1724,13 +1732,70 @@ h5,
   }
 
   .intel-chart-card {
-    width: min(340px, calc(100vw - 40px));
-    max-width: calc(100vw - 56px);
+    width: min(360px, 100%);
+    max-width: 100%;
     margin-inline: auto;
   }
 
   .feed-tabs-row {
-    transform: translateX(-2px);
+    width: 100%;
+    transform: none;
+  }
+
+  .animated-tabs {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .animated-tabs-logo {
+    width: 42px;
+    height: 42px;
+    padding: 9px;
+  }
+
+  .animated-tabs-track {
+    max-width: calc(100vw - 70px);
+    min-height: 42px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .animated-tabs-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animated-tab {
+    min-width: 64px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0 13px;
+    font-size: 14px;
+    scroll-snap-align: center;
+  }
+
+  .animated-tab-action {
+    min-width: 92px;
+  }
+
+  .job-category-filter-panel {
+    width: calc(100vw - 28px);
+    top: calc(100% + 10px);
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .job-category-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .job-category-option {
+    min-height: 38px;
+    padding: 0 10px;
+    border-radius: 12px;
+    font-size: 13px;
   }
 
   .animated-card-visual,
@@ -1832,8 +1897,63 @@ h5,
     padding: 12px;
   }
 
+  .company-card {
+    gap: 12px;
+    border-radius: 18px;
+  }
+
+  .company-top {
+    gap: 12px;
+  }
+
   .company-top h3 {
     font-size: clamp(21px, 6.2vw, 27px);
+  }
+
+  .company-actions {
+    gap: 6px;
+  }
+
+  .company-clue-tag {
+    min-height: 42px;
+    padding: 8px 13px;
+  }
+
+  .company-claim-seal {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .jdtrust-rail {
+    gap: 7px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .jdtrust-rail-head strong {
+    font-size: 21px;
+  }
+
+  .jdtrust-checks,
+  .jdtrust-domain-warnings ul,
+  .jdtrust-rail-pending p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .job-row {
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .job-title {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .job-actions a {
+    font-size: 13px;
   }
 
   .company-clue-panel-head,
