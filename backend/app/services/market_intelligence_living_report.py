@@ -281,7 +281,28 @@ def _allowed_evidence_ids(input_payload: dict) -> set[str]:
             for item in value:
                 if isinstance(item, dict) and isinstance(item.get("evidence_id"), str):
                     evidence_ids.add(item["evidence_id"])
+
+    allowed_terms = input_payload.get("allowed_evidence_terms")
+    if isinstance(allowed_terms, list):
+        for term in allowed_terms:
+            if isinstance(term, str) and _looks_like_evidence_id(term):
+                evidence_ids.add(term)
+
+    previous_report = input_payload.get("previous_report")
+    if isinstance(previous_report, dict):
+        claims = previous_report.get("active_claims")
+        if isinstance(claims, list):
+            for claim in claims:
+                if not isinstance(claim, dict):
+                    continue
+                for evidence_id in claim.get("evidence_ids") or []:
+                    if isinstance(evidence_id, str) and _looks_like_evidence_id(evidence_id):
+                        evidence_ids.add(evidence_id)
     return evidence_ids
+
+
+def _looks_like_evidence_id(value: str) -> bool:
+    return bool(re.fullmatch(r"(fact-[a-zA-Z0-9]+|e\d+)", value.strip()))
 
 
 def _previous_claim_ids(input_payload: dict) -> set[str]:

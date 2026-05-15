@@ -203,6 +203,29 @@ def test_validate_living_market_report_rejects_unknown_evidence_id():
         validate_living_market_report(report, input_payload=_living_input(), expected_version=1)
 
 
+def test_validate_living_market_report_accepts_previous_report_evidence_for_update():
+    input_payload = _living_input(mode="update")
+    input_payload["previous_report"]["active_claims"][0]["evidence_ids"] = ["fact-99"]
+    input_payload["allowed_evidence_terms"].append("fact-99")
+
+    report = _valid_living_report(version=2, mode="incremental_update")
+    report["claims"][0]["evidence_ids"] = ["fact-99"]
+    report["watchlist"][0]["evidence_ids"] = ["fact-99"]
+
+    validate_living_market_report(report, input_payload=input_payload, expected_version=2)
+
+
+def test_validate_living_market_report_accepts_fact_layer_evidence_terms():
+    input_payload = _living_input()
+    input_payload["allowed_evidence_terms"].append("fact-200")
+
+    report = _valid_living_report()
+    report["claims"][0]["evidence_ids"] = ["fact-200"]
+    report["watchlist"][0]["evidence_ids"] = ["fact-200"]
+
+    validate_living_market_report(report, input_payload=input_payload, expected_version=1)
+
+
 def test_validate_living_market_report_requires_previous_claim_for_non_new_status():
     report = _valid_living_report()
     report["claims"][0]["status"] = "reinforced"
