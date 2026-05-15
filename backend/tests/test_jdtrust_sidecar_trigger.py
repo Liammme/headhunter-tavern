@@ -1,4 +1,6 @@
 from types import SimpleNamespace
+import os
+import time
 
 from app.services.jdtrust_sidecar_trigger import trigger_jdtrust_sidecar_after_crawl
 
@@ -87,6 +89,29 @@ def test_trigger_jdtrust_sidecar_skips_when_lock_exists(tmp_path):
 
     assert result == {"status": "already_running"}
     assert calls == []
+
+
+def test_trigger_jdtrust_sidecar_replaces_stale_lock(tmp_path):
+    calls = []
+    lock_path = tmp_path / "jdtrust.lock"
+    lock_path.write_text("old", encoding="utf-8")
+    old_timestamp = time.time() - 25 * 60 * 60
+    os.utime(lock_path, (old_timestamp, old_timestamp))
+
+    def fake_popen(args, **kwargs):
+        calls.append((args, kwargs))
+        return FakeProcess()
+
+    result = trigger_jdtrust_sidecar_after_crawl(
+        2,
+        settings_override=_settings(bounty_pool_jdtrust_trigger_lock_path=str(lock_path)),
+        popen_factory=fake_popen,
+        wait_for_process=False,
+    )
+
+    assert result == {"status": "started", "pid": 1234}
+    assert calls
+    assert lock_path.read_text(encoding="utf-8") != "old"
 
 
 def test_trigger_jdtrust_sidecar_removes_lock_when_start_fails(tmp_path):

@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -12,6 +13,7 @@ from app.core.config import settings
 
 
 PopenFactory = Callable[..., subprocess.Popen]
+STALE_LOCK_SECONDS = 24 * 60 * 60
 
 
 def trigger_jdtrust_sidecar_after_crawl(
@@ -85,10 +87,26 @@ def _acquire_lock(path: Path) -> bool:
     try:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
-        return False
+        if not _release_stale_lock(path):
+            return False
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            return False
 
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(str(os.getpid()))
+    return True
+
+
+def _release_stale_lock(path: Path) -> bool:
+    try:
+        lock_age_seconds = max(0, time.time() - path.stat().st_mtime)
+    except FileNotFoundError:
+        return True
+    if lock_age_seconds < STALE_LOCK_SECONDS:
+        return False
+    _release_lock(path)
     return True
 
 
