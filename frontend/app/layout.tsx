@@ -8,7 +8,8 @@ const GA_MEASUREMENT_ID = "G-52XYZ9ZD0J";
 
 export const metadata: Metadata = {
   title: "Talent Signal",
-  description: "Talent Signal 猎头酒馆，追踪公开岗位变化与公司招聘信号。",
+  description:
+    "Talent Signal 是聚合 AI 与 Web3 招聘情报产品。它持续抓取公开岗位，生成滚动更新的市场分析报告，并对 JD 可信度和假招聘风险做辅助识别，帮助用户更快看清招聘趋势与市场变化。",
   icons: {
     icon: "/talent-signal-icon-32.svg",
     shortcut: "/talent-signal-icon-32.svg",
