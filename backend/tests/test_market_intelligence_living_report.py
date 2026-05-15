@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, timedelta
 
 import pytest
@@ -164,6 +165,17 @@ def _valid_living_report(*, version: int = 1, mode: str = "baseline_seed") -> di
     }
 
 
+def _expanded_living_report(*, version: int = 1, mode: str = "baseline_seed") -> dict:
+    report = _valid_living_report(version=version, mode=mode)
+    report["executive_summary"] = "AI infra 和数据岗位仍是长期市场结构里的主轴。" * 10
+    for section in report["sections"]:
+        section["body"] = (
+            "本节需要把 7 天、30 天、90 天和 180 天窗口放在一起看，先说明当前结构，再解释变化原因，"
+            "最后标注不确定性，避免把短期采集波动误读成市场趋势。"
+        ) * 4
+    return report
+
+
 def test_validate_living_market_report_accepts_valid_payload():
     validate_living_market_report(
         _valid_living_report(),
@@ -255,6 +267,55 @@ def test_generate_living_market_report_payload_raises_after_invalid_llm(monkeypa
         )
 
     assert len(calls) == 2
+
+
+def test_generate_living_market_report_payload_retries_once_when_report_is_too_short(monkeypatch):
+    calls = []
+    monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
+    short_report = _valid_living_report()
+    expanded_report = _expanded_living_report()
+
+    def fake_request_structured_json(messages, **_kwargs):
+        calls.append([dict(message) for message in messages])
+        report = short_report if len(calls) == 1 else expanded_report
+        return json.dumps(report, ensure_ascii=False)
+
+    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", fake_request_structured_json)
+
+    report = generate_living_market_report_payload(
+        _living_input(),
+        version=1,
+        mode="baseline_seed",
+        previous_snapshot_id=None,
+        generated_at=datetime(2026, 4, 27, 10, 0, 0),
+    )
+
+    assert len(calls) == 2
+    assert "太短" in calls[1][-1]["content"]
+    assert report["executive_summary"] == expanded_report["executive_summary"]
+
+
+def test_generate_living_market_report_payload_accepts_short_report_after_quality_retry(monkeypatch):
+    calls = []
+    monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
+    short_report = _valid_living_report()
+
+    def fake_request_structured_json(messages, **_kwargs):
+        calls.append([dict(message) for message in messages])
+        return json.dumps(short_report, ensure_ascii=False)
+
+    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", fake_request_structured_json)
+
+    report = generate_living_market_report_payload(
+        _living_input(),
+        version=1,
+        mode="baseline_seed",
+        previous_snapshot_id=None,
+        generated_at=datetime(2026, 4, 27, 10, 0, 0),
+    )
+
+    assert len(calls) == 2
+    assert report["headline"] == short_report["headline"]
 
 
 def test_generate_living_market_report_payload_requires_llm(monkeypatch):

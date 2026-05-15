@@ -57,6 +57,9 @@ BANNED_FIELDS = {
 }
 BANNED_TOKENS = {"bounty", "claimed"}
 LIVING_REPORT_LLM_TIMEOUT_SECONDS = 120
+MIN_EXECUTIVE_SUMMARY_CHARS = 120
+MIN_SECTION_BODY_CHARS = 180
+MIN_TOTAL_REPORT_CHARS = 1800
 
 
 class LivingMarketReportError(Exception):
@@ -66,7 +69,9 @@ class LivingMarketReportError(Exception):
 def build_living_market_report_system_prompt() -> str:
     return (
         "你从脱敏招聘事实生成中文 Living Market Report，只返回 JSON object，不要 Markdown。"
-        "目标 1500-2500 字，不写日报、不写榜单、不写岗位流水账。"
+        "目标 2000-3000 个中文字符，不写日报、不写榜单、不写岗位流水账。"
+        "即使 mode 是 incremental_update，也必须输出一份完整市场分析报告，不是上一版的补丁、摘要或更新日志。"
+        "每个 section 都要展开数据变化、原因解释和不确定性，必须对比 7d/30d/90d/180d。"
         "只能使用输入 JSON 中的统计和 evidence_id；每个 claim 必须有 evidence_ids。"
         "禁止补外部事实，禁止输出 canonical_url/source_name/job_url/full_description、猎头、赏金、认领、客户开发、岗位来源、岗位链接。"
         "字段必须严格匹配 living_market_report schema，不能输出 date、statement 或任何 schema 外字段。"
@@ -89,6 +94,7 @@ def build_living_market_report_system_prompt() -> str:
         "}。"
         "sections 必须 3-5 个，section_id 只能是 market_structure/demand_shifts/company_patterns/risk_and_uncertainty；"
         "claims 必须 4-10 个；每个 claim 使用 1-5 个输入中存在的 evidence_id。"
+        "executive_summary 至少 120 个中文字符；每个 section.body 至少 180 个中文字符。"
     )
 
 
@@ -122,6 +128,20 @@ def generate_living_market_report_payload(
             report["seed_window_days"] = 180
             report["generated_at"] = generated_at.replace(microsecond=0).isoformat()
             validate_living_market_report(report, input_payload=input_payload, expected_version=version)
+            quality_warnings = _quality_warnings(report)
+            if quality_warnings and attempt == 0:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "上次输出太短，不能作为完整 Living Market Report。"
+                            f"问题：{'; '.join(quality_warnings)}。"
+                            "请扩写 executive_summary 和每个 section.body。"
+                            "保持相同 JSON schema，只使用输入证据，不添加外部事实，不要解释。"
+                        ),
+                    }
+                )
+                continue
             return report
         except Exception as exc:
             last_error = exc
@@ -139,6 +159,44 @@ def generate_living_market_report_payload(
             if attempt == 0:
                 continue
     raise LivingMarketReportError(f"LLM report failed validation after retries: {str(last_error)[:300]}")
+
+
+def _quality_warnings(payload: dict) -> list[str]:
+    warnings: list[str] = []
+    executive_summary = payload.get("executive_summary")
+    if isinstance(executive_summary, str) and len(executive_summary.strip()) < MIN_EXECUTIVE_SUMMARY_CHARS:
+        warnings.append("executive_summary 太短")
+
+    sections = payload.get("sections")
+    if isinstance(sections, list):
+        short_sections = [
+            section.get("section_id") or section.get("title") or "unknown"
+            for section in sections
+            if isinstance(section, dict) and len(str(section.get("body") or "").strip()) < MIN_SECTION_BODY_CHARS
+        ]
+        if short_sections:
+            warnings.append(f"section.body 太短: {', '.join(str(item) for item in short_sections[:4])}")
+
+    if _report_text_length(payload) < MIN_TOTAL_REPORT_CHARS:
+        warnings.append("整篇报告正文太短")
+    return warnings
+
+
+def _report_text_length(payload: dict) -> int:
+    text_parts = [str(payload.get("headline") or ""), str(payload.get("executive_summary") or "")]
+    sections = payload.get("sections")
+    if isinstance(sections, list):
+        for section in sections:
+            if isinstance(section, dict):
+                text_parts.append(str(section.get("title") or ""))
+                text_parts.append(str(section.get("body") or ""))
+    claims = payload.get("claims")
+    if isinstance(claims, list):
+        for claim in claims:
+            if isinstance(claim, dict):
+                text_parts.append(str(claim.get("claim") or ""))
+                text_parts.append(str(claim.get("change_reason") or ""))
+    return len("".join(text_parts).strip())
 
 
 def validate_living_market_report(payload: dict, *, input_payload: dict, expected_version: int) -> None:
