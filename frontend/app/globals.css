@@ -1201,7 +1201,6 @@ h5,
   overflow-wrap: anywhere;
 }
 
-.company-meta,
 .job-badges,
 .company-actions,
 .dialog-actions,
@@ -1212,12 +1211,6 @@ h5,
   gap: 8px;
 }
 
-.company-meta {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.company-grade,
 .job-badge {
   display: inline-flex;
   align-items: center;

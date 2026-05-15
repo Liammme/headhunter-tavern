@@ -91,10 +91,6 @@ export default function CompanyCard({
               companyState.company
             )}
           </h3>
-          <div className="company-meta">
-            <span>共 {companyState.total_jobs} 个岗位</span>
-            <span>已认领 {companyState.claimed_names.length} 人</span>
-          </div>
           <div className="company-actions">
             <button
               type="button"
@@ -111,7 +107,6 @@ export default function CompanyCard({
               </span>
               <span>线索</span>
             </button>
-            <span className="company-grade">{renderCompanyGrade(companyState.company_grade)}</span>
           </div>
         </div>
         <CompanyClaimSeal company={companyState} />
@@ -167,16 +162,6 @@ export default function CompanyCard({
       ) : null}
     </article>
   );
-}
-
-function renderCompanyGrade(grade: CompanyCardPayload["company_grade"]) {
-  if (grade === "focus") {
-    return "重点公司";
-  }
-  if (grade === "watch") {
-    return "关注公司";
-  }
-  return "普通公司";
 }
 
 function normalizeClueResponse(response: CompanyClueResponse): CompanyClueState {

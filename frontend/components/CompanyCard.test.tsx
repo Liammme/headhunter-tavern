@@ -82,7 +82,11 @@ describe("CompanyCard", () => {
     expect(within(rightRail as HTMLElement).queryByText("¥3,000+")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByRole("button", { name: /认领/ })).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("重点公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("关注公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("普通公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("共 1 个岗位")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("已认领 0 人")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("待签署")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("签署区")).not.toBeInTheDocument();
     expect(within(rightRail as HTMLElement).queryByText("公司线索认领")).not.toBeInTheDocument();
@@ -222,7 +226,8 @@ describe("CompanyCard", () => {
     const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
 
     expect(card).not.toBeNull();
-    expect(within(card as HTMLElement).getByText("共 4 个岗位")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("共 4 个岗位")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("已认领 1 人")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
     expect(within(seal).getByText("JD可信度：需核验")).toBeInTheDocument();
@@ -293,8 +298,11 @@ describe("CompanyCard", () => {
       "https://companies.example.com/opengradient",
     );
     expect(within(card as HTMLElement).queryByText("公司档案")).not.toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("重点公司")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("共 2 个岗位")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("重点公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("关注公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("普通公司")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("共 2 个岗位")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("已认领 1 人")).not.toBeInTheDocument();
     const seal = within(card as HTMLElement).getByLabelText("公司签署状态位");
     expect(within(card as HTMLElement).getByRole("button", { name: "线索" })).toBeInTheDocument();
     expect(within(seal).getByText("Signed by Ada")).toBeInTheDocument();
