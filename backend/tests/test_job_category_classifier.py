@@ -56,3 +56,16 @@ def test_mixed_job_posting_is_not_forced_into_a_specific_filter_category():
     assert result.secondary == ()
     assert result.confidence == "low"
     assert result.mixed_job_posting is True
+
+
+def test_classify_job_category_handles_japanese_role_keywords():
+    cases = [
+        ("リードエンジニア", "", "技术"),
+        ("機械学習エンジニア", "", "AI/算法"),
+        ("プロダクトマネージャー", "", "产品"),
+        ("カスタマーサクセス", "", "销售"),
+        ("マーケティング担当", "", "市场"),
+    ]
+
+    for title, description, expected in cases:
+        assert classify_job_category(title, description) == expected
