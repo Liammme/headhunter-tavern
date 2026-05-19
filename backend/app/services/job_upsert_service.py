@@ -7,11 +7,12 @@ from sqlalchemy.orm import Session
 from app.crawlers.base import NormalizedJob
 from app.models import Job, JobClaim
 from app.services.job_enrichment import build_job_payload
+from app.services.region import GLOBAL_REGION, RegionCode
 
 WINDOW_DAYS = 30
 
 
-def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
+def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob], *, region: RegionCode = GLOBAL_REGION) -> int:
     unique_jobs: dict[str, NormalizedJob] = {}
     for job in fetched_jobs:
         canonical_url = (job.canonical_url or "").strip()
@@ -29,6 +30,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
     for canonical_url, normalized_job in unique_jobs.items():
         existing = existing_jobs.get(canonical_url)
         payload = build_job_payload(normalized_job)
+        payload["region"] = region
         if existing is None:
             db.add(Job(**payload))
             new_jobs += 1

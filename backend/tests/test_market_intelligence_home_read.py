@@ -4,6 +4,7 @@ import pytest
 
 from app.models import MarketIntelligenceSnapshot
 from app.services.market_intelligence_read_service import load_latest_market_intelligence_for_home
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
 def _report_payload(
@@ -85,13 +86,19 @@ def _add_snapshot(
     generated_at: datetime = datetime(2026, 4, 26, 10, 0, 0),
     status: str = "success",
     report_payload: dict | None = None,
+    region: str | None = None,
 ) -> MarketIntelligenceSnapshot:
+    market_signal_payload = {}
+    resolved_report_payload = report_payload if report_payload is not None else _report_payload()
+    if region is not None:
+        market_signal_payload["region"] = region
+        resolved_report_payload = {**resolved_report_payload, "region": region}
     snapshot = MarketIntelligenceSnapshot(
         snapshot_date=snapshot_date,
         generated_at=generated_at,
         window_days=90,
-        market_signal_payload={},
-        report_payload=report_payload if report_payload is not None else _report_payload(),
+        market_signal_payload=market_signal_payload,
+        report_payload=resolved_report_payload,
         model_name=None,
         status=status,
         error_message="model failed" if status == "failed" else None,
@@ -296,3 +303,69 @@ def test_load_latest_market_intelligence_continues_after_latest_invalid_legacy(d
 
     assert payload is not None
     assert payload["headline"] == "Older usable"
+
+
+def test_global_home_does_not_read_japan_report(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=_report_payload(headline="Japan headline", narrative="Japan narrative"),
+        region=JAPAN_REGION,
+    )
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 25, 10, 0, 0),
+        report_payload=_report_payload(headline="Global headline", narrative="Global narrative"),
+        region=GLOBAL_REGION,
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session)
+
+    assert payload is not None
+    assert payload["headline"] == "Global headline"
+
+
+def test_japan_home_does_not_read_global_report(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=_report_payload(headline="Global headline", narrative="Global narrative"),
+        region=GLOBAL_REGION,
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session, region=JAPAN_REGION)
+
+    assert payload is None
+
+
+def test_japan_home_prefers_japan_report(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 9, 0, 0),
+        report_payload=_report_payload(headline="Global headline", narrative="Global narrative"),
+        region=GLOBAL_REGION,
+    )
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload=_report_payload(headline="Japan headline", narrative="Japan narrative"),
+        region=JAPAN_REGION,
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session, region=JAPAN_REGION)
+
+    assert payload is not None
+    assert payload["headline"] == "Japan headline"
+
+
+def test_bad_japan_report_does_not_500(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 10, 0, 0),
+        report_payload={"headline": "", "narrative": "Bad Japan"},
+        region=JAPAN_REGION,
+    )
+
+    payload = load_latest_market_intelligence_for_home(db_session, region=JAPAN_REGION)
+
+    assert payload is None

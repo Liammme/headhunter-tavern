@@ -11,10 +11,12 @@ export default function CompanyCard({
   company,
   defaultVisibleJobs = 3,
   showJobExpand = true,
+  showTrustRail = true,
 }: {
   company: CompanyCardPayload;
   defaultVisibleJobs?: number;
   showJobExpand?: boolean;
+  showTrustRail?: boolean;
 }) {
   const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
@@ -109,7 +111,7 @@ export default function CompanyCard({
             </button>
           </div>
         </div>
-        <CompanyClaimSeal company={companyState} />
+        {showTrustRail ? <CompanyClaimSeal company={companyState} /> : null}
       </div>
       {isClueOpen && clueState ? (
         <CompanyCluePanel

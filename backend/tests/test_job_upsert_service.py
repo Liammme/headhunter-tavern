@@ -4,6 +4,7 @@ from sqlalchemy import select
 
 from app.crawlers.base import NormalizedJob
 from app.models import Job, JobClaim
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 from app.services import job_upsert_service
 from app.services.job_upsert_service import delete_out_of_window_jobs, purge_demo_jobs, upsert_jobs
 
@@ -88,6 +89,43 @@ def test_upsert_jobs_persists_long_titles(db_session):
 
     assert new_jobs == 1
     assert stored_job.title == expected_title
+
+
+def test_upsert_jobs_writes_global_region_by_default(db_session):
+    upsert_jobs(
+        db_session,
+        [
+            build_normalized_job(
+                canonical_url="https://jobs.example.com/acme/global-role",
+                title="Global Role",
+                company="Acme",
+                description="global payload",
+            )
+        ],
+    )
+
+    stored_job = db_session.execute(select(Job)).scalars().one()
+
+    assert stored_job.region == GLOBAL_REGION
+
+
+def test_upsert_jobs_writes_explicit_japan_region(db_session):
+    upsert_jobs(
+        db_session,
+        [
+            build_normalized_job(
+                canonical_url="https://jobs.example.jp/acme/japan-role",
+                title="Japan Role",
+                company="Acme Japan",
+                description="japan payload",
+            )
+        ],
+        region=JAPAN_REGION,
+    )
+
+    stored_job = db_session.execute(select(Job)).scalars().one()
+
+    assert stored_job.region == JAPAN_REGION
 
 
 def test_purge_demo_jobs_removes_demo_jobs_and_claims(db_session):

@@ -21,7 +21,13 @@ const EARLIER_JOB_PREVIEW_LIMIT = 10;
 
 type FeedTabLabel = "最新" | "7天内" | "更早";
 
-export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[] }) {
+export default function CompanyFeedTimeline({
+  days,
+  showTrustRail = true,
+}: {
+  days: DayBucketPayload[];
+  showTrustRail?: boolean;
+}) {
   const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
   const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
   const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
@@ -124,6 +130,7 @@ export default function CompanyFeedTimeline({ days }: { days: DayBucketPayload[]
           showTitle={false}
           defaultVisibleJobs={isEarlier ? Number.MAX_SAFE_INTEGER : undefined}
           showJobExpand={!isEarlier}
+          showTrustRail={showTrustRail}
         />
       ) : (
         <section className="empty-state" aria-live="polite">

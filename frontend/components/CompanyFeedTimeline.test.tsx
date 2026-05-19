@@ -5,9 +5,16 @@ import CompanyFeedTimeline from "./CompanyFeedTimeline";
 import type { DayBucketPayload, JobCategory } from "../lib/types";
 
 vi.mock("./CompanyCard", () => ({
-  default: ({ company }: { company: { company: string; jobs: Array<{ title: string }> } }) => (
+  default: ({
+    company,
+    showTrustRail,
+  }: {
+    company: { company: string; jobs: Array<{ title: string }> };
+    showTrustRail?: boolean;
+  }) => (
     <article>
       <h3>{company.company}</h3>
+      <span>{showTrustRail === false ? "trust hidden" : "trust visible"}</span>
       {company.jobs.map((job) => (
         <p key={job.title}>{job.title}</p>
       ))}
@@ -194,5 +201,12 @@ describe("CompanyFeedTimeline", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "设计" }));
 
     expect(screen.getByRole("button", { name: "设计" })).toBeInTheDocument();
+  });
+
+  it("passes showTrustRail=false to company cards", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Tokyo Co")]} showTrustRail={false} />);
+
+    expect(screen.getByText("trust hidden")).toBeInTheDocument();
+    expect(screen.queryByText("trust visible")).not.toBeInTheDocument();
   });
 });

@@ -2,12 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import MarketIntelligenceSnapshot
+from app.services.region import GLOBAL_REGION, RegionCode
 
 
 MARKET_INTELLIGENCE_VERSION = "market-intelligence-v1"
 
 
-def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
+def load_latest_market_intelligence_for_home(db: Session, *, region: RegionCode = GLOBAL_REGION) -> dict | None:
     snapshots = (
         db.execute(
             select(MarketIntelligenceSnapshot)
@@ -18,6 +19,7 @@ def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
         .scalars()
         .all()
     )
+    snapshots = [snapshot for snapshot in snapshots if _snapshot_matches_region(snapshot, region)]
     for snapshot in snapshots:
         if snapshot.status != "success":
             continue
@@ -33,6 +35,15 @@ def load_latest_market_intelligence_for_home(db: Session) -> dict | None:
         if payload is not None:
             return payload
     return None
+
+
+def _snapshot_matches_region(snapshot: MarketIntelligenceSnapshot, region: RegionCode) -> bool:
+    report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
+    signal = snapshot.market_signal_payload if isinstance(snapshot.market_signal_payload, dict) else {}
+    snapshot_region = report.get("region") or signal.get("region")
+    if region == GLOBAL_REGION:
+        return snapshot_region in (None, GLOBAL_REGION)
+    return snapshot_region == region
 
 
 def _home_payload_from_snapshot(

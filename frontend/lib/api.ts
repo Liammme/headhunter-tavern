@@ -28,6 +28,18 @@ export async function fetchHomePayload(): Promise<HomePayload> {
   return response.json();
 }
 
+export async function fetchJapanHomePayload(): Promise<HomePayload> {
+  const response = await fetch(`${apiBase}/home/japan`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load Japan home payload");
+  }
+
+  return response.json();
+}
+
 export async function createClaim(jobId: number, claimerName: string) {
   const response = await fetch(`${apiBase}/claims`, {
     method: "POST",

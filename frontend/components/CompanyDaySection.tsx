@@ -9,12 +9,14 @@ export default function CompanyDaySection({
   showTitle = true,
   defaultVisibleJobs,
   showJobExpand,
+  showTrustRail = true,
 }: {
   bucket: DayBucketPayload["bucket"];
   companies: CompanyCardPayload[];
   showTitle?: boolean;
   defaultVisibleJobs?: number;
   showJobExpand?: boolean;
+  showTrustRail?: boolean;
 }) {
   return (
     <section className="day-section">
@@ -26,6 +28,7 @@ export default function CompanyDaySection({
             company={company}
             defaultVisibleJobs={defaultVisibleJobs}
             showJobExpand={showJobExpand}
+            showTrustRail={showTrustRail}
           />
         ))}
       </div>
