@@ -46,9 +46,7 @@ def generate_daily_market_intelligence_snapshot(
     if recent_success is not None:
         return {"status": "skipped", "snapshot_id": recent_success.id}
 
-    jobs_query = select(Job)
-    if region != GLOBAL_REGION:
-        jobs_query = jobs_query.where(Job.region == region)
+    jobs_query = select(Job).where(Job.region == region)
     jobs = list(db.execute(jobs_query).scalars().all())
     signal_payload = build_market_signal_payload(jobs=jobs, snapshot_date=target_date)
     signal_payload["region"] = region

@@ -128,6 +128,41 @@ def test_upsert_jobs_writes_explicit_japan_region(db_session):
     assert stored_job.region == JAPAN_REGION
 
 
+def test_upsert_jobs_does_not_update_same_url_in_other_region(db_session):
+    existing = Job(
+        canonical_url="https://jobs.example.com/shared-role",
+        source_name="global-board",
+        title="Global Title",
+        company="Global Co",
+        company_normalized="global-co",
+        description="global description",
+        collected_at=datetime.now().replace(microsecond=0),
+        region=GLOBAL_REGION,
+    )
+    db_session.add(existing)
+    db_session.commit()
+
+    new_jobs = upsert_jobs(
+        db_session,
+        [
+            build_normalized_job(
+                canonical_url="https://jobs.example.com/shared-role",
+                title="Japan Title",
+                company="Japan Co",
+                description="japan description",
+            )
+        ],
+        region=JAPAN_REGION,
+    )
+
+    jobs = db_session.execute(select(Job)).scalars().all()
+
+    assert new_jobs == 0
+    assert len(jobs) == 1
+    assert jobs[0].region == GLOBAL_REGION
+    assert jobs[0].title == "Global Title"
+
+
 def test_purge_demo_jobs_removes_demo_jobs_and_claims(db_session):
     demo_job = Job(
         canonical_url="https://jobs.example.com/demo/demo-role",
@@ -208,6 +243,46 @@ def test_delete_out_of_window_jobs_keeps_jobs_collected_within_30_days(db_sessio
 
     assert [job.canonical_url for job in remaining_jobs] == [boundary_job_url, fresh_job_url]
     assert [claim.job_id for claim in remaining_claims] == [fresh_job_id, boundary_job_id]
+
+
+def test_delete_out_of_window_jobs_only_cleans_requested_region(db_session, monkeypatch):
+    fixed_now = datetime(2026, 4, 26, 12, 0, 0)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now
+
+    monkeypatch.setattr(job_upsert_service, "datetime", FrozenDateTime)
+
+    stale_global = Job(
+        canonical_url="https://jobs.example.com/global-stale",
+        source_name="test",
+        title="Global Stale",
+        company="Global",
+        company_normalized="global",
+        description="stale",
+        collected_at=fixed_now - timedelta(days=31),
+        region=GLOBAL_REGION,
+    )
+    stale_japan = Job(
+        canonical_url="https://jobs.example.jp/japan-stale",
+        source_name="test",
+        title="Japan Stale",
+        company="Japan",
+        company_normalized="japan",
+        description="stale",
+        collected_at=fixed_now - timedelta(days=31),
+        region=JAPAN_REGION,
+    )
+    db_session.add_all([stale_global, stale_japan])
+    db_session.commit()
+
+    delete_out_of_window_jobs(db_session, region=JAPAN_REGION)
+
+    remaining_jobs = db_session.execute(select(Job)).scalars().all()
+
+    assert [job.canonical_url for job in remaining_jobs] == ["https://jobs.example.com/global-stale"]
 
 
 def test_upsert_jobs_flushes_existing_job_updates_before_retention_cleanup(db_session, monkeypatch):
