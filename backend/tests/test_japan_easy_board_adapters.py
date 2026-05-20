@@ -14,7 +14,7 @@ def test_en_tenshoku_adapter_parses_new_job_links(monkeypatch):
     jobs = EnTenshokuAdapter().fetch()
 
     assert len(jobs) == 1
-    assert jobs[0].canonical_url == "https://employment.en-japan.com/desc_1418422/?arearoute=1"
+    assert jobs[0].canonical_url == "https://employment.en-japan.com/desc_1418422/"
     assert jobs[0].title.startswith("厚生労働省の管理部門担当")
     assert jobs[0].source_job_id == "1418422"
     assert jobs[0].remote_type == "remote"

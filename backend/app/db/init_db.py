@@ -22,6 +22,7 @@ def init_db() -> None:
     )
     Base.metadata.create_all(bind=engine)
     _ensure_job_region_column()
+    _ensure_job_region_index()
 
 
 def _ensure_job_region_column() -> None:
@@ -39,3 +40,16 @@ def _ensure_job_region_column() -> None:
     )
     with engine.begin() as connection:
         connection.execute(text(statement))
+
+
+def _ensure_job_region_index() -> None:
+    inspector = inspect(engine)
+    if "jobs" not in inspector.get_table_names():
+        return
+    if not any(column["name"] == "region" for column in inspector.get_columns("jobs")):
+        return
+    if any(index["name"] == "ix_jobs_region" for index in inspector.get_indexes("jobs")):
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_region ON jobs (region)"))

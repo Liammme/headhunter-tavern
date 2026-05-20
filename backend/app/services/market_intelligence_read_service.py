@@ -14,7 +14,6 @@ def load_latest_market_intelligence_for_home(db: Session, *, region: RegionCode 
             select(MarketIntelligenceSnapshot)
             .where(MarketIntelligenceSnapshot.status.in_(("success", "fallback")))
             .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
-            .limit(20)
         )
         .scalars()
         .all()

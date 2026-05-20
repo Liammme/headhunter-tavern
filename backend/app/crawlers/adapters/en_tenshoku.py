@@ -23,7 +23,7 @@ class EnTenshokuAdapter(SourceAdapter):
             if not href or not title or not source_job_id or title == "詳細へ":
                 continue
 
-            canonical_url = urljoin("https://employment.en-japan.com", href)
+            canonical_url = f"https://employment.en-japan.com/desc_{source_job_id}/"
             if canonical_url in seen:
                 continue
 

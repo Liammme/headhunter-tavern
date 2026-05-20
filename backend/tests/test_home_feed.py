@@ -3,6 +3,7 @@ import json
 from importlib import reload
 
 from app.models import Job, MarketIntelligenceSnapshot
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 from app.services.home_feed import build_home_payload
 
 
@@ -72,6 +73,46 @@ def test_build_home_payload_prefers_success_market_intelligence_snapshot(db_sess
     assert payload["intelligence"]["generated_at"] == "2026-04-26T15:00:00"
     assert payload["meta"]["generated_at"] == job_time.isoformat()
     assert payload["days"][0]["companies"][0]["company"] == "OpenGradient"
+
+
+def test_build_home_payload_excludes_japan_region_jobs_from_global_home(db_session):
+    now = datetime.now().replace(microsecond=0)
+    db_session.add_all(
+        [
+            Job(
+                canonical_url="https://jobs.example.com/global/staff-ai-engineer",
+                source_name="test",
+                title="Staff AI Engineer",
+                company="Global Co",
+                company_normalized="global-co",
+                description="global",
+                posted_at=now,
+                collected_at=now,
+                bounty_grade="high",
+                signal_tags={"display_tags": ["Global"]},
+                region=GLOBAL_REGION,
+            ),
+            Job(
+                canonical_url="https://jobs.example.jp/japan/backend-engineer",
+                source_name="test",
+                title="バックエンドエンジニア",
+                company="Japan Co",
+                company_normalized="japan-co",
+                description="japan",
+                posted_at=now,
+                collected_at=now,
+                bounty_grade="high",
+                signal_tags={"display_tags": ["Japan"]},
+                region=JAPAN_REGION,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    payload = build_home_payload(db_session)
+
+    companies = [company["company"] for day in payload["days"] for company in day["companies"]]
+    assert companies == ["Global Co"]
 
 
 def test_build_home_payload_reads_configured_jdtrust_assessment_jsonl(db_session, tmp_path, monkeypatch):

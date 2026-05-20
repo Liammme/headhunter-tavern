@@ -77,13 +77,19 @@ class WithBAdapter(SourceAdapter):
         seen: set[str] = set()
 
         for category_url in CATEGORY_URLS:
-            category_html = fetch_html(category_url)
+            try:
+                category_html = fetch_html(category_url)
+            except Exception:  # noqa: BLE001
+                continue
             category_soup, _ = soup_links(category_html)
 
             for page_url in _category_page_urls(category_url, category_soup):
                 soup = category_soup
                 if page_url != category_url:
-                    html = fetch_html(page_url)
+                    try:
+                        html = fetch_html(page_url)
+                    except Exception:  # noqa: BLE001
+                        continue
                     soup, _ = soup_links(html)
 
                 for article in soup.select("article"):

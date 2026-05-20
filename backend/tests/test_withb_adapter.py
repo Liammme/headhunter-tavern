@@ -50,3 +50,35 @@ def test_withb_adapter_parses_category_pages_and_pagination(monkeypatch):
     assert jobs[0].raw_payload["site"] == "withb"
     assert jobs[0].raw_payload["salary"] == "402万円 〜 600万円"
     assert jobs[0].posted_at is not None
+
+
+def test_withb_adapter_keeps_parsed_jobs_when_later_page_fails(monkeypatch):
+    pages = {
+        "https://withb.co.jp/category/engineer/": """
+        <html><body>
+          <article>
+            <a href="https://withb.co.jp/79872/">
+              エンジニア バックエンドエンジニア（TypeScript）
+              給与：402万円 〜 600万円
+              2026.02.17 株式会社マーキュリー
+            </a>
+          </article>
+          <a href="https://withb.co.jp/category/engineer/page/2/">2</a>
+        </body></html>
+        """,
+    }
+
+    def fake_fetch_html(url: str):
+        if url == "https://withb.co.jp/category/engineer/page/2/":
+            raise TimeoutError("page timed out")
+        return pages.get(url, "<html><body></body></html>")
+
+    monkeypatch.setattr("app.crawlers.adapters.withb.fetch_html", fake_fetch_html)
+    monkeypatch.setattr(
+        "app.crawlers.adapters.withb.CATEGORY_URLS",
+        ("https://withb.co.jp/category/engineer/",),
+    )
+
+    jobs = WithBAdapter().fetch()
+
+    assert [job.canonical_url for job in jobs] == ["https://withb.co.jp/79872/"]

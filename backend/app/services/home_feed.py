@@ -11,12 +11,13 @@ from app.services.home_feed_assembler import assemble_home_payload
 from app.services.intelligence import build_intelligence_snapshot
 from app.services.jdtrust_assessment_read import load_jdtrust_assessments
 from app.services.market_intelligence_read_service import load_latest_market_intelligence_for_home
+from app.services.region import GLOBAL_REGION
 
 
 def build_home_payload(db: Session) -> dict:
     now = datetime.now().replace(microsecond=0)
-    jobs = db.execute(select(Job)).scalars().all()
-    claims = db.execute(select(JobClaim).order_by(JobClaim.created_at.asc(), JobClaim.id.asc())).scalars().all()
+    jobs = db.execute(select(Job).where(Job.region == GLOBAL_REGION)).scalars().all()
+    claims = _load_home_claims(db, jobs)
     day_payloads = build_day_payloads(
         jobs,
         claims,
@@ -31,6 +32,21 @@ def build_home_payload(db: Session) -> dict:
         intelligence=intelligence,
         day_payloads=day_payloads,
         meta=meta,
+    )
+
+
+def _load_home_claims(db: Session, jobs: list[Job]) -> list[JobClaim]:
+    job_ids = [job.id for job in jobs if job.id is not None]
+    if not job_ids:
+        return []
+    return (
+        db.execute(
+            select(JobClaim)
+            .where(JobClaim.job_id.in_(job_ids))
+            .order_by(JobClaim.created_at.asc(), JobClaim.id.asc())
+        )
+        .scalars()
+        .all()
     )
 
 

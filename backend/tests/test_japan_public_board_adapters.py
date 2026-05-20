@@ -51,7 +51,7 @@ def test_wantedly_adapter_parses_project_links(monkeypatch):
     jobs = WantedlyAdapter().fetch()
 
     assert len(jobs) == 1
-    assert jobs[0].canonical_url == "https://www.wantedly.com/projects/2313760?featured=0"
+    assert jobs[0].canonical_url == "https://www.wantedly.com/projects/2313760"
     assert jobs[0].title.startswith("iOSアプリエンジニア")
     assert jobs[0].source_job_id == "2313760"
     assert jobs[0].raw_payload["site"] == "wantedly"

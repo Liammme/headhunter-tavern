@@ -120,7 +120,6 @@ def _load_recent_success_snapshot(
             MarketIntelligenceSnapshot.generated_at >= cutoff,
         )
         .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
-        .limit(20)
     ).scalars().all()
     for snapshot in snapshots:
         report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}

@@ -358,6 +358,30 @@ def test_japan_home_prefers_japan_report(db_session):
     assert payload["headline"] == "Japan headline"
 
 
+def test_japan_home_reads_japan_report_beyond_recent_global_snapshots(db_session):
+    _add_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 1, 10, 0, 0),
+        report_payload=_report_payload(headline="Japan headline", narrative="Japan narrative"),
+        region=JAPAN_REGION,
+    )
+    for index in range(21):
+        _add_snapshot(
+            db_session,
+            generated_at=datetime(2026, 4, 2 + index, 10, 0, 0),
+            report_payload=_report_payload(
+                headline=f"Global headline {index}",
+                narrative=f"Global narrative {index}",
+            ),
+            region=GLOBAL_REGION,
+        )
+
+    payload = load_latest_market_intelligence_for_home(db_session, region=JAPAN_REGION)
+
+    assert payload is not None
+    assert payload["headline"] == "Japan headline"
+
+
 def test_bad_japan_report_does_not_500(db_session):
     _add_snapshot(
         db_session,

@@ -23,7 +23,7 @@ class WantedlyAdapter(SourceAdapter):
             if not href or not title or not source_job_id:
                 continue
 
-            canonical_url = urljoin("https://www.wantedly.com", href)
+            canonical_url = f"https://www.wantedly.com/projects/{source_job_id}"
             if canonical_url in seen:
                 continue
 
