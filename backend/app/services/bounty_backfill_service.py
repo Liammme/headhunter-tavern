@@ -9,10 +9,11 @@ from app.services.bounty_estimation import (
     estimate_bounty,
 )
 from app.services.job_facts import StandardizedJobInput, extract_job_facts
+from app.services.region import GLOBAL_REGION
 
 
 def backfill_estimated_bounties(db: Session) -> dict[str, int]:
-    jobs = db.execute(select(Job).order_by(Job.id.asc())).scalars().all()
+    jobs = db.execute(select(Job).where(Job.region == GLOBAL_REGION).order_by(Job.id.asc())).scalars().all()
     updated_jobs = 0
     skipped_jobs = 0
 

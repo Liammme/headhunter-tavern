@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.models import Job
 from app.services.bounty_backfill_service import backfill_estimated_bounties
+from app.services.region import JAPAN_REGION
 
 
 def test_backfill_estimated_bounties_updates_jobs_missing_estimates(db_session):
@@ -27,6 +28,30 @@ def test_backfill_estimated_bounties_updates_jobs_missing_estimates(db_session):
     assert refreshed.signal_tags["estimated_bounty_amount"] == 12600
     assert refreshed.signal_tags["estimated_bounty_label"] == "¥7,200-¥18,000"
     assert refreshed.signal_tags["display_tags"] == ["AI", "Senior", "核心岗位"]
+
+
+def test_backfill_estimated_bounties_ignores_japan_region_jobs(db_session):
+    job = Job(
+        canonical_url="https://jobs.example.jp/japan/1",
+        source_name="japan-board",
+        title="Principal AI Engineer",
+        company="Japan Co",
+        company_normalized="japan-co",
+        description="Salary range: ¥30k-50k/month. Build LLM platform.",
+        posted_at=datetime(2026, 4, 23, 9, 0, 0),
+        collected_at=datetime(2026, 4, 23, 9, 0, 0),
+        bounty_grade="medium",
+        signal_tags={"display_tags": ["AI"]},
+        region=JAPAN_REGION,
+    )
+    db_session.add(job)
+    db_session.commit()
+
+    summary = backfill_estimated_bounties(db_session)
+    refreshed = db_session.get(Job, job.id)
+
+    assert summary == {"scanned_jobs": 0, "updated_jobs": 0, "skipped_jobs": 0}
+    assert refreshed.signal_tags == {"display_tags": ["AI"]}
 
 
 def test_backfill_estimated_bounties_skips_jobs_with_existing_estimates(db_session):

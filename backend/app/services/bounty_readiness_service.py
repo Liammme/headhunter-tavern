@@ -7,13 +7,14 @@ from sqlalchemy.orm import Session
 from app.models import Job
 from app.services.bounty_estimation import classify_bounty_signal_tags
 from app.services.estimated_bounty_read import select_readable_estimated_bounty
+from app.services.region import GLOBAL_REGION
 
 STATE_KEYS = ("complete", "partial", "invalid", "missing")
 JOB_GRADE_ORDER = {"high": 0, "medium": 1, "low": 2}
 
 
 def audit_estimated_bounties(db: Session, *, today: date, window_days: int) -> dict[str, object]:
-    jobs = db.execute(select(Job).order_by(Job.id.asc())).scalars().all()
+    jobs = db.execute(select(Job).where(Job.region == GLOBAL_REGION).order_by(Job.id.asc())).scalars().all()
     window_start = today - timedelta(days=window_days - 1)
     totals = {state: 0 for state in STATE_KEYS}
     active_totals = {state: 0 for state in STATE_KEYS}

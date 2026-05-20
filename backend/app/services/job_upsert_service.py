@@ -7,11 +7,12 @@ from sqlalchemy.orm import Session
 from app.crawlers.base import NormalizedJob
 from app.models import Job, JobClaim
 from app.services.job_enrichment import build_job_payload
+from app.services.region import GLOBAL_REGION, RegionCode
 
 WINDOW_DAYS = 30
 
 
-def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
+def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob], *, region: RegionCode = GLOBAL_REGION) -> int:
     unique_jobs: dict[str, NormalizedJob] = {}
     for job in fetched_jobs:
         canonical_url = (job.canonical_url or "").strip()
@@ -20,15 +21,17 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
             continue
         unique_jobs[canonical_url] = job
 
-    existing_jobs = {
-        item.canonical_url: item
-        for item in db.execute(select(Job).where(Job.canonical_url.in_(list(unique_jobs.keys())))).scalars().all()
-    }
+    existing_rows = db.execute(select(Job).where(Job.canonical_url.in_(list(unique_jobs.keys())))).scalars().all()
+    existing_jobs = {item.canonical_url: item for item in existing_rows if item.region == region}
+    cross_region_urls = {item.canonical_url for item in existing_rows if item.region != region}
 
     new_jobs = 0
     for canonical_url, normalized_job in unique_jobs.items():
+        if canonical_url in cross_region_urls:
+            continue
         existing = existing_jobs.get(canonical_url)
         payload = build_job_payload(normalized_job)
+        payload["region"] = region
         if existing is None:
             db.add(Job(**payload))
             new_jobs += 1
@@ -38,7 +41,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob]) -> int:
             setattr(existing, key, value)
 
     db.flush()
-    delete_out_of_window_jobs(db)
+    delete_out_of_window_jobs(db, region=region)
     db.commit()
     return new_jobs
 
@@ -51,9 +54,9 @@ def purge_demo_jobs(db: Session) -> None:
         db.commit()
 
 
-def delete_out_of_window_jobs(db: Session) -> None:
+def delete_out_of_window_jobs(db: Session, *, region: RegionCode = GLOBAL_REGION) -> None:
     cutoff = datetime.now() - timedelta(days=WINDOW_DAYS)
-    stale_job_ids = db.execute(select(Job.id).where(Job.collected_at < cutoff)).scalars().all()
+    stale_job_ids = db.execute(select(Job.id).where(Job.collected_at < cutoff, Job.region == region)).scalars().all()
     if not stale_job_ids:
         return
     db.execute(delete(JobClaim).where(JobClaim.job_id.in_(stale_job_ids)))

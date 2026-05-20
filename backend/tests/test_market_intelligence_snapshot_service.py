@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.models import Job, MarketIntelligenceSnapshot
 from app.services.market_intelligence_report import MarketIntelligenceReportError
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
 FULL_DESCRIPTION = (
@@ -19,14 +20,21 @@ def _load_snapshot_service():
     return market_intelligence_snapshot_service
 
 
-def _add_job(db_session, *, job_id: int = 1, posted_at: datetime | None = None) -> Job:
+def _add_job(
+    db_session,
+    *,
+    job_id: int = 1,
+    posted_at: datetime | None = None,
+    region: str = GLOBAL_REGION,
+    company: str = "OpenGradient",
+) -> Job:
     job = Job(
         id=job_id,
         canonical_url=f"https://jobs.example.com/{job_id}",
         source_name="demo-board",
         title="AI Infrastructure Engineer",
-        company="OpenGradient",
-        company_normalized="opengradient",
+        company=company,
+        company_normalized=company.lower().replace(" ", "-"),
         description=FULL_DESCRIPTION,
         posted_at=posted_at or datetime(2026, 4, 25, 9, 0, 0),
         collected_at=datetime(2026, 4, 25, 10, 0, 0),
@@ -38,6 +46,7 @@ def _add_job(db_session, *, job_id: int = 1, posted_at: datetime | None = None) 
             "bd_entry": "email",
             "salary": "100K-200K",
         },
+        region=region,
     )
     db_session.add(job)
     db_session.commit()
@@ -89,6 +98,59 @@ def test_generate_daily_market_intelligence_snapshot_persists_success_snapshot(
     assert "claimed" not in serialized_signal
     assert "bd_entry" not in serialized_signal
     assert FULL_DESCRIPTION not in serialized_signal
+
+
+def test_generate_daily_market_intelligence_snapshot_global_excludes_japan_jobs(
+    db_session,
+    monkeypatch,
+):
+    service = _load_snapshot_service()
+    _add_job(db_session, job_id=1, region=GLOBAL_REGION, company="Global Co")
+    _add_job(db_session, job_id=2, region=JAPAN_REGION, company="Japan Co")
+    captured_payload = {}
+
+    def fake_generate_market_report(signal_payload):
+        captured_payload.update(signal_payload)
+        return {"headline": "Global", "narrative": "Global narrative"}
+
+    monkeypatch.setattr(service, "generate_market_report", fake_generate_market_report)
+
+    service.generate_daily_market_intelligence_snapshot(
+        db_session,
+        snapshot_date=date(2026, 4, 26),
+        clock=_fixed_clock,
+    )
+
+    samples = captured_payload["representative_samples"]
+    assert captured_payload["region"] == GLOBAL_REGION
+    assert [sample["company"] for sample in samples] == ["Global Co"]
+
+
+def test_generate_daily_market_intelligence_snapshot_japan_excludes_global_jobs(
+    db_session,
+    monkeypatch,
+):
+    service = _load_snapshot_service()
+    _add_job(db_session, job_id=1, region=GLOBAL_REGION, company="Global Co")
+    _add_job(db_session, job_id=2, region=JAPAN_REGION, company="Japan Co")
+    captured_payload = {}
+
+    def fake_generate_market_report(signal_payload):
+        captured_payload.update(signal_payload)
+        return {"headline": "Japan", "narrative": "Japan narrative"}
+
+    monkeypatch.setattr(service, "generate_market_report", fake_generate_market_report)
+
+    service.generate_daily_market_intelligence_snapshot(
+        db_session,
+        snapshot_date=date(2026, 4, 26),
+        clock=_fixed_clock,
+        region=JAPAN_REGION,
+    )
+
+    samples = captured_payload["representative_samples"]
+    assert captured_payload["region"] == JAPAN_REGION
+    assert [sample["company"] for sample in samples] == ["Japan Co"]
 
 
 def test_generate_daily_market_intelligence_snapshot_skips_when_recent_success_exists(

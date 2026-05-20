@@ -389,6 +389,16 @@ describe("CompanyCard", () => {
     expect(within(rightRail as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
   });
 
+  it("does not render the jd trust rail when showTrustRail is false", () => {
+    render(<CompanyCard company={buildCompany({ jd_trust: null })} showTrustRail={false} />);
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).queryByText("JD可信度待评估")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByLabelText("JD可信度甄别结果")).not.toBeInTheDocument();
+  });
+
   it("keeps clue content hidden until the clue action is triggered", () => {
     render(<CompanyCard company={buildCompany()} />);
 

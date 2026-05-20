@@ -56,7 +56,8 @@ RULES = (
             r"\b(ai|artificial intelligence|ml|machine learning|deep learning|llm|large language model|"
             r"genai|generative ai|computer vision|nlp|algorithm|research scientist|applied scientist|"
             r"prompt|rag|model training|model serving|inference)\b|"
-            r"算法|机器学习|大模型|人工智能|模型推理|ai工程师|ai架构"
+            r"算法|机器学习|大模型|人工智能|模型推理|ai工程师|ai架构|"
+            r"機械学習|生成ai|aiエンジニア"
         ),
     ),
     CategoryRule(
@@ -73,12 +74,16 @@ RULES = (
         _compile(
             r"\b(designer|design|product design|ux|ui|user experience|visual|brand designer|graphic|"
             r"motion designer|creative director|multimedia editor|video editor|copywriter)\b|"
-            r"设计师|设计|视觉|品牌|用户体验|交互|动效|剪辑|内容编辑"
+            r"设计师|设计|视觉|品牌|用户体验|交互|动效|剪辑|内容编辑|"
+            r"デザイナー|デザイン"
         ),
     ),
     CategoryRule(
         "产品",
-        _compile(r"\b(product manager|product owner|product lead|head of product|principal product)\b|产品经理|产品负责人"),
+        _compile(
+            r"\b(product manager|product owner|product lead|head of product|principal product)\b|"
+            r"产品经理|产品负责人|プロダクトマネージャー|プロダクトオーナー|pdm"
+        ),
     ),
     CategoryRule(
         "DevRel/社区",
@@ -92,6 +97,7 @@ RULES = (
         _compile(
             r"\b(sales|account executive|account manager|sales development|sdr|bdr|customer success|"
             r"solutions consultant|pre-sales|presales|loan originator)\b|销售|客户成功|售前"
+            r"|営業|カスタマーサクセス"
         ),
     ),
     CategoryRule(
@@ -106,7 +112,7 @@ RULES = (
         _compile(
             r"\b(marketing|marketer|growth marketing|content marketing|brand marketing|performance marketing|"
             r"seo|social media|communications|public relations|\bpr\b|campaign|event manager)\b|"
-            r"市场|营销|品牌传播|公关|内容|社交媒体"
+            r"市场|营销|品牌传播|公关|内容|社交媒体|マーケティング|マーケター|広告運用"
         ),
     ),
     CategoryRule(
@@ -133,7 +139,9 @@ RULES = (
             r"full-stack|devops|sre|platform|infrastructure|architect|python|java|typescript|javascript|"
             r"react|node|cloud|kubernetes|qa|quality engineer|test engineer|robotics|automation engineer|"
             r"ios|android|golang|solidity|rust|sdet|protocol engineer)\b|"
-            r"工程师|开发|前端|后端|全栈|架构|测试|运维|机器人|自动化|智能合约|服务端"
+            r"工程师|开发|前端|后端|全栈|架构|测试|运维|机器人|自动化|智能合约|服务端|"
+            r"エンジニア|ソフトウェア|システム開発|フロントエンド|バックエンド|"
+            r"インフラ|開発|社内se"
         ),
     ),
 )

@@ -9,12 +9,19 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.database import Base, get_db
 from app.main import app
-from app.models import company_daily_summary, intelligence_snapshot, job, job_claim, market_intelligence_fact
+from app.models import (
+    company_daily_summary,
+    intelligence_snapshot,
+    job,
+    job_claim,
+    market_intelligence_fact,
+    market_intelligence_snapshot,
+)
 
 
 @pytest.fixture()
 def test_session_factory() -> Generator[sessionmaker, None, None]:
-    _ = (job, company_daily_summary, intelligence_snapshot, job_claim, market_intelligence_fact)
+    _ = (job, company_daily_summary, intelligence_snapshot, job_claim, market_intelligence_fact, market_intelligence_snapshot)
     runtime_dir = Path(__file__).resolve().parents[1] / ".pytest-runtime"
     runtime_dir.mkdir(exist_ok=True)
     db_path = runtime_dir / f"test-{uuid4().hex}.db"

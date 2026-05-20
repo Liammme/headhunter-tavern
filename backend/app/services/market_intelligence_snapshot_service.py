@@ -12,6 +12,7 @@ from app.services.market_intelligence_report import (
     generate_market_report,
 )
 from app.services.market_signal_builder import build_market_signal_payload
+from app.services.region import GLOBAL_REGION, RegionCode
 
 
 ERROR_MESSAGE_LIMIT = 500
@@ -36,15 +37,19 @@ def generate_daily_market_intelligence_snapshot(
     *,
     snapshot_date: date | None = None,
     clock: Callable[[], datetime] = datetime.now,
+    region: RegionCode = GLOBAL_REGION,
+    window_days: int = 90,
 ) -> dict[str, Any]:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
-    recent_success = _load_recent_success_snapshot(db, generated_at=generated_at)
+    recent_success = _load_recent_success_snapshot(db, generated_at=generated_at, region=region)
     if recent_success is not None:
         return {"status": "skipped", "snapshot_id": recent_success.id}
 
-    jobs = list(db.execute(select(Job)).scalars().all())
+    jobs_query = select(Job).where(Job.region == region)
+    jobs = list(db.execute(jobs_query).scalars().all())
     signal_payload = build_market_signal_payload(jobs=jobs, snapshot_date=target_date)
+    signal_payload["region"] = region
     if db.in_transaction():
         db.commit()
 
@@ -52,12 +57,14 @@ def generate_daily_market_intelligence_snapshot(
         report_payload = generate_market_report(signal_payload)
     except MarketIntelligenceReportError as exc:
         error_message = _sanitize_error_message(exc)
+        report_payload = build_rule_market_report(signal_payload)
+        report_payload["region"] = region
         snapshot = MarketIntelligenceSnapshot(
             snapshot_date=target_date,
             generated_at=generated_at,
-            window_days=90,
+            window_days=window_days,
             market_signal_payload=signal_payload,
-            report_payload=build_rule_market_report(signal_payload),
+            report_payload=report_payload,
             model_name=None,
             status="fallback",
             error_message=error_message,
@@ -71,7 +78,7 @@ def generate_daily_market_intelligence_snapshot(
         snapshot = MarketIntelligenceSnapshot(
             snapshot_date=target_date,
             generated_at=generated_at,
-            window_days=90,
+            window_days=window_days,
             market_signal_payload=signal_payload,
             report_payload={},
             model_name=None,
@@ -82,10 +89,11 @@ def generate_daily_market_intelligence_snapshot(
         db.commit()
         return {"status": "failed", "error": error_message}
 
+    report_payload["region"] = region
     snapshot = MarketIntelligenceSnapshot(
         snapshot_date=target_date,
         generated_at=generated_at,
-        window_days=90,
+        window_days=window_days,
         market_signal_payload=signal_payload,
         report_payload=report_payload,
         model_name=None,
@@ -102,17 +110,26 @@ def _load_recent_success_snapshot(
     db: Session,
     *,
     generated_at: datetime,
+    region: RegionCode,
 ) -> MarketIntelligenceSnapshot | None:
     cutoff = generated_at - timedelta(days=SUCCESS_REFRESH_INTERVAL_DAYS)
-    return db.execute(
+    snapshots = db.execute(
         select(MarketIntelligenceSnapshot)
         .where(
             MarketIntelligenceSnapshot.status == "success",
             MarketIntelligenceSnapshot.generated_at >= cutoff,
         )
         .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
-        .limit(1)
-    ).scalar_one_or_none()
+    ).scalars().all()
+    for snapshot in snapshots:
+        report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
+        signal = snapshot.market_signal_payload if isinstance(snapshot.market_signal_payload, dict) else {}
+        snapshot_region = report.get("region") or signal.get("region")
+        if region == GLOBAL_REGION and snapshot_region in (None, GLOBAL_REGION):
+            return snapshot
+        if snapshot_region == region:
+            return snapshot
+    return None
 
 
 def _sanitize_error_message(exc: Exception) -> str:

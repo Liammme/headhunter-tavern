@@ -36,6 +36,39 @@ def test_home_endpoint_returns_query_service_result(client, monkeypatch):
     assert response.json() == expected
 
 
+def test_japan_home_endpoint_returns_query_service_result(client, monkeypatch):
+    expected = {
+        "intelligence": {
+            "narrative": "japan test",
+            "headline": "japan test",
+            "summary": "japan test",
+            "analysis_version": "feed-v1",
+            "rule_version": "score-v2",
+            "window_start": "2026-04-05",
+            "window_end": "2026-04-18",
+            "generated_at": "2026-04-18T09:00:00",
+            "findings": [],
+            "actions": [],
+            "living_report": None,
+        },
+        "meta": {
+            "analysis_version": "feed-v1",
+            "rule_version": "score-v2",
+            "window_start": "2026-04-05",
+            "window_end": "2026-04-18",
+            "generated_at": "2026-04-18T09:00:00",
+        },
+        "days": [],
+    }
+
+    monkeypatch.setattr("app.api.home.get_japan_home_payload", lambda db: expected)
+
+    response = client.get("/api/v1/home/japan")
+
+    assert response.status_code == 200
+    assert response.json() == expected
+
+
 def test_home_payload_has_intelligence_and_days(client):
     response = client.get("/api/v1/home")
 
