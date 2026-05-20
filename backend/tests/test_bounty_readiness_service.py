@@ -2,9 +2,10 @@ from datetime import date, datetime
 
 from app.models import Job
 from app.services.bounty_readiness_service import audit_estimated_bounties
+from app.services.region import JAPAN_REGION
 
 
-def build_job(*, company: str, title: str, days_ago: int, signal_tags: dict) -> Job:
+def build_job(*, company: str, title: str, days_ago: int, signal_tags: dict, region: str = "global") -> Job:
     base_time = datetime(2026, 4, 23, 9, 0, 0)
     collected_at = base_time.replace(day=base_time.day - days_ago)
     return Job(
@@ -18,6 +19,7 @@ def build_job(*, company: str, title: str, days_ago: int, signal_tags: dict) -> 
         collected_at=collected_at,
         bounty_grade="medium",
         signal_tags=signal_tags,
+        region=region,
     )
 
 
@@ -128,3 +130,22 @@ def test_audit_estimated_bounties_fails_strict_readiness_when_active_rows_are_mi
 
     assert summary["active_missing_jobs"] == 1
     assert summary["strict_readiness"] is False
+
+
+def test_audit_estimated_bounties_ignores_japan_region_jobs(db_session):
+    db_session.add(
+        build_job(
+            company="Japan Co",
+            title="Backend Engineer",
+            days_ago=0,
+            signal_tags={"display_tags": ["技术"]},
+            region=JAPAN_REGION,
+        )
+    )
+    db_session.commit()
+
+    summary = audit_estimated_bounties(db_session, today=date(2026, 4, 23), window_days=14)
+
+    assert summary["scanned_jobs"] == 0
+    assert summary["active_scanned_jobs"] == 0
+    assert summary["strict_readiness"] is True
