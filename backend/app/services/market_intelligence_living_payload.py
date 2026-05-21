@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services.market_intelligence_baseline_service import BASELINE_NOTE
-from app.services.region import GLOBAL_REGION, RegionCode
+from app.services.region import GLOBAL_REGION, JAPAN_REGION, RegionCode
 
 WINDOWS = (7, 30, 90, 180)
 
@@ -33,6 +33,7 @@ def build_living_market_report_input(
             "mode": "update" if mode == "update" else "initial",
             "snapshot_date": snapshot_date.isoformat(),
         },
+        "report_scope": _report_scope(region),
         "previous_report": previous_report,
         "market_windows": market_windows,
         "deltas": {
@@ -46,6 +47,30 @@ def build_living_market_report_input(
         "allowed_evidence_terms": _allowed_terms(samples),
         "fact_watermark": _facts_watermark_payload(facts),
         "data_quality": _data_quality(facts),
+    }
+
+
+def _report_scope(region: RegionCode) -> dict:
+    if region == JAPAN_REGION:
+        return {
+            "name": "Talent Signal Japan",
+            "market_scope": "日本招聘市场",
+            "data_source_scope": "日本公开招聘平台样本",
+            "not_a_vertical_web3_report": True,
+            "web3_headline_requires_sample_share_gt": 0.5,
+            "narrative_rules": [
+                "报告标题和总论必须描述日本招聘市场或日本技术/业务岗位招聘信号，不得默认写成 Web3 垂直市场报告。",
+                "Web3、Crypto、Blockchain 只能作为样本中的细分行业信号；除非 Web3 样本占比明确超过阈值，不得进入标题。",
+                "结论必须表述为日本公开招聘平台样本中的可见信号，不得推断完整行业规模、融资、链上活动或外部市场事实。",
+                "优先分析职能结构、经验层级、语言/国际化线索、地点/远程线索、雇佣形态和薪资披露质量。",
+            ],
+        }
+    return {
+        "name": "Talent Signal",
+        "market_scope": "global talent market",
+        "data_source_scope": "structured recruiting facts",
+        "not_a_vertical_web3_report": False,
+        "narrative_rules": [],
     }
 
 

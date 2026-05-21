@@ -7,6 +7,8 @@ from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services import market_intelligence_living_report
 from app.services import market_intelligence_living_report_service
 from app.services.market_intelligence_baseline_service import BASELINE_NOTE
+from app.services.market_intelligence_living_payload import build_living_market_report_input
+from app.services.market_intelligence_living_report import LivingMarketReportError, validate_living_market_report
 from app.services.market_intelligence_living_refresh_service import refresh_living_market_report_if_due
 from app.services.market_intelligence_living_report_service import (
     generate_living_market_report,
@@ -308,6 +310,80 @@ def test_generate_living_market_report_for_japan_uses_180_day_japan_window(db_se
     assert snapshot.window_days == 180
     assert snapshot.market_signal_payload["region"] == JAPAN_REGION
     assert snapshot.report_payload["region"] == JAPAN_REGION
+
+
+def test_japan_living_report_input_declares_non_web3_vertical_scope(db_session):
+    _add_fact(
+        db_session,
+        title="Japan Customer Success",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    input_payload = build_living_market_report_input(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        region=JAPAN_REGION,
+    )
+
+    assert input_payload["report_scope"]["name"] == "Talent Signal Japan"
+    assert input_payload["report_scope"]["market_scope"] == "日本招聘市场"
+    assert input_payload["report_scope"]["data_source_scope"] == "日本公开招聘平台样本"
+    assert input_payload["report_scope"]["not_a_vertical_web3_report"] is True
+    assert "Web3" in " ".join(input_payload["report_scope"]["narrative_rules"])
+
+
+def test_global_living_report_input_keeps_existing_scope(db_session):
+    _add_fact(
+        db_session,
+        title="Global AI Infra Engineer",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    input_payload = build_living_market_report_input(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        region=GLOBAL_REGION,
+    )
+
+    assert input_payload["report_scope"]["name"] == "Talent Signal"
+    assert input_payload["report_scope"]["not_a_vertical_web3_report"] is False
+
+
+def test_japan_living_report_rejects_web3_headline_when_web3_is_not_majority(db_session):
+    _add_fact(
+        db_session,
+        title="Japan Customer Success",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+    input_payload = build_living_market_report_input(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        region=JAPAN_REGION,
+    )
+    payload = _fake_report(
+        input_payload,
+        version=1,
+        mode="baseline_seed",
+        previous_snapshot_id=None,
+        generated_at=datetime(2026, 4, 27, 11, 0, 0),
+    )
+    payload["headline"] = "日本IT/Web3招聘市场报告：初级岗位活跃"
+
+    try:
+        validate_living_market_report(payload, input_payload=input_payload, expected_version=1)
+    except LivingMarketReportError as exc:
+        assert "Web3" in str(exc)
+    else:
+        raise AssertionError("Japan report should reject a Web3 headline when Web3 is not the main sample")
 
 
 def test_refresh_japan_living_report_backfills_japan_facts_before_baseline(db_session, monkeypatch):

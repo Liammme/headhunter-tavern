@@ -72,6 +72,8 @@ def build_living_market_report_system_prompt() -> str:
         "目标 2000-3000 个中文字符，不写日报、不写榜单、不写岗位流水账。"
         "即使 mode 是 incremental_update，也必须输出一份完整市场分析报告，不是上一版的补丁、摘要或更新日志。"
         "每个 section 都要展开数据变化、原因解释和不确定性，必须对比 7d/30d/90d/180d。"
+        "必须遵守输入 JSON 的 report_scope：按 market_scope 和 data_source_scope 定义报告边界，按 narrative_rules 控制标题和总论。"
+        "如果 report_scope.not_a_vertical_web3_report 为 true，Web3/Crypto/Blockchain 只能作为细分信号；除非输入统计显示该类样本明确过半，不得写进 headline。"
         "只能使用输入 JSON 中的统计和 evidence_id；每个 claim 必须有 evidence_ids。"
         "禁止补外部事实，禁止输出 canonical_url/source_name/job_url/full_description、猎头、赏金、认领、客户开发、岗位来源、岗位链接。"
         "字段必须严格匹配 living_market_report schema，不能输出 date、statement 或任何 schema 外字段。"
@@ -206,6 +208,7 @@ def validate_living_market_report(payload: dict, *, input_payload: dict, expecte
     if extra:
         raise LivingMarketReportError(f"unknown fields: {sorted(extra)}")
     _reject_leakage(payload)
+    _validate_report_scope(payload, input_payload=input_payload)
     if payload.get("kind") != KIND:
         raise LivingMarketReportError("kind is invalid")
     if payload.get("schema_version") != SCHEMA_VERSION:
@@ -279,6 +282,41 @@ def validate_living_market_report(payload: dict, *, input_payload: dict, expecte
             raise LivingMarketReportError("watchlist evidence_id is invalid")
     if not isinstance(payload.get("data_quality"), dict):
         raise LivingMarketReportError("data_quality must be an object")
+
+
+def _validate_report_scope(payload: dict, *, input_payload: dict) -> None:
+    report_scope = input_payload.get("report_scope")
+    if not isinstance(report_scope, dict) or report_scope.get("not_a_vertical_web3_report") is not True:
+        return
+    headline = payload.get("headline")
+    if not isinstance(headline, str) or not _mentions_web3_vertical(headline):
+        return
+    if _web3_sample_share(input_payload) <= float(report_scope.get("web3_headline_requires_sample_share_gt") or 0.5):
+        raise LivingMarketReportError("Web3/Crypto/Blockchain headline requires Web3 sample majority for this report scope")
+
+
+def _mentions_web3_vertical(text: str) -> bool:
+    return bool(re.search(r"web3|crypto|blockchain|区块链|加密|暗号資産|仮想通貨", text, re.IGNORECASE))
+
+
+def _web3_sample_share(input_payload: dict) -> float:
+    market_windows = input_payload.get("market_windows")
+    if not isinstance(market_windows, dict):
+        return 0.0
+    window_180d = market_windows.get("180d")
+    if not isinstance(window_180d, dict):
+        return 0.0
+    job_count = window_180d.get("job_count")
+    if not isinstance(job_count, int) or job_count <= 0:
+        return 0.0
+    theme_counts = window_180d.get("theme_counts")
+    if not isinstance(theme_counts, dict):
+        return 0.0
+    web3_count = 0
+    for theme, count in theme_counts.items():
+        if isinstance(theme, str) and _mentions_web3_vertical(theme) and isinstance(count, int):
+            web3_count += count
+    return web3_count / job_count
 
 
 def build_rule_living_market_report(
