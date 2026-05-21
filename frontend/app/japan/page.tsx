@@ -42,9 +42,9 @@ export default async function JapanPage() {
               className="hero-brand-focus-inner"
             />
           </div>
-          <h1 id="japan-hero-title" aria-label="日本市場の求人シグナルを、ノイズから切り分けて見る。">
+          <h1 id="japan-hero-title" aria-label="日本の採用シグナルを、ひと目で。">
             <Typewriter
-              words={["日本市場の求人シグナルを、ノイズから切り分けて見る。"]}
+              words={["日本の採用シグナルを、ひと目で。"]}
               speed={58}
               delayBetweenWords={2600}
               cursor
