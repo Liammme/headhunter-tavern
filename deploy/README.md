@@ -14,6 +14,11 @@ This directory contains the minimum production artifacts for the recommended bac
   - Runs `python -m app.cli.refresh_living_market_report` every day at 15:30
   - Refreshes sanitized market facts idempotently, then generates a Living Report only when the latest successful report is at least 3 calendar days old
   - Uses `/etc/cron.d` format and runs as the `deploy` user
+- `cron/japan-market.cron`
+  - Runs `python -m app.cli.crawl_japan_jobs` every day at 08:00 and 14:00, matching the main site job update schedule
+  - Runs `python -m app.cli.generate_japan_market_report --days 180` every day at 15:30, matching the main site Living Report schedule
+  - Uses Japan-only crawlers and Japan-only market facts/snapshots; it does not call `daily_bounty`
+  - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `backend-deploy.sh`
   - Pulls the latest `master`, restarts the backend service, and runs health checks
 - `tencent-cloud-postgres.md`
@@ -28,8 +33,9 @@ Recommended usage order:
 3. Copy `nginx/bounty-pool.conf` to `/etc/nginx/sites-available/` and adjust the domain.
 4. Install `cron/daily-bounty.cron` after `daily_bounty` has been verified manually once.
 5. Install `cron/living-market-report.cron` after `refresh_living_market_report` has been verified manually once.
-6. Use `backend-deploy.sh` for routine backend releases after code is merged to `master`.
-7. Use `ops-runbook.md` as the default manual for restarts, log checks, daily inspection, and release steps.
+6. Install `cron/japan-market.cron` after `crawl_japan_jobs` and `generate_japan_market_report --days 180` have been verified manually once.
+7. Use `backend-deploy.sh` for routine backend releases after code is merged to `master`.
+8. Use `ops-runbook.md` as the default manual for restarts, log checks, daily inspection, and release steps.
 
 Routine backend release:
 
