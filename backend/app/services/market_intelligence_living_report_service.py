@@ -15,6 +15,8 @@ from app.services.market_intelligence_snapshot_service import _sanitize_error_me
 from app.services.region import GLOBAL_REGION, RegionCode
 
 Mode = Literal["baseline", "update", "auto"]
+LIVING_SNAPSHOT_SCAN_BATCH_SIZE = 50
+LIVING_SNAPSHOT_SCAN_MAX_BATCHES = 20
 
 
 def generate_living_market_report(
@@ -112,21 +114,25 @@ def load_latest_success_living_snapshot(
     *,
     region: RegionCode = GLOBAL_REGION,
 ) -> MarketIntelligenceSnapshot | None:
-    snapshots = (
-        db.execute(
-            select(MarketIntelligenceSnapshot)
-            .where(MarketIntelligenceSnapshot.status == "success", MarketIntelligenceSnapshot.region == region)
-            .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
-            .limit(20)
+    for batch_index in range(LIVING_SNAPSHOT_SCAN_MAX_BATCHES):
+        snapshots = (
+            db.execute(
+                select(MarketIntelligenceSnapshot)
+                .where(MarketIntelligenceSnapshot.status == "success", MarketIntelligenceSnapshot.region == region)
+                .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
+                .limit(LIVING_SNAPSHOT_SCAN_BATCH_SIZE)
+                .offset(batch_index * LIVING_SNAPSHOT_SCAN_BATCH_SIZE)
+            )
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
-    for snapshot in snapshots:
-        report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
-        living = report.get("living_report")
-        if isinstance(living, dict) and living.get("kind") == "living_market_report":
-            return snapshot
+        if not snapshots:
+            return None
+        for snapshot in snapshots:
+            report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
+            living = report.get("living_report")
+            if isinstance(living, dict) and living.get("kind") == "living_market_report":
+                return snapshot
     return None
 
 

@@ -3,7 +3,10 @@ from datetime import date, datetime, timedelta
 from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services import market_intelligence_living_report
 from app.services import market_intelligence_living_report_service
-from app.services.market_intelligence_living_report_service import generate_living_market_report
+from app.services.market_intelligence_living_report_service import (
+    generate_living_market_report,
+    load_latest_success_living_snapshot,
+)
 from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
@@ -65,6 +68,71 @@ def _fake_report(input_payload, *, version, mode, previous_snapshot_id, generate
         "watchlist": [{"topic": "AI infra", "why_watch": "watch", "evidence_ids": [evidence_id]}],
         "data_quality": input_payload["data_quality"],
     }
+
+
+def _add_success_snapshot(
+    db_session,
+    *,
+    generated_at: datetime,
+    region: str = GLOBAL_REGION,
+    living: bool = False,
+    version: int = 1,
+) -> MarketIntelligenceSnapshot:
+    report_payload = {
+        "region": region,
+        "headline": "普通市场报告",
+        "narrative": "普通市场报告 narrative",
+        "primary_judgment": {"claim": "普通判断"},
+        "trend_cards": [],
+        "watchlist": [],
+    }
+    if living:
+        report_payload["living_report"] = {
+            "kind": "living_market_report",
+            "schema_version": "living-market-report-v1",
+            "headline": "Living report",
+            "version": version,
+            "mode": "baseline_seed" if version == 1 else "incremental_update",
+            "previous_snapshot_id": None,
+            "seed_window_days": 180,
+            "generated_at": generated_at.isoformat(),
+            "executive_summary": "Living report summary",
+            "sections": [],
+            "claims": [],
+            "watchlist": [],
+            "data_quality": {},
+        }
+    snapshot = MarketIntelligenceSnapshot(
+        region=region,
+        snapshot_date=generated_at.date(),
+        generated_at=generated_at,
+        window_days=180,
+        market_signal_payload={"region": region},
+        report_payload=report_payload,
+        model_name=None,
+        status="success",
+        error_message=None,
+    )
+    db_session.add(snapshot)
+    db_session.commit()
+    db_session.refresh(snapshot)
+    return snapshot
+
+
+def _add_newer_plain_success_snapshots(
+    db_session,
+    *,
+    count: int,
+    start_at: datetime,
+    region: str,
+) -> None:
+    for index in range(count):
+        _add_success_snapshot(
+            db_session,
+            generated_at=start_at + timedelta(minutes=index),
+            region=region,
+            living=False,
+        )
 
 
 def test_generate_living_market_report_baseline_writes_v1_snapshot(db_session, monkeypatch):
@@ -207,3 +275,81 @@ def test_generate_living_market_report_for_japan_uses_180_day_japan_window(db_se
     assert snapshot.window_days == 180
     assert snapshot.market_signal_payload["region"] == JAPAN_REGION
     assert snapshot.report_payload["region"] == JAPAN_REGION
+
+
+def test_load_latest_success_living_snapshot_finds_global_living_report_after_many_plain_snapshots(db_session):
+    living = _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=GLOBAL_REGION,
+        living=True,
+    )
+    _add_newer_plain_success_snapshots(
+        db_session,
+        count=25,
+        start_at=datetime(2026, 4, 21, 10, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    loaded = load_latest_success_living_snapshot(db_session, region=GLOBAL_REGION)
+
+    assert loaded is not None
+    assert loaded.id == living.id
+
+
+def test_load_latest_success_living_snapshot_finds_japan_living_report_after_many_plain_snapshots(db_session):
+    living = _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=JAPAN_REGION,
+        living=True,
+    )
+    _add_newer_plain_success_snapshots(
+        db_session,
+        count=25,
+        start_at=datetime(2026, 4, 21, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    loaded = load_latest_success_living_snapshot(db_session, region=JAPAN_REGION)
+
+    assert loaded is not None
+    assert loaded.id == living.id
+
+
+def test_load_latest_success_living_snapshot_japan_does_not_return_global_living_report(db_session):
+    _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=GLOBAL_REGION,
+        living=True,
+    )
+    _add_newer_plain_success_snapshots(
+        db_session,
+        count=25,
+        start_at=datetime(2026, 4, 21, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    loaded = load_latest_success_living_snapshot(db_session, region=JAPAN_REGION)
+
+    assert loaded is None
+
+
+def test_load_latest_success_living_snapshot_global_does_not_return_japan_living_report(db_session):
+    _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=JAPAN_REGION,
+        living=True,
+    )
+    _add_newer_plain_success_snapshots(
+        db_session,
+        count=25,
+        start_at=datetime(2026, 4, 21, 10, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    loaded = load_latest_success_living_snapshot(db_session, region=GLOBAL_REGION)
+
+    assert loaded is None
