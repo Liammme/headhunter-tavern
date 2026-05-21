@@ -1,14 +1,11 @@
-import CompanyFeedTimeline from "../../components/CompanyFeedTimeline";
-import IntelligencePanel from "../../components/IntelligencePanel";
+import JapanHomeContent from "../../components/JapanHomeContent";
 import { GridPattern } from "../../components/ui/grid-pattern";
 import TrueFocus from "../../components/ui/true-focus";
 import { Typewriter } from "../../components/ui/typewriter";
 import { fetchJapanHomePayload } from "../../lib/api";
-import { JAPAN_UI_COPY } from "../../lib/copy";
 
 export default async function JapanPage() {
   const payload = await fetchJapanHomePayload();
-  const hasDays = payload.days.length > 0;
   const reportDateLabel = formatReportDate(new Date());
   const dailyCaptureInfo = buildDailyCaptureInfo(payload.days);
 
@@ -55,33 +52,14 @@ export default async function JapanPage() {
             />
           </h1>
         </header>
-        <IntelligencePanel
+        <JapanHomeContent
           intelligence={payload.intelligence}
+          days={payload.days}
           reportDateLabel={reportDateLabel}
           captureTitle={dailyCaptureInfo.title}
           captureDescription={dailyCaptureInfo.description}
           collectionStats={buildCollectionStats(payload.days)}
-          copy={JAPAN_UI_COPY.intelligence}
-          chartCopy={JAPAN_UI_COPY.chart}
         />
-      </section>
-
-      <section className="feed-shell" aria-label="日本市場の求人リスト">
-        {hasDays ? (
-          <CompanyFeedTimeline
-            days={payload.days}
-            showTrustRail={false}
-            showClueAction={false}
-            copy={JAPAN_UI_COPY.feed}
-            companyCardCopy={JAPAN_UI_COPY.companyCard}
-          />
-        ) : (
-          <section className="empty-state" aria-live="polite">
-            <p className="eyebrow">Signal Status</p>
-            <h2>表示できる求人はまだありません</h2>
-            <p>取得タスクが完了すると、日本市場の独立データソースから取得した求人だけがここに表示されます。</p>
-          </section>
-        )}
       </section>
       <footer className="page-brand-footer" aria-label="Powered by Talentverse X">
         <a href="https://www.talent-verse.xyz/zh-hans/talentverse-x" target="_blank" rel="noopener noreferrer">
