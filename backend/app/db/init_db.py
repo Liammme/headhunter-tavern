@@ -23,6 +23,10 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_job_region_column()
     _ensure_job_region_index()
+    _ensure_region_column("market_intelligence_snapshots")
+    _ensure_region_index("market_intelligence_snapshots", "ix_market_intelligence_snapshots_region")
+    _ensure_region_column("market_intelligence_facts")
+    _ensure_region_index("market_intelligence_facts", "ix_market_intelligence_facts_region")
 
 
 def _ensure_job_region_column() -> None:
@@ -53,3 +57,33 @@ def _ensure_job_region_index() -> None:
 
     with engine.begin() as connection:
         connection.execute(text("CREATE INDEX IF NOT EXISTS ix_jobs_region ON jobs (region)"))
+
+
+def _ensure_region_column(table_name: str) -> None:
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+    if any(column["name"] == "region" for column in inspector.get_columns(table_name)):
+        return
+
+    dialect = engine.dialect.name
+    statement = (
+        f"ALTER TABLE {table_name} ADD COLUMN region VARCHAR(32) DEFAULT 'global' NOT NULL"
+        if dialect == "sqlite"
+        else f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS region VARCHAR(32) DEFAULT 'global' NOT NULL"
+    )
+    with engine.begin() as connection:
+        connection.execute(text(statement))
+
+
+def _ensure_region_index(table_name: str, index_name: str) -> None:
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+    if not any(column["name"] == "region" for column in inspector.get_columns(table_name)):
+        return
+    if any(index["name"] == index_name for index in inspector.get_indexes(table_name)):
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name} (region)"))

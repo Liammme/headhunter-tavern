@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services.market_intelligence_baseline_service import BASELINE_NOTE
+from app.services.region import GLOBAL_REGION, RegionCode
 
 WINDOWS = (7, 30, 90, 180)
 
@@ -17,8 +18,9 @@ def build_living_market_report_input(
     days: int = 180,
     snapshot_date: date,
     previous_snapshot: MarketIntelligenceSnapshot | None = None,
+    region: RegionCode = GLOBAL_REGION,
 ) -> dict:
-    facts = _load_window_facts(db, snapshot_date=snapshot_date, days=days)
+    facts = _load_window_facts(db, snapshot_date=snapshot_date, days=days, region=region)
     samples = [_build_sample(fact, index=index) for index, fact in enumerate(_sorted_facts(facts), start=1)]
     market_windows = {f"{window}d": _build_window(facts=facts, snapshot_date=snapshot_date, days=window) for window in WINDOWS}
     previous_report = _previous_report_summary(previous_snapshot)
@@ -47,11 +49,18 @@ def build_living_market_report_input(
     }
 
 
-def _load_window_facts(db: Session, *, snapshot_date: date, days: int) -> list[MarketIntelligenceFact]:
+def _load_window_facts(
+    db: Session,
+    *,
+    snapshot_date: date,
+    days: int,
+    region: RegionCode,
+) -> list[MarketIntelligenceFact]:
     cutoff = datetime.combine(snapshot_date - timedelta(days=days - 1), datetime.min.time())
     facts = list(
         db.execute(
             select(MarketIntelligenceFact).where(
+                MarketIntelligenceFact.region == region,
                 or_(
                     MarketIntelligenceFact.posted_at >= cutoff,
                     MarketIntelligenceFact.posted_at.is_(None)

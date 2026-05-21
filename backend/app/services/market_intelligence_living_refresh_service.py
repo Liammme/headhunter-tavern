@@ -8,6 +8,7 @@ from app.services.market_intelligence_living_report_service import (
     generate_living_market_report,
     load_latest_success_living_snapshot,
 )
+from app.services.region import GLOBAL_REGION, RegionCode
 
 
 def refresh_living_market_report_if_due(
@@ -16,6 +17,8 @@ def refresh_living_market_report_if_due(
     days: int = 180,
     min_age_days: int = 3,
     clock: Callable[[], datetime] = datetime.now,
+    region: RegionCode = GLOBAL_REGION,
+    adapters=None,
 ) -> dict:
     generated_at = clock().replace(microsecond=0)
     fact_summary = backfill_market_intelligence_facts(
@@ -23,9 +26,11 @@ def refresh_living_market_report_if_due(
         days=days,
         dry_run=False,
         collected_at=generated_at,
+        region=region,
+        adapters=adapters,
     )
 
-    latest = load_latest_success_living_snapshot(db)
+    latest = load_latest_success_living_snapshot(db, region=region)
     if latest is not None:
         next_due_date = latest.generated_at.date() + timedelta(days=min_age_days)
         next_due_at = datetime.combine(next_due_date, generated_at.time())
@@ -45,6 +50,7 @@ def refresh_living_market_report_if_due(
         days=days,
         snapshot_date=generated_at.date(),
         clock=lambda: generated_at,
+        region=region,
     )
     result["facts"] = fact_summary
     return result

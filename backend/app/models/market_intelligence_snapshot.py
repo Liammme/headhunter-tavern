@@ -4,12 +4,14 @@ from sqlalchemy import Date, DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
+from app.services.region import GLOBAL_REGION
 
 
 class MarketIntelligenceSnapshot(Base):
     __tablename__ = "market_intelligence_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    region: Mapped[str] = mapped_column(String(32), default=GLOBAL_REGION, index=True)
     snapshot_date: Mapped[date] = mapped_column(Date, index=True)
     generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
     window_days: Mapped[int] = mapped_column(Integer, default=90)

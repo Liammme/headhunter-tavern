@@ -13,12 +13,12 @@ def load_latest_market_intelligence_for_home(db: Session, *, region: RegionCode 
         db.execute(
             select(MarketIntelligenceSnapshot)
             .where(MarketIntelligenceSnapshot.status.in_(("success", "fallback")))
+            .where(MarketIntelligenceSnapshot.region == region)
             .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
         )
         .scalars()
         .all()
     )
-    snapshots = [snapshot for snapshot in snapshots if _snapshot_matches_region(snapshot, region)]
     for snapshot in snapshots:
         if snapshot.status != "success":
             continue
@@ -34,16 +34,6 @@ def load_latest_market_intelligence_for_home(db: Session, *, region: RegionCode 
         if payload is not None:
             return payload
     return None
-
-
-def _snapshot_matches_region(snapshot: MarketIntelligenceSnapshot, region: RegionCode) -> bool:
-    report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
-    signal = snapshot.market_signal_payload if isinstance(snapshot.market_signal_payload, dict) else {}
-    snapshot_region = report.get("region") or signal.get("region")
-    if region == GLOBAL_REGION:
-        return snapshot_region in (None, GLOBAL_REGION)
-    return snapshot_region == region
-
 
 def _home_payload_from_snapshot(
     snapshot: MarketIntelligenceSnapshot,

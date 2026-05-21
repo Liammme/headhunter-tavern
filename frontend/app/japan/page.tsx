@@ -65,7 +65,7 @@ export default async function JapanPage() {
 
       <section className="feed-shell" aria-label="日本地区岗位列表">
         {hasDays ? (
-          <CompanyFeedTimeline days={payload.days} showTrustRail={false} />
+          <CompanyFeedTimeline days={payload.days} showTrustRail={false} showClueAction={false} />
         ) : (
           <section className="empty-state" aria-live="polite">
             <p className="eyebrow">Japan Signal Status</p>

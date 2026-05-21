@@ -24,9 +24,11 @@ type FeedTabLabel = "最新" | "7天内" | "更早";
 export default function CompanyFeedTimeline({
   days,
   showTrustRail = true,
+  showClueAction = true,
 }: {
   days: DayBucketPayload[];
   showTrustRail?: boolean;
+  showClueAction?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
   const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
@@ -131,6 +133,7 @@ export default function CompanyFeedTimeline({
           defaultVisibleJobs={isEarlier ? Number.MAX_SAFE_INTEGER : undefined}
           showJobExpand={!isEarlier}
           showTrustRail={showTrustRail}
+          showClueAction={showClueAction}
         />
       ) : (
         <section className="empty-state" aria-live="polite">

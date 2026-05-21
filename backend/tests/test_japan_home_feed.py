@@ -65,6 +65,7 @@ def test_japan_home_prefers_japan_market_intelligence(db_session):
     )
     db_session.add(
         MarketIntelligenceSnapshot(
+            region=JAPAN_REGION,
             snapshot_date=date(2026, 5, 1),
             generated_at=datetime(2026, 5, 1, 10, 0, 0),
             window_days=90,

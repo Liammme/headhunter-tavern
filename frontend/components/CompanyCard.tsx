@@ -12,11 +12,13 @@ export default function CompanyCard({
   defaultVisibleJobs = 3,
   showJobExpand = true,
   showTrustRail = true,
+  showClueAction = true,
 }: {
   company: CompanyCardPayload;
   defaultVisibleJobs?: number;
   showJobExpand?: boolean;
   showTrustRail?: boolean;
+  showClueAction?: boolean;
 }) {
   const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
@@ -93,27 +95,35 @@ export default function CompanyCard({
               companyState.company
             )}
           </h3>
-          <div className="company-actions">
-            <button
-              type="button"
-              className="company-clue-tag"
-              aria-label={isClueOpen ? "收起线索" : "线索"}
-              aria-expanded={isClueOpen}
-              onClick={handleClueToggle}
-            >
-              <span className="company-clue-icon" aria-hidden="true">
-                <svg viewBox="0 0 16 16" focusable="false">
-                  <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="2.5" />
-                  <path d="M10.4 10.4L13.5 13.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span>线索</span>
-            </button>
-          </div>
+          {showClueAction ? (
+            <div className="company-actions">
+              <button
+                type="button"
+                className="company-clue-tag"
+                aria-label={isClueOpen ? "收起线索" : "线索"}
+                aria-expanded={isClueOpen}
+                onClick={handleClueToggle}
+              >
+                <span className="company-clue-icon" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" focusable="false">
+                    <circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                    <path
+                      d="M10.4 10.4L13.5 13.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <span>线索</span>
+              </button>
+            </div>
+          ) : null}
         </div>
         {showTrustRail ? <CompanyClaimSeal company={companyState} /> : null}
       </div>
-      {isClueOpen && clueState ? (
+      {showClueAction && isClueOpen && clueState ? (
         <CompanyCluePanel
           clue={clueState}
           onRetry={clueState.status === "failure" ? requestClueLetter : undefined}

@@ -60,6 +60,7 @@ def generate_daily_market_intelligence_snapshot(
         report_payload = build_rule_market_report(signal_payload)
         report_payload["region"] = region
         snapshot = MarketIntelligenceSnapshot(
+            region=region,
             snapshot_date=target_date,
             generated_at=generated_at,
             window_days=window_days,
@@ -76,6 +77,7 @@ def generate_daily_market_intelligence_snapshot(
     except Exception as exc:
         error_message = _sanitize_error_message(exc)
         snapshot = MarketIntelligenceSnapshot(
+            region=region,
             snapshot_date=target_date,
             generated_at=generated_at,
             window_days=window_days,
@@ -91,6 +93,7 @@ def generate_daily_market_intelligence_snapshot(
 
     report_payload["region"] = region
     snapshot = MarketIntelligenceSnapshot(
+        region=region,
         snapshot_date=target_date,
         generated_at=generated_at,
         window_days=window_days,
@@ -117,19 +120,12 @@ def _load_recent_success_snapshot(
         select(MarketIntelligenceSnapshot)
         .where(
             MarketIntelligenceSnapshot.status == "success",
+            MarketIntelligenceSnapshot.region == region,
             MarketIntelligenceSnapshot.generated_at >= cutoff,
         )
         .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
     ).scalars().all()
-    for snapshot in snapshots:
-        report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
-        signal = snapshot.market_signal_payload if isinstance(snapshot.market_signal_payload, dict) else {}
-        snapshot_region = report.get("region") or signal.get("region")
-        if region == GLOBAL_REGION and snapshot_region in (None, GLOBAL_REGION):
-            return snapshot
-        if snapshot_region == region:
-            return snapshot
-    return None
+    return snapshots[0] if snapshots else None
 
 
 def _sanitize_error_message(exc: Exception) -> str:

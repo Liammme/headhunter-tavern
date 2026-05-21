@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from datetime import datetime
+from hashlib import sha256
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from app.crawlers.base import NormalizedJob, SourceAdapter
 from app.crawlers.registry import ADAPTERS
 from app.models import MarketIntelligenceFact
 from app.services.market_intelligence_fact_extractor import extract_market_intelligence_fact
+from app.services.region import GLOBAL_REGION, RegionCode
 
 SUPPORTED_BACKFILL_DAYS = {30, 90, 180}
 
@@ -19,6 +21,7 @@ def backfill_market_intelligence_facts(
     dry_run: bool = False,
     adapters: Iterable[SourceAdapter] | None = None,
     collected_at: datetime | None = None,
+    region: RegionCode = GLOBAL_REGION,
 ) -> dict:
     if days not in SUPPORTED_BACKFILL_DAYS:
         raise ValueError("days must be one of 30, 90, or 180")
@@ -48,12 +51,16 @@ def backfill_market_intelligence_facts(
             summary["skipped_out_of_window"] += 1
             continue
         summary["eligible"] += 1
-        extracted_facts.append(extracted)
+        payload = extracted.to_model_payload()
+        payload["region"] = region
+        if region != GLOBAL_REGION:
+            payload["dedupe_key"] = sha256(f"{region}:{payload['dedupe_key']}".encode("utf-8")).hexdigest()
+        extracted_facts.append(payload)
 
     if not extracted_facts:
         return summary
 
-    dedupe_keys = [fact.dedupe_key for fact in extracted_facts]
+    dedupe_keys = [fact["dedupe_key"] for fact in extracted_facts]
     existing_keys = set(
         db.execute(
             select(MarketIntelligenceFact.dedupe_key).where(MarketIntelligenceFact.dedupe_key.in_(dedupe_keys))
@@ -64,13 +71,13 @@ def backfill_market_intelligence_facts(
 
     seen_keys: set[str] = set()
     for fact in extracted_facts:
-        if fact.dedupe_key in existing_keys or fact.dedupe_key in seen_keys:
+        if fact["dedupe_key"] in existing_keys or fact["dedupe_key"] in seen_keys:
             summary["skipped_duplicate"] += 1
             continue
-        seen_keys.add(fact.dedupe_key)
+        seen_keys.add(fact["dedupe_key"])
         if dry_run:
             continue
-        db.add(MarketIntelligenceFact(**fact.to_model_payload()))
+        db.add(MarketIntelligenceFact(**fact))
         summary["inserted"] += 1
 
     if dry_run:

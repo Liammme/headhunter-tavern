@@ -4,12 +4,14 @@ from sqlalchemy import DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
+from app.services.region import GLOBAL_REGION
 
 
 class MarketIntelligenceFact(Base):
     __tablename__ = "market_intelligence_facts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    region: Mapped[str] = mapped_column(String(32), default=GLOBAL_REGION, index=True)
     dedupe_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     collected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)

@@ -8,13 +8,16 @@ vi.mock("./CompanyCard", () => ({
   default: ({
     company,
     showTrustRail,
+    showClueAction,
   }: {
     company: { company: string; jobs: Array<{ title: string }> };
     showTrustRail?: boolean;
+    showClueAction?: boolean;
   }) => (
     <article>
       <h3>{company.company}</h3>
       <span>{showTrustRail === false ? "trust hidden" : "trust visible"}</span>
+      <span>{showClueAction === false ? "clue hidden" : "clue visible"}</span>
       {company.jobs.map((job) => (
         <p key={job.title}>{job.title}</p>
       ))}
@@ -208,5 +211,12 @@ describe("CompanyFeedTimeline", () => {
 
     expect(screen.getByText("trust hidden")).toBeInTheDocument();
     expect(screen.queryByText("trust visible")).not.toBeInTheDocument();
+  });
+
+  it("passes showClueAction=false to company cards", () => {
+    render(<CompanyFeedTimeline days={[buildDay("within_3_days", "Tokyo Co")]} showClueAction={false} />);
+
+    expect(screen.getByText("clue hidden")).toBeInTheDocument();
+    expect(screen.queryByText("clue visible")).not.toBeInTheDocument();
   });
 });

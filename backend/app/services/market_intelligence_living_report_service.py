@@ -12,6 +12,7 @@ from app.services.market_intelligence_living_report import (
     validate_living_market_report,
 )
 from app.services.market_intelligence_snapshot_service import _sanitize_error_message
+from app.services.region import GLOBAL_REGION, RegionCode
 
 Mode = Literal["baseline", "update", "auto"]
 
@@ -24,10 +25,11 @@ def generate_living_market_report(
     snapshot_date: date | None = None,
     clock: Callable[[], datetime] = datetime.now,
     force: bool = False,
+    region: RegionCode = GLOBAL_REGION,
 ) -> dict:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
-    previous_snapshot = load_latest_success_living_snapshot(db)
+    previous_snapshot = load_latest_success_living_snapshot(db, region=region)
     resolved_mode = "baseline" if mode == "auto" and previous_snapshot is None else mode
     if resolved_mode == "auto":
         resolved_mode = "update"
@@ -44,7 +46,9 @@ def generate_living_market_report(
         days=days,
         snapshot_date=target_date,
         previous_snapshot=previous_snapshot if resolved_mode == "update" else None,
+        region=region,
     )
+    input_payload["region"] = region
     input_payload["fact_watermark"] = input_payload.get("fact_watermark") or _fact_watermark(input_payload)
 
     try:
@@ -70,11 +74,12 @@ def generate_living_market_report(
         status = "fallback"
 
     snapshot = MarketIntelligenceSnapshot(
+        region=region,
         snapshot_date=target_date,
         generated_at=generated_at,
         window_days=days,
         market_signal_payload=input_payload,
-        report_payload=_compat_report_payload(living_report),
+        report_payload=_compat_report_payload(living_report, region=region),
         model_name=None,
         status=status,
         error_message=error_message,
@@ -85,8 +90,9 @@ def generate_living_market_report(
     return {"status": status, "snapshot_id": snapshot.id}
 
 
-def _compat_report_payload(living_report: dict) -> dict:
+def _compat_report_payload(living_report: dict, *, region: RegionCode) -> dict:
     return {
+        "region": region,
         "headline": living_report.get("headline") or "活报告已更新",
         "narrative": living_report.get("executive_summary", ""),
         "primary_judgment": {
@@ -101,11 +107,15 @@ def _compat_report_payload(living_report: dict) -> dict:
     }
 
 
-def load_latest_success_living_snapshot(db: Session) -> MarketIntelligenceSnapshot | None:
+def load_latest_success_living_snapshot(
+    db: Session,
+    *,
+    region: RegionCode = GLOBAL_REGION,
+) -> MarketIntelligenceSnapshot | None:
     snapshots = (
         db.execute(
             select(MarketIntelligenceSnapshot)
-            .where(MarketIntelligenceSnapshot.status == "success")
+            .where(MarketIntelligenceSnapshot.status == "success", MarketIntelligenceSnapshot.region == region)
             .order_by(MarketIntelligenceSnapshot.generated_at.desc(), MarketIntelligenceSnapshot.id.desc())
             .limit(20)
         )

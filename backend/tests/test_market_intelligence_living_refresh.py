@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from app.models import MarketIntelligenceSnapshot
 from app.services import market_intelligence_living_refresh_service as refresh_service
+from app.services.region import GLOBAL_REGION
 
 
 def _success_snapshot(db_session, *, generated_at: datetime) -> MarketIntelligenceSnapshot:
@@ -37,11 +38,14 @@ def test_refresh_generates_when_no_success_report_exists(db_session, monkeypatch
     monkeypatch.setattr(
         refresh_service,
         "backfill_market_intelligence_facts",
-        lambda db, days, dry_run=False, collected_at=None: {"inserted": 2, "days": days},
+        lambda db, days, dry_run=False, collected_at=None, region=GLOBAL_REGION, adapters=None: {
+            "inserted": 2,
+            "days": days,
+        },
     )
 
-    def fake_generate(db, *, mode, days, snapshot_date, clock):
-        calls.append((mode, days, snapshot_date, clock()))
+    def fake_generate(db, *, mode, days, snapshot_date, clock, region=GLOBAL_REGION):
+        calls.append((mode, days, snapshot_date, clock(), region))
         return {"status": "success", "snapshot_id": 10}
 
     monkeypatch.setattr(refresh_service, "generate_living_market_report", fake_generate)
@@ -55,7 +59,7 @@ def test_refresh_generates_when_no_success_report_exists(db_session, monkeypatch
 
     assert result["status"] == "success"
     assert result["facts"]["inserted"] == 2
-    assert calls == [("auto", 180, now.date(), now)]
+    assert calls == [("auto", 180, now.date(), now, GLOBAL_REGION)]
 
 
 def test_refresh_skips_when_latest_success_is_fresh(db_session, monkeypatch):
@@ -64,7 +68,10 @@ def test_refresh_skips_when_latest_success_is_fresh(db_session, monkeypatch):
     monkeypatch.setattr(
         refresh_service,
         "backfill_market_intelligence_facts",
-        lambda db, days, dry_run=False, collected_at=None: {"inserted": 0, "days": days},
+        lambda db, days, dry_run=False, collected_at=None, region=GLOBAL_REGION, adapters=None: {
+            "inserted": 0,
+            "days": days,
+        },
     )
 
     def fail_generate(*_args, **_kwargs):
@@ -93,11 +100,14 @@ def test_refresh_generates_when_latest_success_is_due(db_session, monkeypatch):
     monkeypatch.setattr(
         refresh_service,
         "backfill_market_intelligence_facts",
-        lambda db, days, dry_run=False, collected_at=None: {"inserted": 1, "days": days},
+        lambda db, days, dry_run=False, collected_at=None, region=GLOBAL_REGION, adapters=None: {
+            "inserted": 1,
+            "days": days,
+        },
     )
 
-    def fake_generate(db, *, mode, days, snapshot_date, clock):
-        calls.append((mode, days, snapshot_date, clock()))
+    def fake_generate(db, *, mode, days, snapshot_date, clock, region=GLOBAL_REGION):
+        calls.append((mode, days, snapshot_date, clock(), region))
         return {"status": "success", "snapshot_id": 11}
 
     monkeypatch.setattr(refresh_service, "generate_living_market_report", fake_generate)
@@ -112,4 +122,4 @@ def test_refresh_generates_when_latest_success_is_due(db_session, monkeypatch):
     assert result["status"] == "success"
     assert result["snapshot_id"] == 11
     assert result["facts"]["inserted"] == 1
-    assert calls == [("auto", 180, now.date(), now)]
+    assert calls == [("auto", 180, now.date(), now, GLOBAL_REGION)]

@@ -94,6 +94,7 @@ def _add_snapshot(
         market_signal_payload["region"] = region
         resolved_report_payload = {**resolved_report_payload, "region": region}
     snapshot = MarketIntelligenceSnapshot(
+        region=region or GLOBAL_REGION,
         snapshot_date=snapshot_date,
         generated_at=generated_at,
         window_days=90,
@@ -107,6 +108,12 @@ def _add_snapshot(
     db_session.commit()
     db_session.refresh(snapshot)
     return snapshot
+
+
+def test_market_snapshot_region_defaults_to_global(db_session):
+    snapshot = _add_snapshot(db_session)
+
+    assert snapshot.region == GLOBAL_REGION
 
 
 def test_load_latest_market_intelligence_skips_failed_snapshot(db_session):

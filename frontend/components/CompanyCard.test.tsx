@@ -399,6 +399,14 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByLabelText("JD可信度甄别结果")).not.toBeInTheDocument();
   });
 
+  it("does not render or request company clue when showClueAction is false", () => {
+    render(<CompanyCard company={buildCompany()} showClueAction={false} />);
+
+    expect(screen.queryByRole("button", { name: "线索" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("公司线索来信")).not.toBeInTheDocument();
+    expect(requestCompanyClueLetterMock).not.toHaveBeenCalled();
+  });
+
   it("keeps clue content hidden until the clue action is triggered", () => {
     render(<CompanyCard company={buildCompany()} />);
 

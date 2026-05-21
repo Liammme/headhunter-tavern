@@ -11,6 +11,7 @@ from app.services.market_intelligence_report import (
     build_rule_market_report,
     generate_market_report,
 )
+from app.services.region import GLOBAL_REGION, RegionCode
 
 BASELINE_NOTE = "当前可见岗位的历史基线，不代表完整真实半年历史。"
 
@@ -21,31 +22,36 @@ def generate_market_baseline_report(
     days: int,
     snapshot_date: date | None = None,
     generated_at: datetime | None = None,
+    region: RegionCode = GLOBAL_REGION,
 ) -> dict:
     if days not in SUPPORTED_BACKFILL_DAYS:
         raise ValueError("days must be one of 30, 90, or 180")
 
     generated_at = (generated_at or datetime.now()).replace(microsecond=0)
     snapshot_date = snapshot_date or generated_at.date()
-    facts = _load_window_facts(db, snapshot_date=snapshot_date, days=days)
+    facts = _load_window_facts(db, snapshot_date=snapshot_date, days=days, region=region)
     signal_payload = build_market_baseline_signal_payload(
         facts=facts,
         snapshot_date=snapshot_date,
         days=days,
+        region=region,
     )
     if db.in_transaction():
         db.commit()
 
     try:
         report_payload = generate_market_report(signal_payload)
+        report_payload["region"] = region
         status = "success"
         error_message = None
     except MarketIntelligenceReportError as exc:
         report_payload = build_rule_market_report(signal_payload)
+        report_payload["region"] = region
         status = "fallback"
         error_message = str(exc)[:500]
     except Exception as exc:
         snapshot = MarketIntelligenceSnapshot(
+            region=region,
             snapshot_date=snapshot_date,
             generated_at=generated_at,
             window_days=days,
@@ -60,6 +66,7 @@ def generate_market_baseline_report(
         return {"status": "failed", "error": snapshot.error_message}
 
     snapshot = MarketIntelligenceSnapshot(
+        region=region,
         snapshot_date=snapshot_date,
         generated_at=generated_at,
         window_days=days,
@@ -80,6 +87,7 @@ def build_market_baseline_signal_payload(
     facts: list[MarketIntelligenceFact],
     snapshot_date: date,
     days: int,
+    region: RegionCode = GLOBAL_REGION,
 ) -> dict:
     windows = {
         f"{window_days}d": _build_window(facts=facts, snapshot_date=snapshot_date, days=window_days)
@@ -87,6 +95,7 @@ def build_market_baseline_signal_payload(
     }
     return {
         "snapshot_date": snapshot_date.isoformat(),
+        "region": region,
         "baseline_note": BASELINE_NOTE,
         "windows": windows,
         "representative_samples": [_build_sample(fact) for fact in _sorted_facts(facts)[:12]],
@@ -103,11 +112,13 @@ def _load_window_facts(
     *,
     snapshot_date: date,
     days: int,
+    region: RegionCode,
 ) -> list[MarketIntelligenceFact]:
     cutoff = datetime.combine(snapshot_date - timedelta(days=days - 1), datetime.min.time())
     facts = list(
         db.execute(
             select(MarketIntelligenceFact).where(
+                MarketIntelligenceFact.region == region,
                 or_(
                     MarketIntelligenceFact.posted_at >= cutoff,
                     MarketIntelligenceFact.posted_at.is_(None)
