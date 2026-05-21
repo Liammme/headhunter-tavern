@@ -12,10 +12,11 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Generate a Japan living market intelligence snapshot.",
         epilog=(
-            "Production sequence: python -m app.db.init_db; "
+            'Production sequence: python -c "from app.db.init_db import init_db; init_db()"; '
             "python -m app.cli.crawl_japan_jobs; "
             "python -m app.cli.generate_japan_market_report --days 180; "
-            "sudo systemctl restart bounty-pool"
+            "sudo systemctl restart bounty-pool; "
+            "sudo systemctl status bounty-pool --no-pager"
         ),
     )
     parser.add_argument("--days", type=int, choices=(180,), default=180)
