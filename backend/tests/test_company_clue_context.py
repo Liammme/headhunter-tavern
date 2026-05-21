@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from app.models import Job
 from app.services.company_clue_context import build_company_clue_context, load_company_jobs_for_clue
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
 def build_job(
@@ -11,6 +12,7 @@ def build_job(
     days_ago: int,
     description: str,
     signal_tags: dict | None = None,
+    region: str = GLOBAL_REGION,
 ) -> Job:
     current = datetime(2026, 4, 23, 12, 0, 0) - timedelta(days=days_ago)
     return Job(
@@ -23,6 +25,7 @@ def build_job(
         posted_at=current,
         collected_at=current,
         bounty_grade="high",
+        region=region,
         signal_tags=signal_tags
         or {
             "display_tags": ["AI"],
@@ -57,6 +60,36 @@ def test_load_company_jobs_for_clue_uses_same_14_day_window_as_home_feed(db_sess
     )
 
     assert [job.title for job in jobs] == ["Recent Role"]
+
+
+def test_load_company_jobs_for_clue_ignores_japan_region_jobs(db_session):
+    db_session.add(
+        build_job(
+            company="OpenGradient",
+            title="Japan Role",
+            days_ago=2,
+            description="urgent ai platform hiring now",
+            region=JAPAN_REGION,
+        )
+    )
+    db_session.add(
+        build_job(
+            company="OpenGradient",
+            title="Global Role",
+            days_ago=2,
+            description="urgent ai platform hiring now",
+            region=GLOBAL_REGION,
+        )
+    )
+    db_session.commit()
+
+    jobs = load_company_jobs_for_clue(
+        db_session,
+        company="OpenGradient",
+        today=datetime(2026, 4, 23, 12, 0, 0).date(),
+    )
+
+    assert [job.title for job in jobs] == ["Global Role"]
 
 
 def test_build_company_clue_context_exposes_grounded_evidence_cards(monkeypatch):

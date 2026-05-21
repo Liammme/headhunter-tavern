@@ -1,4 +1,5 @@
 from app.models import Job
+from app.services.region import JAPAN_REGION
 
 
 def build_job() -> Job:
@@ -10,6 +11,13 @@ def build_job() -> Job:
         company_normalized="acme",
         description="Build the core platform.",
     )
+
+
+def build_japan_job() -> Job:
+    job = build_job()
+    job.canonical_url = "https://jobs.example.jp/acme/founding-engineer"
+    job.region = JAPAN_REGION
+    return job
 
 
 def test_create_claim_requires_name(client):
@@ -52,6 +60,21 @@ def test_create_claim_returns_created_claim(client, db_session):
 
 def test_create_claim_returns_404_when_job_missing(client):
     response = client.post("/api/v1/claims", json={"job_id": 999, "claimer_name": "Liam"})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Job not found"}
+
+
+def test_create_claim_returns_404_for_japan_region_job(client, db_session):
+    job = build_japan_job()
+    db_session.add(job)
+    db_session.commit()
+    db_session.refresh(job)
+
+    response = client.post(
+        "/api/v1/claims",
+        json={"job_id": job.id, "claimer_name": "Liam"},
+    )
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Job not found"}

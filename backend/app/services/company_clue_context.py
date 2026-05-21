@@ -8,6 +8,7 @@ from app.models import Job
 from app.services.estimated_bounty_read import select_readable_estimated_bounty, should_expose_estimated_bounty
 from app.services.feed_snapshot import WINDOW_DAYS
 from app.services.job_facts import StandardizedJobInput, build_v2_score_input, extract_job_facts
+from app.services.region import GLOBAL_REGION
 from app.services.scoring import score_job_v2
 
 
@@ -19,7 +20,7 @@ def load_company_jobs_for_clue(db: Session, *, company: str, today: date) -> lis
     window_start = today - timedelta(days=WINDOW_DAYS - 1)
     jobs = (
         db.query(Job)
-        .filter(Job.company == company)
+        .filter(Job.company == company, Job.region == GLOBAL_REGION)
         .order_by(Job.collected_at.desc(), Job.id.desc())
         .all()
     )

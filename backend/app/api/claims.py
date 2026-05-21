@@ -6,6 +6,7 @@ from app.schemas.claim import ClaimCreate
 from app.services.claim_service import (
     ClaimCompanyAlreadyClaimedError,
     ClaimJobNotFoundError,
+    ClaimRegionNotSupportedError,
     create_claim as create_claim_record,
 )
 
@@ -18,7 +19,7 @@ def create_claim(payload: ClaimCreate, db: Session = Depends(get_db)):
         claim = create_claim_record(db, job_id=payload.job_id, claimer_name=payload.claimer_name)
     except ClaimCompanyAlreadyClaimedError:
         raise HTTPException(status_code=409, detail="Company already claimed")
-    except ClaimJobNotFoundError:
+    except (ClaimJobNotFoundError, ClaimRegionNotSupportedError):
         raise HTTPException(status_code=404, detail="Job not found")
 
     return {

@@ -2,6 +2,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Job, JobClaim
+from app.services.region import GLOBAL_REGION
 
 
 class ClaimJobNotFoundError(Exception):
@@ -9,6 +10,10 @@ class ClaimJobNotFoundError(Exception):
 
 
 class ClaimCompanyAlreadyClaimedError(Exception):
+    pass
+
+
+class ClaimRegionNotSupportedError(Exception):
     pass
 
 
@@ -20,6 +25,8 @@ def create_claim(db: Session, *, job_id: int, claimer_name: str) -> JobClaim:
     job = db.get(Job, job_id)
     if job is None:
         raise ClaimJobNotFoundError(job_id)
+    if job.region != GLOBAL_REGION:
+        raise ClaimRegionNotSupportedError(job_id)
 
     company_key = _normalize_company_key(job)
     company_name = (job.company or "").strip()
@@ -33,7 +40,7 @@ def create_claim(db: Session, *, job_id: int, claimer_name: str) -> JobClaim:
         existing_claim = db.scalar(
             select(JobClaim.id)
             .join(Job, Job.id == JobClaim.job_id)
-            .where(or_(*company_matchers))
+            .where(Job.region == GLOBAL_REGION, or_(*company_matchers))
             .limit(1)
         )
     if existing_claim is not None:

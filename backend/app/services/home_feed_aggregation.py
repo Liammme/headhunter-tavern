@@ -34,8 +34,10 @@ def build_day_payloads(
     *,
     today: date,
     jdtrust_assessments: dict[int, dict] | None = None,
+    expose_claims: bool = True,
+    expose_estimated_bounty: bool = True,
 ) -> list[DayBucketSnapshot]:
-    claim_map = build_claim_map(claims)
+    claim_map = build_claim_map(claims) if expose_claims else {}
     jdtrust_assessments = jdtrust_assessments or {}
     window_start = today - timedelta(days=WINDOW_DAYS - 1)
     day_groups: dict[str, dict[str, dict]] = defaultdict(dict)
@@ -63,7 +65,7 @@ def build_day_payloads(
     for bucket in sorted(day_groups.keys(), key=lambda item: BUCKET_ORDER[item]):
         companies: list[CompanyFeedSnapshot] = []
         for company in day_groups[bucket].values():
-            expose_estimated_bounty = _should_expose_estimated_bounty()
+            should_expose_bounty = expose_estimated_bounty and _should_expose_estimated_bounty()
             sorted_jobs = sorted(
                 company["jobs"],
                 key=lambda current_job: (JOB_GRADE_ORDER[current_job.bounty_grade], current_job.title.lower()),
@@ -76,7 +78,7 @@ def build_day_payloads(
                         company_claims.append(name)
             company_grade = derive_company_grade([job_item["bounty_grade"] for job_item in jobs_payload])
             company_bounty_estimate = (
-                _select_company_bounty_estimate(sorted_jobs) if expose_estimated_bounty else None
+                _select_company_bounty_estimate(sorted_jobs) if should_expose_bounty else None
             )
             companies.append(
                 CompanyFeedSnapshot(
@@ -89,7 +91,9 @@ def build_day_payloads(
                     claimed_by=company_claims[0] if company_claims else None,
                     claim_status="claimed" if company_claims else None,
                     estimated_bounty_amount=company_bounty_estimate.amount if company_bounty_estimate else None,
-                    estimated_bounty_label=company_bounty_estimate.label if company_bounty_estimate else PENDING_ESTIMATED_BOUNTY_LABEL,
+                    estimated_bounty_label=company_bounty_estimate.label
+                    if company_bounty_estimate
+                    else (PENDING_ESTIMATED_BOUNTY_LABEL if should_expose_bounty else None),
                     jd_trust=_select_company_jdtrust(sorted_jobs, jdtrust_assessments),
                 )
             )

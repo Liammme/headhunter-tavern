@@ -5,8 +5,10 @@ from app.models import Job, JobClaim
 from app.services.claim_service import (
     ClaimCompanyAlreadyClaimedError,
     ClaimJobNotFoundError,
+    ClaimRegionNotSupportedError,
     create_claim,
 )
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
 def build_job(
@@ -15,6 +17,7 @@ def build_job(
     title: str = "Founding Engineer",
     company: str = "Acme",
     company_normalized: str = "acme",
+    region: str = GLOBAL_REGION,
 ) -> Job:
     return Job(
         canonical_url=canonical_url,
@@ -23,6 +26,7 @@ def build_job(
         company=company,
         company_normalized=company_normalized,
         description="Build the core platform.",
+        region=region,
     )
 
 
@@ -47,6 +51,22 @@ def test_create_claim_raises_for_missing_job(db_session):
         create_claim(db_session, job_id=999, claimer_name="Liam")
 
 
+def test_create_claim_raises_for_japan_region_job(db_session):
+    job = build_job(
+        canonical_url="https://jobs.example.jp/acme/founding-engineer",
+        region=JAPAN_REGION,
+    )
+    db_session.add(job)
+    db_session.commit()
+    db_session.refresh(job)
+
+    with pytest.raises(ClaimRegionNotSupportedError):
+        create_claim(db_session, job_id=job.id, claimer_name="Liam")
+
+    stored_claims = db_session.execute(select(JobClaim)).scalars().all()
+    assert stored_claims == []
+
+
 def test_create_claim_raises_when_company_already_claimed(db_session):
     first_job = build_job()
     second_job = build_job(
@@ -66,3 +86,24 @@ def test_create_claim_raises_when_company_already_claimed(db_session):
     stored_claims = db_session.execute(select(JobClaim)).scalars().all()
     assert len(stored_claims) == 1
     assert stored_claims[0].job_id == first_job.id
+
+
+def test_create_claim_does_not_treat_japan_claim_as_global_company_claim(db_session):
+    japan_job = build_job(
+        canonical_url="https://jobs.example.jp/acme/founding-engineer",
+        region=JAPAN_REGION,
+    )
+    global_job = build_job(
+        canonical_url="https://jobs.example.com/acme/founding-engineer",
+        region=GLOBAL_REGION,
+    )
+    db_session.add_all([japan_job, global_job])
+    db_session.commit()
+    db_session.refresh(japan_job)
+    db_session.refresh(global_job)
+    db_session.add(JobClaim(job_id=japan_job.id, claimer_name="Japan Tester"))
+    db_session.commit()
+
+    claim = create_claim(db_session, job_id=global_job.id, claimer_name="Liam")
+
+    assert claim.job_id == global_job.id
