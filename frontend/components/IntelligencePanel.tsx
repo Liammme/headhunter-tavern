@@ -12,6 +12,7 @@ import {
   Visual3,
 } from "./ui/animated-card-chart";
 import LivingReportPaper from "./LivingReportPaper";
+import { DEFAULT_CHART_COPY, DEFAULT_INTELLIGENCE_COPY, type ChartCopy, type IntelligenceCopy } from "../lib/copy";
 import type { IntelligencePayload } from "../lib/types";
 
 type IntelligencePanelProps = {
@@ -20,6 +21,8 @@ type IntelligencePanelProps = {
   captureTitle: string;
   captureDescription: string;
   collectionStats: ChartDatum[];
+  copy?: IntelligenceCopy;
+  chartCopy?: ChartCopy;
 };
 
 export default function IntelligencePanel({
@@ -28,6 +31,8 @@ export default function IntelligencePanel({
   captureTitle,
   captureDescription,
   collectionStats,
+  copy = DEFAULT_INTELLIGENCE_COPY,
+  chartCopy = DEFAULT_CHART_COPY,
 }: IntelligencePanelProps) {
   const [showIntelPaper, setShowIntelPaper] = useState(false);
   const narrativeParagraphs = splitNarrativeIntoParagraphs(intelligence.narrative);
@@ -51,7 +56,7 @@ export default function IntelligencePanel({
                 aria-labelledby="intelligence-paper-title"
               >
                 <button className="intel-back-button" type="button" onClick={closeIntelPaper}>
-                  返回
+                  {copy.backLabel}
                 </button>
                 <h2 id="intelligence-panel-title" className="intel-preview">
                   {intelligence.headline}
@@ -59,7 +64,7 @@ export default function IntelligencePanel({
                 <div className="intel-paper-copy">
                   <h3 id="intelligence-paper-title">{reportDateLabel}</h3>
                   {intelligence.living_report ? (
-                    <LivingReportPaper report={intelligence.living_report} />
+                    <LivingReportPaper report={intelligence.living_report} copy={copy.livingReport} />
                   ) : (
                     narrativeParagraphs.map((paragraph, index) => (
                       <p key={`${index}-${paragraph}`} className="intel-narrative">
@@ -72,14 +77,14 @@ export default function IntelligencePanel({
             ) : (
               <AnimatedCard
                 className="intel-chart-card is-clickable"
-                aria-label="打开猎场控制台"
+                aria-label={copy.openReportAriaLabel}
                 aria-expanded={showIntelPaper}
                 tabIndex={0}
                 onClick={openIntelPaper}
                 onKeyDown={handleIntelModeKeyDown}
               >
                 <CardVisual>
-                  <Visual3 data={collectionStats} mainColor="#75fb6e" secondaryColor="#26a17b" />
+                  <Visual3 data={collectionStats} mainColor="#75fb6e" secondaryColor="#26a17b" copy={chartCopy} />
                 </CardVisual>
                 <CardBody>
                   <CardTitle id="intelligence-panel-title">{captureTitle}</CardTitle>

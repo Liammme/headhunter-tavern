@@ -28,7 +28,7 @@ def build_living_market_report_input(
     return {
         "report_task": {
             "report_id": "living-market-report",
-            "language": "zh-CN",
+            "language": _report_language(region),
             "target_length_words": [1500, 2500],
             "mode": "update" if mode == "update" else "initial",
             "snapshot_date": snapshot_date.isoformat(),
@@ -53,16 +53,18 @@ def build_living_market_report_input(
 def _report_scope(region: RegionCode) -> dict:
     if region == JAPAN_REGION:
         return {
-            "name": "Talent Signal Japan",
-            "market_scope": "日本招聘市场",
-            "data_source_scope": "日本公开招聘平台样本",
+            "name": "Talent Signal",
+            "market_scope": "日本の採用市場",
+            "data_source_scope": "日本の公開求人プラットフォームのサンプル",
             "not_a_vertical_web3_report": True,
             "web3_headline_requires_sample_share_gt": 0.5,
             "narrative_rules": [
-                "报告标题和总论必须描述日本招聘市场或日本技术/业务岗位招聘信号，不得默认写成 Web3 垂直市场报告。",
-                "Web3、Crypto、Blockchain 只能作为样本中的细分行业信号；除非 Web3 样本占比明确超过阈值，不得进入标题。",
-                "结论必须表述为日本公开招聘平台样本中的可见信号，不得推断完整行业规模、融资、链上活动或外部市场事实。",
-                "优先分析职能结构、经验层级、语言/国际化线索、地点/远程线索、雇佣形态和薪资披露质量。",
+                "レポートのタイトルと総論は、日本の採用市場または日本の技術/ビジネス職の採用シグナルとして書く。",
+                "Web3、Crypto、Blockchain はサンプル内の細分化された業界シグナルとして扱う。",
+                "Web3 サンプル比率が明確にしきい値を超えない限り、タイトルに Web3 を入れない。",
+                "結論は日本の公開求人プラットフォームのサンプルに見えるシグナルとして表現する。",
+                "外部の市場規模、資金調達、オンチェーン活動など入力外の事実は推定しない。",
+                "職能構造、経験レベル、言語/国際化、勤務地/リモート、雇用形態、給与開示品質を優先して分析する。",
             ],
         }
     return {
@@ -72,6 +74,12 @@ def _report_scope(region: RegionCode) -> dict:
         "not_a_vertical_web3_report": False,
         "narrative_rules": [],
     }
+
+
+def _report_language(region: RegionCode) -> str:
+    if region == JAPAN_REGION:
+        return "ja-JP"
+    return "zh-CN"
 
 
 def _load_window_facts(

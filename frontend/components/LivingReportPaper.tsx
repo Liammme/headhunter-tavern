@@ -1,26 +1,21 @@
 import React from "react";
 
+import { DEFAULT_LIVING_REPORT_COPY, type LivingReportCopy } from "../lib/copy";
 import type { LivingReportPayload } from "../lib/types";
 
 type LivingReportPaperProps = {
   report: LivingReportPayload;
+  copy?: LivingReportCopy;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  new: "新增",
-  reinforced: "强化",
-  weakened: "削弱",
-  retired: "退休",
-};
-
-export default function LivingReportPaper({ report }: LivingReportPaperProps) {
+export default function LivingReportPaper({ report, copy = DEFAULT_LIVING_REPORT_COPY }: LivingReportPaperProps) {
   return (
     <div className="living-report-scroll">
       <header className="living-report-header">
-        <div className="living-report-meta" aria-label="活报告元信息">
-          <span>第 {report.version} 版</span>
-          <span>基于 {report.seed_window_days} 天基线</span>
-          <span>最近更新 {report.generated_at}</span>
+        <div className="living-report-meta" aria-label={copy.metaAriaLabel}>
+          <span>{copy.versionLabel(report.version)}</span>
+          <span>{copy.baselineLabel(report.seed_window_days)}</span>
+          <span>{copy.updatedLabel(report.generated_at)}</span>
         </div>
         <h3 className="living-report-title">{report.headline}</h3>
         <div className="living-report-copy">
@@ -28,7 +23,7 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
         </div>
       </header>
 
-      <section className="living-report-sections" aria-label="报告章节">
+      <section className="living-report-sections" aria-label={copy.sectionsAriaLabel}>
         {report.sections.length > 0 ? (
           report.sections.map((section) => (
             <section key={section.section_id} className="living-report-section">
@@ -37,16 +32,16 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
             </section>
           ))
         ) : (
-          <p className="living-report-empty">暂无可展示章节。</p>
+          <p className="living-report-empty">{copy.emptySectionsLabel}</p>
         )}
       </section>
 
-      <section className="living-report-claims" aria-label="报告判断">
-        <h3>判断</h3>
+      <section className="living-report-claims" aria-label={copy.claimsAriaLabel}>
+        <h3>{copy.claimsTitle}</h3>
         <ul>
           {report.claims.map((claim) => (
             <li key={claim.claim_id}>
-              <span className="living-report-claim-status">{STATUS_LABELS[claim.status] ?? claim.status}</span>
+              <span className="living-report-claim-status">{copy.statusLabels[claim.status] ?? claim.status}</span>
               <strong>{claim.claim}</strong>
               <small>{claim.confidence} confidence · {claim.evidence_ids.join(", ")}</small>
             </li>
@@ -54,8 +49,8 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
         </ul>
       </section>
 
-      <section className="living-report-watchlist" aria-label="观察清单">
-        <h3>观察清单</h3>
+      <section className="living-report-watchlist" aria-label={copy.watchlistAriaLabel}>
+        <h3>{copy.watchlistTitle}</h3>
         {report.watchlist.map((item) => (
           <p key={`${item.topic}-${item.why_watch}`}>
             <strong>{item.topic}</strong>
@@ -65,7 +60,7 @@ export default function LivingReportPaper({ report }: LivingReportPaperProps) {
       </section>
 
       <footer className="living-report-quality">
-        <span>样本数 {report.data_quality.sample_count ?? 0}</span>
+        <span>{copy.sampleCountLabel(report.data_quality.sample_count ?? 0)}</span>
         {report.data_quality.baseline_note ? <span>{report.data_quality.baseline_note}</span> : null}
       </footer>
     </div>

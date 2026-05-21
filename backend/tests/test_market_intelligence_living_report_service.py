@@ -328,9 +328,10 @@ def test_japan_living_report_input_declares_non_web3_vertical_scope(db_session):
         region=JAPAN_REGION,
     )
 
-    assert input_payload["report_scope"]["name"] == "Talent Signal Japan"
-    assert input_payload["report_scope"]["market_scope"] == "日本招聘市场"
-    assert input_payload["report_scope"]["data_source_scope"] == "日本公开招聘平台样本"
+    assert input_payload["report_task"]["language"] == "ja-JP"
+    assert input_payload["report_scope"]["name"] == "Talent Signal"
+    assert input_payload["report_scope"]["market_scope"] == "日本の採用市場"
+    assert input_payload["report_scope"]["data_source_scope"] == "日本の公開求人プラットフォームのサンプル"
     assert input_payload["report_scope"]["not_a_vertical_web3_report"] is True
     assert "Web3" in " ".join(input_payload["report_scope"]["narrative_rules"])
 
@@ -351,6 +352,7 @@ def test_global_living_report_input_keeps_existing_scope(db_session):
         region=GLOBAL_REGION,
     )
 
+    assert input_payload["report_task"]["language"] == "zh-CN"
     assert input_payload["report_scope"]["name"] == "Talent Signal"
     assert input_payload["report_scope"]["not_a_vertical_web3_report"] is False
 

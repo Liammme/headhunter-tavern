@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import CompanyFeedTimeline from "./CompanyFeedTimeline";
+import { JAPAN_UI_COPY } from "../lib/copy";
 import type { DayBucketPayload, JobCategory } from "../lib/types";
 
 vi.mock("./CompanyCard", () => ({
@@ -218,5 +219,25 @@ describe("CompanyFeedTimeline", () => {
 
     expect(screen.getByText("clue hidden")).toBeInTheDocument();
     expect(screen.queryByText("clue visible")).not.toBeInTheDocument();
+  });
+
+  it("renders Japan timeline tabs, category filter, and empty states with Japanese copy", () => {
+    render(
+      <CompanyFeedTimeline
+        days={[buildDay("within_3_days", "Tech Co", ["技术"])]}
+        copy={JAPAN_UI_COPY.feed}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: "最新" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "7日以内" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "それ以前" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "すべての職種" }));
+    expect(screen.getByRole("button", { name: "デザイン" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "デザイン" }));
+    expect(screen.getByText("このセクションには一致する求人がまだありません")).toBeInTheDocument();
+    expect(screen.getByText("次回の取得後、この期間に該当する企業の求人が表示されます。")).toBeInTheDocument();
   });
 });

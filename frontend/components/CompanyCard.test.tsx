@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 
 import CompanyCard from "./CompanyCard";
 import { requestCompanyClueLetter } from "../lib/api";
+import { JAPAN_UI_COPY } from "../lib/copy";
 import type { CompanyCardPayload } from "../lib/types";
 
 vi.mock("../lib/api", () => ({
@@ -405,6 +406,22 @@ describe("CompanyCard", () => {
     expect(screen.queryByRole("button", { name: "线索" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("公司线索来信")).not.toBeInTheDocument();
     expect(requestCompanyClueLetterMock).not.toHaveBeenCalled();
+  });
+
+  it("uses Japanese job action and aria copy when Japan copy is provided", () => {
+    render(
+      <CompanyCard
+        company={buildCompany()}
+        showTrustRail={false}
+        showClueAction={false}
+        copy={JAPAN_UI_COPY.companyCard}
+      />,
+    );
+
+    expect(screen.getByLabelText("OpenGradientの募集中ポジション")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "原文を見る" })).toHaveAttribute("href", "https://jobs.example.com/1");
+    expect(screen.queryByRole("link", { name: "查看原帖" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "線索" })).not.toBeInTheDocument();
   });
 
   it("keeps clue content hidden until the clue action is triggered", () => {

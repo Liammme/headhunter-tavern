@@ -12,7 +12,7 @@ from app.services.market_intelligence_living_report import (
     validate_living_market_report,
 )
 from app.services.market_intelligence_snapshot_service import _sanitize_error_message
-from app.services.region import GLOBAL_REGION, RegionCode
+from app.services.region import GLOBAL_REGION, JAPAN_REGION, RegionCode
 
 Mode = Literal["baseline", "update", "auto"]
 LIVING_SNAPSHOT_SCAN_BATCH_SIZE = 50
@@ -93,13 +93,18 @@ def generate_living_market_report(
 
 
 def _compat_report_payload(living_report: dict, *, region: RegionCode) -> dict:
+    headline_fallback = "活报告已更新"
+    why_it_matters = "用于首页读取兼容。"
+    if region == JAPAN_REGION:
+        headline_fallback = "レポートを更新しました"
+        why_it_matters = "ホーム画面で読み取るための互換フィールドです。"
     return {
         "region": region,
-        "headline": living_report.get("headline") or "活报告已更新",
+        "headline": living_report.get("headline") or headline_fallback,
         "narrative": living_report.get("executive_summary", ""),
         "primary_judgment": {
             "claim": living_report.get("executive_summary", ""),
-            "why_it_matters": "用于首页读取兼容。",
+            "why_it_matters": why_it_matters,
             "confidence": "low",
         },
         "perspectives": [],

@@ -1,6 +1,7 @@
 import React from "react";
 
 import CompanyCard from "./CompanyCard";
+import { DEFAULT_FEED_COPY, type CompanyCardCopy, type FeedCopy } from "../lib/copy";
 import type { CompanyCardPayload, DayBucketPayload } from "../lib/types";
 
 export default function CompanyDaySection({
@@ -11,6 +12,8 @@ export default function CompanyDaySection({
   showJobExpand,
   showTrustRail = true,
   showClueAction = true,
+  copy = DEFAULT_FEED_COPY,
+  companyCardCopy,
 }: {
   bucket: DayBucketPayload["bucket"];
   companies: CompanyCardPayload[];
@@ -19,10 +22,12 @@ export default function CompanyDaySection({
   showJobExpand?: boolean;
   showTrustRail?: boolean;
   showClueAction?: boolean;
+  copy?: FeedCopy;
+  companyCardCopy?: CompanyCardCopy;
 }) {
   return (
     <section className="day-section">
-      {showTitle ? <h2 className="day-title">{renderBucketTitle(bucket)}</h2> : null}
+      {showTitle ? <h2 className="day-title">{copy.tabs[bucket]}</h2> : null}
       <div className="company-list">
         {companies.map((company) => (
           <CompanyCard
@@ -32,19 +37,10 @@ export default function CompanyDaySection({
             showJobExpand={showJobExpand}
             showTrustRail={showTrustRail}
             showClueAction={showClueAction}
+            copy={companyCardCopy}
           />
         ))}
       </div>
     </section>
   );
-}
-
-function renderBucketTitle(bucket: DayBucketPayload["bucket"]) {
-  if (bucket === "within_3_days") {
-    return "3天内";
-  }
-  if (bucket === "within_7_days") {
-    return "7天内";
-  }
-  return "更早";
 }

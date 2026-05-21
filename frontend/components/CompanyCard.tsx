@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import CompanyClaimSeal from "./CompanyClaimSeal";
 import CompanyCluePanel from "./CompanyCluePanel";
 import { requestCompanyClueLetter } from "../lib/api";
+import { DEFAULT_COMPANY_CARD_COPY, type CompanyCardCopy } from "../lib/copy";
 import type { CompanyCardPayload, CompanyClueResponse, CompanyClueState } from "../lib/types";
 
 export default function CompanyCard({
@@ -13,12 +14,14 @@ export default function CompanyCard({
   showJobExpand = true,
   showTrustRail = true,
   showClueAction = true,
+  copy = DEFAULT_COMPANY_CARD_COPY,
 }: {
   company: CompanyCardPayload;
   defaultVisibleJobs?: number;
   showJobExpand?: boolean;
   showTrustRail?: boolean;
   showClueAction?: boolean;
+  copy?: CompanyCardCopy;
 }) {
   const [companyState, setCompanyState] = useState(company);
   const [expanded, setExpanded] = useState(false);
@@ -100,7 +103,7 @@ export default function CompanyCard({
               <button
                 type="button"
                 className="company-clue-tag"
-                aria-label={isClueOpen ? "收起线索" : "线索"}
+                aria-label={isClueOpen ? copy.collapseClueLabel : copy.clueLabel}
                 aria-expanded={isClueOpen}
                 onClick={handleClueToggle}
               >
@@ -116,7 +119,7 @@ export default function CompanyCard({
                     />
                   </svg>
                 </span>
-                <span>线索</span>
+                <span>{copy.clueLabel}</span>
               </button>
             </div>
           ) : null}
@@ -130,7 +133,7 @@ export default function CompanyCard({
           onClose={() => setIsClueOpen(false)}
         />
       ) : null}
-      <section className="job-list" aria-label={`${companyState.company}在招岗位`}>
+      <section className="job-list" aria-label={copy.jobListAriaLabel(companyState.company)}>
         {jobs.map((job) => {
           const verificationTags = job.verification_tags ?? [];
           return (
@@ -158,7 +161,7 @@ export default function CompanyCard({
               </div>
               <div className="job-actions">
                 <a href={job.canonical_url} target="_blank" rel="noreferrer">
-                  查看原帖
+                  {copy.viewOriginalPostLabel}
                 </a>
               </div>
             </div>
@@ -168,7 +171,7 @@ export default function CompanyCard({
       {showJobExpand && companyState.jobs.length > defaultVisibleJobs ? (
         <div className="company-footer">
           <button type="button" onClick={() => setExpanded((value) => !value)}>
-            {expanded ? "收起岗位" : "展开更多岗位"}
+            {expanded ? copy.collapseJobsLabel : copy.expandJobsLabel}
           </button>
         </div>
       ) : null}

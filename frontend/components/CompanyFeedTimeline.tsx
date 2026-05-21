@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import CompanyDaySection from "./CompanyDaySection";
 import { AnimatedTabs } from "./ui/animated-tabs";
+import { DEFAULT_FEED_COPY, type CompanyCardCopy, type FeedCopy } from "../lib/copy";
 import {
   JOB_CATEGORY_OPTIONS,
   type CompanyCardPayload,
@@ -11,26 +12,28 @@ import {
   type JobCategory,
 } from "../lib/types";
 
-const FEED_TABS: Array<{ label: FeedTabLabel; bucket: DayBucketPayload["bucket"] }> = [
-  { label: "最新", bucket: "within_3_days" },
-  { label: "7天内", bucket: "within_7_days" },
-  { label: "更早", bucket: "earlier" },
+const FEED_TABS: Array<{ bucket: DayBucketPayload["bucket"] }> = [
+  { bucket: "within_3_days" },
+  { bucket: "within_7_days" },
+  { bucket: "earlier" },
 ];
 
 const EARLIER_JOB_PREVIEW_LIMIT = 10;
-
-type FeedTabLabel = "最新" | "7天内" | "更早";
 
 export default function CompanyFeedTimeline({
   days,
   showTrustRail = true,
   showClueAction = true,
+  copy = DEFAULT_FEED_COPY,
+  companyCardCopy,
 }: {
   days: DayBucketPayload[];
   showTrustRail?: boolean;
   showClueAction?: boolean;
+  copy?: FeedCopy;
+  companyCardCopy?: CompanyCardCopy;
 }) {
-  const [activeTab, setActiveTab] = useState<FeedTabLabel>("最新");
+  const [activeBucket, setActiveBucket] = useState<DayBucketPayload["bucket"]>("within_3_days");
   const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([]);
   const [categoryPanelOpen, setCategoryPanelOpen] = useState(false);
   const [showAllEarlier, setShowAllEarlier] = useState(false);
@@ -50,10 +53,9 @@ export default function CompanyFeedTimeline({
     return grouped;
   }, [days]);
 
-  const activeBucket = FEED_TABS.find((tab) => tab.label === activeTab)?.bucket ?? "within_3_days";
   const activeCompanies = daysByBucket[activeBucket];
   const filteredCompanies = filterCompaniesByCategory(activeCompanies, selectedCategories);
-  const categoryActionLabel = formatCategoryActionLabel(selectedCategories);
+  const categoryActionLabel = formatCategoryActionLabel(selectedCategories, copy);
   const isEarlier = activeBucket === "earlier";
   const { companies: visibleCompanies, hasHiddenJobs } =
     isEarlier && !showAllEarlier
@@ -82,8 +84,8 @@ export default function CompanyFeedTimeline({
     <div className="feed-timeline">
       <div className="feed-tabs-row" ref={categoryFilterRef}>
         <AnimatedTabs
-          tabs={FEED_TABS.map(({ label }) => ({ label }))}
-          activeLabel={activeTab}
+          tabs={FEED_TABS.map(({ bucket }) => ({ label: copy.tabs[bucket] }))}
+          activeLabel={copy.tabs[activeBucket]}
           actions={[
             {
               label: categoryActionLabel,
@@ -93,18 +95,19 @@ export default function CompanyFeedTimeline({
               onClick: () => setCategoryPanelOpen((value) => !value),
             },
           ]}
-          ariaLabel="岗位时间筛选"
+          ariaLabel={copy.ariaLabel}
           logoSrc="/q.svg"
-          logoAlt="赏金猎人"
+          logoAlt={copy.logoAlt}
           onChange={(label) => {
-            setActiveTab(label as FeedTabLabel);
+            const selected = FEED_TABS.find((tab) => copy.tabs[tab.bucket] === label);
+            setActiveBucket(selected?.bucket ?? "within_3_days");
             setShowAllEarlier(false);
             setCategoryPanelOpen(false);
           }}
         />
 
         {categoryPanelOpen ? (
-          <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label="岗位类型筛选">
+          <div id="job-category-filter-panel" className="job-category-filter-panel" aria-label={copy.categoryFilterAriaLabel}>
             <div className="job-category-options">
               {JOB_CATEGORY_OPTIONS.map((category) => (
                 <button
@@ -117,7 +120,7 @@ export default function CompanyFeedTimeline({
                     setShowAllEarlier(false);
                   }}
                 >
-                  {category}
+                  {copy.categoryLabels[category]}
                 </button>
               ))}
             </div>
@@ -134,12 +137,14 @@ export default function CompanyFeedTimeline({
           showJobExpand={!isEarlier}
           showTrustRail={showTrustRail}
           showClueAction={showClueAction}
+          copy={copy}
+          companyCardCopy={companyCardCopy}
         />
       ) : (
         <section className="empty-state" aria-live="polite">
-          <p className="eyebrow">{activeTab}</p>
-          <h2>{selectedCategories.length ? "这一栏暂时没有匹配岗位" : "这一栏暂时没有岗位"}</h2>
-          <p>等下一次抓取写入后，这里会自动展示对应时间段的公司机会。</p>
+          <p className="eyebrow">{copy.tabs[activeBucket]}</p>
+          <h2>{selectedCategories.length ? copy.emptyNoMatchTitle : copy.emptyNoJobsTitle}</h2>
+          <p>{copy.emptyDescription}</p>
         </section>
       )}
 
@@ -151,7 +156,7 @@ export default function CompanyFeedTimeline({
             aria-expanded={showAllEarlier}
             onClick={() => setShowAllEarlier((value) => !value)}
           >
-            {showAllEarlier ? "收起更早岗位" : "展开全部更早岗位"}
+            {showAllEarlier ? copy.collapseEarlierLabel : copy.expandEarlierLabel}
           </button>
         </div>
       ) : null}
@@ -159,12 +164,12 @@ export default function CompanyFeedTimeline({
   );
 }
 
-function formatCategoryActionLabel(categories: JobCategory[]): string {
+function formatCategoryActionLabel(categories: JobCategory[], copy: FeedCopy): string {
   if (!categories.length) {
-    return "全部岗位";
+    return copy.allCategoriesLabel;
   }
 
-  const label = categories.join("/");
+  const label = categories.map((category) => copy.categoryLabels[category]).join("/");
   if (label.length <= 5) {
     return label;
   }

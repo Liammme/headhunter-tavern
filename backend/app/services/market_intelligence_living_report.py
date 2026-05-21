@@ -66,7 +66,42 @@ class LivingMarketReportError(Exception):
     pass
 
 
-def build_living_market_report_system_prompt() -> str:
+def build_living_market_report_system_prompt(input_payload: dict | None = None) -> str:
+    if _report_language(input_payload) == "ja-JP":
+        return (
+            "You generate a Japanese Living Market Report from sanitized recruiting facts. "
+            "Return only a JSON object, no Markdown. "
+            "本文、headline、executive_summary、section title/body、claim、watchlist、change_reason は日本語で書く。"
+            "Company names, job titles, AI/Web3/JD/RootData/DevRel, and source terms may remain in their original language. "
+            "目標は日本語で 2000-3000 文字。日報、ランキング、求人の羅列にしない。"
+            "Even when mode is incremental_update, output a complete market analysis report, not a patch or changelog. "
+            "Each section must compare 7d/30d/90d/180d and explain structure, changes, causes, and uncertainty. "
+            "Follow input JSON report_scope: market_scope and data_source_scope define the boundary; narrative_rules control title and framing. "
+            "If report_scope.not_a_vertical_web3_report is true, Web3/Crypto/Blockchain is only a segment signal; do not put it in the headline unless the input statistics show a clear sample majority. "
+            "Use only statistics and evidence_id from input JSON; every claim must include evidence_ids. "
+            "Do not add external facts. Do not output canonical_url/source_name/job_url/full_description, 猎头, 赏金, 認領, クライアント開拓, 求人ソース, 求人リンク. "
+            "Fields must strictly match the living_market_report schema. Do not output date, statement, or any unknown schema fields. "
+            "The claim text field must be named claim. status must be new/reinforced/weakened/retired."
+            "\n\nReturn exactly this structure:"
+            "{"
+            '"kind":"living_market_report",'
+            '"schema_version":"living-market-report-v1",'
+            '"headline":"日本語タイトル",'
+            '"version":1,'
+            '"mode":"baseline_seed or incremental_update",'
+            '"previous_snapshot_id":null,'
+            '"seed_window_days":180,'
+            '"generated_at":"ISO time",'
+            '"executive_summary":"日本語の要約",'
+            '"sections":[{"section_id":"market_structure","title":"市場構造","body":"分析本文","claim_ids":["c1"]}],'
+            '"claims":[{"claim_id":"c1","previous_claim_id":null,"status":"new","claim":"判断","confidence":"low","evidence_ids":["fact-1"],"evidence_notes":["証拠メモ"],"change_reason":"変化理由"}],'
+            '"watchlist":[{"topic":"観察テーマ","why_watch":"見る理由","evidence_ids":["fact-1"]}],'
+            '"data_quality":{}'
+            "}。"
+            "sections must contain 3-5 items and section_id must be market_structure/demand_shifts/company_patterns/risk_and_uncertainty; "
+            "claims must contain 4-10 items; each claim uses 1-5 existing input evidence_id values. "
+            "executive_summary must be at least 120 Japanese characters; each section.body must be at least 180 Japanese characters."
+        )
     return (
         "你从脱敏招聘事实生成中文 Living Market Report，只返回 JSON object，不要 Markdown。"
         "目标 2000-3000 个中文字符，不写日报、不写榜单、不写岗位流水账。"
@@ -116,7 +151,7 @@ def generate_living_market_report_payload(
         raise LivingMarketReportError("LLM is disabled or missing API key")
 
     messages = [
-        {"role": "system", "content": build_living_market_report_system_prompt()},
+        {"role": "system", "content": build_living_market_report_system_prompt(input_payload)},
         {"role": "user", "content": build_living_market_report_user_prompt(input_payload)},
     ]
     last_error: Exception | None = None
@@ -327,6 +362,14 @@ def build_rule_living_market_report(
     previous_snapshot_id: int | None,
     generated_at: datetime,
 ) -> dict:
+    if _report_language(input_payload) == "ja-JP":
+        return _build_japanese_rule_living_market_report(
+            input_payload,
+            version=version,
+            mode=mode,
+            previous_snapshot_id=previous_snapshot_id,
+            generated_at=generated_at,
+        )
     evidence_id = next(iter(_allowed_evidence_ids(input_payload)), "e1")
     data_quality = input_payload.get("data_quality") if isinstance(input_payload.get("data_quality"), dict) else {}
     return {
@@ -367,6 +410,85 @@ def _rule_claim(claim_id: str, claim: str, evidence_id: str) -> dict:
         "evidence_notes": ["规则 fallback 使用输入中的结构化证据。"],
         "change_reason": "LLM 不可用或输出未通过校验，使用保守规则报告。",
     }
+
+
+def _build_japanese_rule_living_market_report(
+    input_payload: dict,
+    *,
+    version: int,
+    mode: str,
+    previous_snapshot_id: int | None,
+    generated_at: datetime,
+) -> dict:
+    evidence_id = next(iter(_allowed_evidence_ids(input_payload)), "e1")
+    data_quality = input_payload.get("data_quality") if isinstance(input_payload.get("data_quality"), dict) else {}
+    return {
+        "kind": KIND,
+        "schema_version": SCHEMA_VERSION,
+        "headline": "市場需要は慎重に推移",
+        "version": version,
+        "mode": mode,
+        "previous_snapshot_id": previous_snapshot_id,
+        "seed_window_days": 180,
+        "generated_at": generated_at.replace(microsecond=0).isoformat(),
+        "executive_summary": "日本の公開求人サンプルでは、構造的な需要は見えるものの、市場全体が一気に加速しているとまでは言えません。",
+        "sections": [
+            {
+                "section_id": "market_structure",
+                "title": "市場構造",
+                "body": "市場構造は、可視化されたテーマが安定して現れるかどうかを軸に見る必要があります。短期の増減だけで日本市場全体の拡大と判断するのはまだ早く、職種とテーマの組み合わせを継続して確認する段階です。",
+                "claim_ids": ["c1"],
+            },
+            {
+                "section_id": "demand_shifts",
+                "title": "需要変化",
+                "body": "短期ウィンドウの変化は 180 日の基線に戻して読む必要があります。現時点では方向感を把握する材料にはなりますが、強いトレンドとして断定するには追加サンプルが必要です。",
+                "claim_ids": ["c2"],
+            },
+            {
+                "section_id": "company_patterns",
+                "title": "企業と組織シグナル",
+                "body": "代表サンプルからは、企業の採用が全面的な拡大というより選択的な補強に近いことが読み取れます。特定職能の継続的な出現があるかを見続ける必要があります。",
+                "claim_ids": ["c3"],
+            },
+            {
+                "section_id": "risk_and_uncertainty",
+                "title": "不確実性",
+                "body": "このレポートは構造化された公開求人サンプルに基づくため、日本市場の完全な履歴や全体規模を示すものではありません。サンプル数、投稿日、取得日の偏りを前提に読む必要があります。",
+                "claim_ids": ["c4"],
+            },
+        ],
+        "claims": [
+            _japanese_rule_claim("c1", "構造的な需要は見えるが、証拠強度は慎重に扱うべきです。", evidence_id),
+            _japanese_rule_claim("c2", "短期変化だけでは市場全体の加速を示すには不十分です。", evidence_id),
+            _japanese_rule_claim("c3", "組織シグナルは選択的な補強に近い状態です。", evidence_id),
+            _japanese_rule_claim("c4", "サンプル品質の制約を継続して明示する必要があります。", evidence_id),
+        ],
+        "watchlist": [{"topic": "構造的テーマ", "why_watch": "今後の短期ウィンドウで継続的に広がるかを確認します。", "evidence_ids": [evidence_id]}],
+        "data_quality": data_quality,
+    }
+
+
+def _japanese_rule_claim(claim_id: str, claim: str, evidence_id: str) -> dict:
+    return {
+        "claim_id": claim_id,
+        "previous_claim_id": None,
+        "status": "new",
+        "claim": claim,
+        "confidence": "low",
+        "evidence_ids": [evidence_id],
+        "evidence_notes": ["ルール fallback は入力内の構造化証拠を使用します。"],
+        "change_reason": "LLM が利用できない、または出力が検証を通過しなかったため、保守的なルールレポートを使用します。",
+    }
+
+
+def _report_language(input_payload: dict | None) -> str:
+    report_task = input_payload.get("report_task") if isinstance(input_payload, dict) else None
+    if isinstance(report_task, dict) and report_task.get("language") == "ja-JP":
+        return "ja-JP"
+    if isinstance(input_payload, dict) and input_payload.get("region") == "japan":
+        return "ja-JP"
+    return "zh-CN"
 
 
 def _allowed_evidence_ids(input_payload: dict) -> set[str]:

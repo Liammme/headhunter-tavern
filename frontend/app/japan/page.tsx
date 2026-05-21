@@ -4,6 +4,7 @@ import { GridPattern } from "../../components/ui/grid-pattern";
 import TrueFocus from "../../components/ui/true-focus";
 import { Typewriter } from "../../components/ui/typewriter";
 import { fetchJapanHomePayload } from "../../lib/api";
+import { JAPAN_UI_COPY } from "../../lib/copy";
 
 export default async function JapanPage() {
   const payload = await fetchJapanHomePayload();
@@ -33,9 +34,9 @@ export default async function JapanPage() {
       />
       <section className="hero-shell" aria-labelledby="japan-hero-title">
         <header className="home-hero-copy">
-          <div className="hero-brand-focus" aria-label="Talent Signal Japan">
+          <div className="hero-brand-focus" aria-label="Talent Signal">
             <TrueFocus
-              sentence="Talent Signal Japan"
+              sentence="Talent Signal"
               blurAmount={4}
               borderColor="#6cff72"
               glowColor="rgba(108, 255, 114, 0.42)"
@@ -44,9 +45,9 @@ export default async function JapanPage() {
               className="hero-brand-focus-inner"
             />
           </div>
-          <h1 id="japan-hero-title" aria-label="Japan market signals, isolated from global noise.">
+          <h1 id="japan-hero-title" aria-label="日本市場の求人シグナルを、ノイズから切り分けて見る。">
             <Typewriter
-              words={["Japan market signals, isolated from global noise."]}
+              words={["日本市場の求人シグナルを、ノイズから切り分けて見る。"]}
               speed={58}
               delayBetweenWords={2600}
               cursor
@@ -60,17 +61,25 @@ export default async function JapanPage() {
           captureTitle={dailyCaptureInfo.title}
           captureDescription={dailyCaptureInfo.description}
           collectionStats={buildCollectionStats(payload.days)}
+          copy={JAPAN_UI_COPY.intelligence}
+          chartCopy={JAPAN_UI_COPY.chart}
         />
       </section>
 
-      <section className="feed-shell" aria-label="日本地区岗位列表">
+      <section className="feed-shell" aria-label="日本市場の求人リスト">
         {hasDays ? (
-          <CompanyFeedTimeline days={payload.days} showTrustRail={false} showClueAction={false} />
+          <CompanyFeedTimeline
+            days={payload.days}
+            showTrustRail={false}
+            showClueAction={false}
+            copy={JAPAN_UI_COPY.feed}
+            companyCardCopy={JAPAN_UI_COPY.companyCard}
+          />
         ) : (
           <section className="empty-state" aria-live="polite">
-            <p className="eyebrow">Japan Signal Status</p>
-            <h2>最近还没有可展示的日本岗位</h2>
-            <p>Japan 抓取任务完成前，这里会暂时保持空态。写入 Japan 数据后，将只展示日本地区独立数据源岗位。</p>
+            <p className="eyebrow">Signal Status</p>
+            <h2>表示できる求人はまだありません</h2>
+            <p>取得タスクが完了すると、日本市場の独立データソースから取得した求人だけがここに表示されます。</p>
           </section>
         )}
       </section>
@@ -84,7 +93,7 @@ export default async function JapanPage() {
 }
 
 function formatReportDate(date: Date) {
-  const parts = new Intl.DateTimeFormat("zh-CN", {
+  const parts = new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Shanghai",
     year: "numeric",
     month: "numeric",
@@ -95,7 +104,7 @@ function formatReportDate(date: Date) {
   const month = parts.find((part) => part.type === "month")?.value ?? "";
   const day = parts.find((part) => part.type === "day")?.value ?? "";
 
-  return `${year}/${month}/${day}`;
+  return `${year}.${month}.${day}`;
 }
 
 function buildDailyCaptureInfo(days: Awaited<ReturnType<typeof fetchJapanHomePayload>>["days"]) {
@@ -103,20 +112,20 @@ function buildDailyCaptureInfo(days: Awaited<ReturnType<typeof fetchJapanHomePay
   const companies = recent?.companies ?? [];
   const jobCount = companies.reduce((sum, company) => sum + company.total_jobs, 0);
   const sourceNames = companies.map((company) => company.company).filter(Boolean);
-  const sourceSummary = sourceNames.length ? sourceNames.slice(0, 6).join("、") : "暂无日本公司来源";
-  const overflow = sourceNames.length > 6 ? `等 ${sourceNames.length} 家公司` : "";
+  const sourceSummary = sourceNames.length ? sourceNames.slice(0, 6).join("、") : "取得元なし";
+  const overflow = sourceNames.length > 6 ? ` ほか ${sourceNames.length}社` : "";
 
   return {
-    title: `近3天日本岗位 ${jobCount} 个 / 点击切换市场报告`,
-    description: `分布来源：${sourceSummary}${overflow}。`,
+    title: `直近3日 ${jobCount}件 / マーケットレポートを開く`,
+    description: `取得元：${sourceSummary}${overflow}。`,
   };
 }
 
 function buildCollectionStats(days: Awaited<ReturnType<typeof fetchJapanHomePayload>>["days"]) {
   const labels: Record<(typeof days)[number]["bucket"], string> = {
-    within_3_days: "3天内",
-    within_7_days: "7天内",
-    earlier: "更早",
+    within_3_days: "3日以内",
+    within_7_days: "7日以内",
+    earlier: "それ以前",
   };
 
   return days.map((day) => ({

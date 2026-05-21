@@ -3,6 +3,8 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
 
+import { DEFAULT_CHART_COPY, type ChartCopy } from "../../lib/copy";
+
 type CardProps = React.HTMLAttributes<HTMLDivElement>;
 
 export type ChartDatum = {
@@ -38,11 +40,12 @@ type Visual3Props = {
   data: ChartDatum[];
   mainColor?: string;
   secondaryColor?: string;
+  copy?: ChartCopy;
 };
 
-export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b" }: Visual3Props) {
+export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b", copy = DEFAULT_CHART_COPY }: Visual3Props) {
   const [isActive, setIsActive] = useState(false);
-  const chartBars = useMemo(() => buildChartBars(data), [data]);
+  const chartBars = useMemo(() => buildChartBars(data, copy.fallbackLabels), [data, copy.fallbackLabels]);
 
   return (
     <div
@@ -73,13 +76,13 @@ export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b
       <div className="animated-chart-tooltip" aria-hidden={!isActive}>
         <span>
           <i />
-          Daily Capture Signal
+          {copy.tooltipTitle}
         </span>
-        <p>Showing live collection movement.</p>
+        <p>{copy.tooltipDescription}</p>
       </div>
       <div className="animated-chart-grid" aria-hidden="true" />
       <div className="animated-chart-glow" aria-hidden="true" />
-      <div className="animated-chart-bars" role="img" aria-label="每日岗位收集数量统计图">
+      <div className="animated-chart-bars" role="img" aria-label={copy.chartAriaLabel}>
         {chartBars.map((item, index) => {
           const height = isActive ? item.activeHeight : item.idleHeight;
           const isPositive = isActive || item.idleDirection === "positive";
@@ -89,7 +92,7 @@ export function Visual3({ data, mainColor = "#75fb6e", secondaryColor = "#26a17b
               key={`${item.label}-${index}`}
               type="button"
               className="animated-chart-bar-button"
-              aria-label={`${item.label}，${item.value} 个岗位`}
+              aria-label={copy.barAriaLabel(item.label, item.value)}
             >
               <span
                 className={joinClassNames(
@@ -110,13 +113,13 @@ function joinClassNames(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function buildChartBars(data: ChartDatum[]) {
+function buildChartBars(data: ChartDatum[], fallbackLabels: [string, string, string]) {
   const source = data.length
     ? data
     : [
-        { label: "3天内", value: 0 },
-        { label: "7天内", value: 0 },
-        { label: "更早", value: 0 },
+        { label: fallbackLabels[0], value: 0 },
+        { label: fallbackLabels[1], value: 0 },
+        { label: fallbackLabels[2], value: 0 },
       ];
 
   return REFERENCE_BARS.map((bar, index) => {

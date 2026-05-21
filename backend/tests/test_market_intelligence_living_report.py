@@ -11,6 +11,7 @@ from app.services.market_intelligence_living_report import (
     generate_living_market_report_payload,
     validate_living_market_report,
 )
+from app.services.region import JAPAN_REGION
 
 
 def _living_input(*, mode: str = "initial") -> dict:
@@ -341,3 +342,48 @@ def test_build_rule_living_market_report_passes_validation():
     )
 
     validate_living_market_report(report, input_payload=_living_input(), expected_version=1)
+
+
+def test_generate_living_market_report_payload_prompts_japan_report_in_japanese(monkeypatch):
+    calls = []
+    monkeypatch.setattr(market_intelligence_living_report, "should_use_llm", lambda: True)
+    expanded_report = _expanded_living_report()
+
+    def fake_request_structured_json(messages, **_kwargs):
+        calls.append([dict(message) for message in messages])
+        return json.dumps(expanded_report, ensure_ascii=False)
+
+    monkeypatch.setattr(market_intelligence_living_report, "request_structured_json", fake_request_structured_json)
+    input_payload = _living_input()
+    input_payload["region"] = JAPAN_REGION
+    input_payload["report_task"]["language"] = "ja-JP"
+
+    generate_living_market_report_payload(
+        input_payload,
+        version=1,
+        mode="baseline_seed",
+        previous_snapshot_id=None,
+        generated_at=datetime(2026, 4, 27, 10, 0, 0),
+    )
+
+    assert "日本語" in calls[0][0]["content"]
+    assert "Japanese" in calls[0][0]["content"]
+
+
+def test_build_rule_living_market_report_returns_japanese_fallback_for_japan():
+    input_payload = _living_input()
+    input_payload["region"] = JAPAN_REGION
+    input_payload["report_task"]["language"] = "ja-JP"
+
+    report = build_rule_living_market_report(
+        input_payload,
+        version=1,
+        mode="baseline_seed",
+        previous_snapshot_id=None,
+        generated_at=datetime(2026, 4, 27, 10, 0, 0),
+    )
+
+    assert report["headline"] == "市場需要は慎重に推移"
+    assert "日本" in report["executive_summary"]
+    assert report["sections"][0]["title"] == "市場構造"
+    assert report["claims"][0]["change_reason"].startswith("LLM が利用できない")

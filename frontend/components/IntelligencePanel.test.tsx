@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import IntelligencePanel from "./IntelligencePanel";
+import { JAPAN_UI_COPY } from "../lib/copy";
 import type { IntelligencePayload } from "../lib/types";
 
 function buildIntelligence(overrides: Partial<IntelligencePayload> = {}): IntelligencePayload {
@@ -351,5 +352,34 @@ describe("IntelligencePanel", () => {
     expect(screen.queryByRole("heading", { level: 3, name: "今日机会雷达" })).not.toBeInTheDocument();
     expect(screen.queryByText("榜单露头")).not.toBeInTheDocument();
     expect(screen.queryByText("找找看有没有能BD的公司？")).not.toBeInTheDocument();
+  });
+
+  it("renders report controls and living report chrome in Japanese when Japan copy is provided", () => {
+    const intelligence = buildIntelligence({ living_report: buildLivingReport() });
+
+    render(
+      <IntelligencePanel
+        intelligence={intelligence}
+        reportDateLabel="2026.4.27"
+        captureTitle="直近3日 5件 / マーケットレポートを開く"
+        captureDescription="取得元：OpenGradient。"
+        collectionStats={[
+          { label: "3日以内", value: 5 },
+          { label: "7日以内", value: 3 },
+          { label: "それ以前", value: 12 },
+        ]}
+        copy={JAPAN_UI_COPY.intelligence}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("region", { name: "マーケットレポートを開く" }));
+
+    expect(screen.getByRole("button", { name: "戻る" })).toBeInTheDocument();
+    expect(screen.getByText("第2版")).toBeInTheDocument();
+    expect(screen.getByText("180日ベースライン")).toBeInTheDocument();
+    expect(screen.getByText("最終更新 2026-04-27T10:00:00")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "判断" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "ウォッチリスト" })).toBeInTheDocument();
+    expect(screen.getByText("サンプル数 8")).toBeInTheDocument();
   });
 });
