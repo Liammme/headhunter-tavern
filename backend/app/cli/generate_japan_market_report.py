@@ -9,7 +9,15 @@ from app.services.region import JAPAN_REGION
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Generate a Japan living market intelligence snapshot.")
+    parser = argparse.ArgumentParser(
+        description="Generate a Japan living market intelligence snapshot.",
+        epilog=(
+            "Production sequence: python -m app.db.init_db; "
+            "python -m app.cli.crawl_japan_jobs; "
+            "python -m app.cli.generate_japan_market_report --days 180; "
+            "sudo systemctl restart bounty-pool"
+        ),
+    )
     parser.add_argument("--days", type=int, choices=(180,), default=180)
     parser.add_argument("--min-age-days", type=int, default=0)
     args = parser.parse_args(argv)

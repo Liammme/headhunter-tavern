@@ -1,13 +1,46 @@
 from datetime import date, datetime, timedelta
 
+from sqlalchemy import select
+
+from app.crawlers.base import NormalizedJob
 from app.models import MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services import market_intelligence_living_report
 from app.services import market_intelligence_living_report_service
+from app.services.market_intelligence_baseline_service import BASELINE_NOTE
+from app.services.market_intelligence_living_refresh_service import refresh_living_market_report_if_due
 from app.services.market_intelligence_living_report_service import (
     generate_living_market_report,
     load_latest_success_living_snapshot,
 )
 from app.services.region import GLOBAL_REGION, JAPAN_REGION
+
+
+class StaticJapanAdapter:
+    source_name = "static_japan"
+
+    def __init__(self, jobs: list[NormalizedJob]):
+        self._jobs = jobs
+
+    def fetch(self) -> list[NormalizedJob]:
+        return self._jobs
+
+
+def _normalized_job(
+    *,
+    canonical_url: str = "https://jobs.example.jp/opening/1",
+    title: str = "Japan AI Infrastructure Engineer",
+    company: str = "Tokyo Signal",
+    posted_at: datetime | None = datetime(2026, 4, 20, 9, 0, 0),
+) -> NormalizedJob:
+    return NormalizedJob(
+        source_job_id=canonical_url.rsplit("/", 1)[-1],
+        canonical_url=canonical_url,
+        title=title,
+        company=company,
+        description="Build LLM platform and enterprise AI systems for Japan.",
+        posted_at=posted_at,
+        raw_payload={"site": "static_japan"},
+    )
 
 
 def _add_fact(db_session, *, title: str, created_at: datetime, region: str = GLOBAL_REGION) -> None:
@@ -275,6 +308,212 @@ def test_generate_living_market_report_for_japan_uses_180_day_japan_window(db_se
     assert snapshot.window_days == 180
     assert snapshot.market_signal_payload["region"] == JAPAN_REGION
     assert snapshot.report_payload["region"] == JAPAN_REGION
+
+
+def test_refresh_japan_living_report_backfills_japan_facts_before_baseline(db_session, monkeypatch):
+    captured_payloads = []
+
+    def assert_japan_baseline(input_payload, *, version, mode, previous_snapshot_id, generated_at):
+        captured_payloads.append(input_payload)
+        assert input_payload["region"] == JAPAN_REGION
+        assert input_payload["previous_report"] is None
+        assert input_payload["market_windows"]["7d"]["job_count"] == 1
+        assert input_payload["market_windows"]["30d"]["job_count"] == 1
+        assert input_payload["market_windows"]["90d"]["job_count"] == 2
+        assert input_payload["market_windows"]["180d"]["job_count"] == 2
+        assert input_payload["data_quality"]["baseline_note"] == BASELINE_NOTE
+        assert {sample["title"] for sample in input_payload["representative_samples"]} == {
+            "Recent Japan AI Engineer",
+            "Older Japan Platform Engineer",
+        }
+        return _fake_report(
+            input_payload,
+            version=version,
+            mode=mode,
+            previous_snapshot_id=previous_snapshot_id,
+            generated_at=generated_at,
+        )
+
+    monkeypatch.setattr(
+        market_intelligence_living_report_service,
+        "generate_living_market_report_payload",
+        assert_japan_baseline,
+    )
+
+    result = refresh_living_market_report_if_due(
+        db_session,
+        days=180,
+        min_age_days=0,
+        clock=lambda: datetime(2026, 4, 27, 12, 0, 0),
+        region=JAPAN_REGION,
+        adapters=[
+            StaticJapanAdapter(
+                [
+                    _normalized_job(
+                        canonical_url="https://jobs.example.jp/recent",
+                        title="Recent Japan AI Engineer",
+                        posted_at=datetime(2026, 4, 26, 9, 0, 0),
+                    ),
+                    _normalized_job(
+                        canonical_url="https://jobs.example.jp/older",
+                        title="Older Japan Platform Engineer",
+                        posted_at=datetime(2026, 2, 20, 9, 0, 0),
+                    ),
+                ]
+            )
+        ],
+    )
+
+    facts = db_session.execute(select(MarketIntelligenceFact).order_by(MarketIntelligenceFact.title)).scalars().all()
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    assert result["status"] == "success"
+    assert result["facts"]["days"] == 180
+    assert result["facts"]["inserted"] == 2
+    assert [fact.region for fact in facts] == [JAPAN_REGION, JAPAN_REGION]
+    assert snapshot.region == JAPAN_REGION
+    assert snapshot.window_days == 180
+    assert snapshot.report_payload["living_report"]["version"] == 1
+    assert snapshot.report_payload["living_report"]["mode"] == "baseline_seed"
+    assert snapshot.report_payload["living_report"]["seed_window_days"] == 180
+    assert snapshot.report_payload["living_report"]["data_quality"]["baseline_note"] == BASELINE_NOTE
+    assert captured_payloads
+
+
+def test_generate_living_market_report_update_for_japan_uses_previous_japan_report_only(db_session, monkeypatch):
+    global_previous = _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=GLOBAL_REGION,
+        living=True,
+        version=9,
+    )
+    japan_previous = _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 21, 10, 0, 0),
+        region=JAPAN_REGION,
+        living=True,
+        version=1,
+    )
+    _add_fact(
+        db_session,
+        title="New Japan AI Infra Engineer",
+        created_at=datetime(2026, 4, 22, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+    _add_fact(
+        db_session,
+        title="New Global AI Infra Engineer",
+        created_at=datetime(2026, 4, 23, 10, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    def assert_japan_update(input_payload, *, version, mode, previous_snapshot_id, generated_at):
+        assert version == 2
+        assert mode == "incremental_update"
+        assert previous_snapshot_id == japan_previous.id
+        assert previous_snapshot_id != global_previous.id
+        assert input_payload["region"] == JAPAN_REGION
+        assert input_payload["previous_report"]["version"] == 1
+        assert [fact["title"] for fact in input_payload["new_facts"]] == ["New Japan AI Infra Engineer"]
+        return _fake_report(
+            input_payload,
+            version=version,
+            mode=mode,
+            previous_snapshot_id=previous_snapshot_id,
+            generated_at=generated_at,
+        )
+
+    monkeypatch.setattr(
+        market_intelligence_living_report_service,
+        "generate_living_market_report_payload",
+        assert_japan_update,
+    )
+
+    result = generate_living_market_report(
+        db_session,
+        mode="update",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    assert result["status"] == "success"
+    assert snapshot.region == JAPAN_REGION
+    assert snapshot.report_payload["living_report"]["version"] == 2
+    assert snapshot.report_payload["living_report"]["previous_snapshot_id"] == japan_previous.id
+
+
+def test_generate_living_market_report_for_global_does_not_read_japan_facts(db_session, monkeypatch):
+    _add_fact(
+        db_session,
+        title="Global AI Infra Engineer",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=GLOBAL_REGION,
+    )
+    _add_fact(
+        db_session,
+        title="Japan AI Infra Engineer",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    def assert_global_report(input_payload, *, version, mode, previous_snapshot_id, generated_at):
+        assert input_payload["region"] == GLOBAL_REGION
+        assert input_payload["market_windows"]["180d"]["job_count"] == 1
+        assert [sample["title"] for sample in input_payload["representative_samples"]] == ["Global AI Infra Engineer"]
+        return _fake_report(
+            input_payload,
+            version=version,
+            mode=mode,
+            previous_snapshot_id=previous_snapshot_id,
+            generated_at=generated_at,
+        )
+
+    monkeypatch.setattr(
+        market_intelligence_living_report_service,
+        "generate_living_market_report_payload",
+        assert_global_report,
+    )
+
+    result = generate_living_market_report(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    assert result["status"] == "success"
+    assert snapshot.region == GLOBAL_REGION
+
+
+def test_generate_living_market_report_without_japan_facts_falls_back_with_clear_data_quality(db_session, monkeypatch):
+    monkeypatch.setattr(
+        market_intelligence_living_report_service,
+        "generate_living_market_report_payload",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("llm unavailable")),
+    )
+
+    result = generate_living_market_report(
+        db_session,
+        mode="baseline",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    data_quality = snapshot.report_payload["living_report"]["data_quality"]
+    assert result["status"] == "fallback"
+    assert snapshot.region == JAPAN_REGION
+    assert data_quality["baseline_note"] == BASELINE_NOTE
+    assert data_quality["sample_count"] == 0
+    assert snapshot.market_signal_payload["market_windows"]["180d"]["job_count"] == 0
 
 
 def test_load_latest_success_living_snapshot_finds_global_living_report_after_many_plain_snapshots(db_session):

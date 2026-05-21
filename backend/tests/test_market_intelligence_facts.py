@@ -8,6 +8,7 @@ from app.models import Job, MarketIntelligenceFact, MarketIntelligenceSnapshot
 from app.services.market_intelligence_baseline_service import generate_market_baseline_report
 from app.services.market_intelligence_fact_extractor import extract_market_intelligence_fact
 from app.services.market_intelligence_fact_service import backfill_market_intelligence_facts
+from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
 FULL_DESCRIPTION = (
@@ -143,6 +144,47 @@ def test_backfill_market_intelligence_facts_filters_by_days(db_session):
     assert summary["skipped_out_of_window"] == 1
     assert len(facts) == 1
     assert facts[0].title == recent.title
+
+
+def test_backfill_market_intelligence_facts_writes_japan_region(db_session):
+    summary = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([_normalized_job(canonical_url="https://jobs.example.jp/japan")])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    fact = db_session.execute(select(MarketIntelligenceFact)).scalar_one()
+    assert summary["inserted"] == 1
+    assert fact.region == JAPAN_REGION
+
+
+def test_backfill_market_intelligence_facts_keeps_japan_dedupe_separate_from_global(db_session):
+    job = _normalized_job(canonical_url="https://jobs.example.com/shared")
+    global_summary = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([job])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=GLOBAL_REGION,
+    )
+    japan_summary = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([job])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    facts = db_session.execute(select(MarketIntelligenceFact).order_by(MarketIntelligenceFact.region)).scalars().all()
+    assert global_summary["inserted"] == 1
+    assert japan_summary["inserted"] == 1
+    assert {fact.region for fact in facts} == {GLOBAL_REGION, JAPAN_REGION}
+    assert len({fact.dedupe_key for fact in facts}) == 2
 
 
 def test_backfill_market_intelligence_facts_continues_when_source_fails(db_session):
