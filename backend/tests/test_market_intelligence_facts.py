@@ -249,6 +249,45 @@ def test_backfill_market_intelligence_facts_keeps_japan_dedupe_separate_from_glo
     assert len({fact.dedupe_key for fact in facts}) == 2
 
 
+def test_backfill_market_intelligence_facts_updates_empty_japan_profile_for_duplicate(db_session):
+    job = _normalized_job(
+        canonical_url="https://jobs.example.jp/profile-duplicate",
+        title="未経験OK カスタマーサクセス",
+        location="東京都",
+        remote_type="hybrid",
+        employment_type="正社員",
+        description="日本語必須。英語歓迎。年収 500万円から700万円。",
+        raw_payload={"site": "withb"},
+    )
+    first = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([job])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+    )
+    fact = db_session.execute(select(MarketIntelligenceFact)).scalar_one()
+    fact.profile_payload = {}
+    db_session.commit()
+
+    second = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([job])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    db_session.refresh(fact)
+    assert first["inserted"] == 1
+    assert second["inserted"] == 0
+    assert second["skipped_duplicate"] == 1
+    assert fact.profile_payload["report_profile"] == "japan_recruiting_market_v1"
+    assert fact.profile_payload["location_signal"] == "tokyo"
+
+
 def test_backfill_market_intelligence_facts_continues_when_source_fails(db_session):
     summary = backfill_market_intelligence_facts(
         db_session,

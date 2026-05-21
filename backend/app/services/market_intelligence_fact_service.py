@@ -64,18 +64,29 @@ def backfill_market_intelligence_facts(
         return summary
 
     dedupe_keys = [fact["dedupe_key"] for fact in extracted_facts]
-    existing_keys = set(
-        db.execute(
-            select(MarketIntelligenceFact.dedupe_key).where(MarketIntelligenceFact.dedupe_key.in_(dedupe_keys))
+    existing_facts = {
+        fact.dedupe_key: fact
+        for fact in db.execute(
+            select(MarketIntelligenceFact).where(MarketIntelligenceFact.dedupe_key.in_(dedupe_keys))
         )
         .scalars()
         .all()
-    )
+    }
+    existing_keys = set(existing_facts)
 
     seen_keys: set[str] = set()
     for fact in extracted_facts:
         if fact["dedupe_key"] in existing_keys or fact["dedupe_key"] in seen_keys:
             summary["skipped_duplicate"] += 1
+            existing_fact = existing_facts.get(fact["dedupe_key"])
+            if (
+                not dry_run
+                and region == JAPAN_REGION
+                and existing_fact is not None
+                and not existing_fact.profile_payload
+                and fact.get("profile_payload")
+            ):
+                existing_fact.profile_payload = fact["profile_payload"]
             continue
         seen_keys.add(fact["dedupe_key"])
         if dry_run:
