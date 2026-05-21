@@ -5,6 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import MarketIntelligenceSnapshot
+from app.services.japan_living_report_payload import build_japan_living_market_report_input
+from app.services.japan_market_profile import JAPAN_RECRUITING_MARKET_PROFILE
 from app.services.market_intelligence_living_payload import build_living_market_report_input
 from app.services.market_intelligence_living_report import (
     build_rule_living_market_report,
@@ -31,7 +33,8 @@ def generate_living_market_report(
 ) -> dict:
     generated_at = clock().replace(microsecond=0)
     target_date = snapshot_date or generated_at.date()
-    previous_snapshot = load_latest_success_living_snapshot(db, region=region)
+    report_profile = JAPAN_RECRUITING_MARKET_PROFILE if region == JAPAN_REGION else None
+    previous_snapshot = load_latest_success_living_snapshot(db, region=region, report_profile=report_profile)
     resolved_mode = "baseline" if mode == "auto" and previous_snapshot is None else mode
     if resolved_mode == "auto":
         resolved_mode = "update"
@@ -42,7 +45,7 @@ def generate_living_market_report(
 
     version = 1 if resolved_mode == "baseline" else _living_version(previous_snapshot) + 1
     living_mode = "baseline_seed" if resolved_mode == "baseline" else "incremental_update"
-    input_payload = build_living_market_report_input(
+    input_payload = _build_living_input(
         db,
         mode=resolved_mode,
         days=days,
@@ -114,10 +117,38 @@ def _compat_report_payload(living_report: dict, *, region: RegionCode) -> dict:
     }
 
 
+def _build_living_input(
+    db: Session,
+    *,
+    mode: str,
+    days: int,
+    snapshot_date: date,
+    previous_snapshot: MarketIntelligenceSnapshot | None,
+    region: RegionCode,
+) -> dict:
+    if region == JAPAN_REGION:
+        return build_japan_living_market_report_input(
+            db,
+            mode=mode,
+            days=days,
+            snapshot_date=snapshot_date,
+            previous_snapshot=previous_snapshot,
+        )
+    return build_living_market_report_input(
+        db,
+        mode=mode,
+        days=days,
+        snapshot_date=snapshot_date,
+        previous_snapshot=previous_snapshot,
+        region=region,
+    )
+
+
 def load_latest_success_living_snapshot(
     db: Session,
     *,
     region: RegionCode = GLOBAL_REGION,
+    report_profile: str | None = None,
 ) -> MarketIntelligenceSnapshot | None:
     for batch_index in range(LIVING_SNAPSHOT_SCAN_MAX_BATCHES):
         snapshots = (
@@ -136,7 +167,12 @@ def load_latest_success_living_snapshot(
         for snapshot in snapshots:
             report = snapshot.report_payload if isinstance(snapshot.report_payload, dict) else {}
             living = report.get("living_report")
-            if isinstance(living, dict) and living.get("kind") == "living_market_report":
+            signal_payload = snapshot.market_signal_payload if isinstance(snapshot.market_signal_payload, dict) else {}
+            if (
+                isinstance(living, dict)
+                and living.get("kind") == "living_market_report"
+                and (report_profile is None or signal_payload.get("report_profile") == report_profile)
+            ):
                 return snapshot
     return None
 

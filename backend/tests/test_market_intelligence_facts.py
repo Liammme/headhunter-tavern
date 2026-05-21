@@ -39,18 +39,25 @@ def _normalized_job(
     canonical_url: str = "https://jobs.example.com/opening/1?token=secret",
     title: str = "Senior AI Infrastructure Engineer",
     company: str = "OpenGradient",
+    location: str = "",
+    remote_type: str = "unknown",
+    employment_type: str = "unknown",
     description: str = FULL_DESCRIPTION,
     posted_at: datetime | None = datetime(2026, 4, 20, 9, 0, 0),
     source_job_id: str | None = "remote-1",
+    raw_payload: dict | None = None,
 ) -> NormalizedJob:
     return NormalizedJob(
         source_job_id=source_job_id,
         canonical_url=canonical_url,
         title=title,
         company=company,
+        location=location,
+        remote_type=remote_type,
+        employment_type=employment_type,
         description=description,
         posted_at=posted_at,
-        raw_payload={"site": "static", "bounty": "high", "claim_url": "https://claims.example.com"},
+        raw_payload=raw_payload or {"site": "static", "bounty": "high", "claim_url": "https://claims.example.com"},
     )
 
 
@@ -159,6 +166,61 @@ def test_backfill_market_intelligence_facts_writes_japan_region(db_session):
     fact = db_session.execute(select(MarketIntelligenceFact)).scalar_one()
     assert summary["inserted"] == 1
     assert fact.region == JAPAN_REGION
+
+
+def test_backfill_market_intelligence_facts_writes_japan_recruiting_profile(db_session):
+    summary = backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[
+            StaticAdapter(
+                [
+                    _normalized_job(
+                        canonical_url="https://jobs.example.jp/customer-success",
+                        title="未経験OK カスタマーサクセス",
+                        company="Tokyo Support",
+                        location="東京都 渋谷区",
+                        remote_type="hybrid",
+                        employment_type="正社員",
+                        description="日本語必須。英語歓迎。年収 500万円から700万円。",
+                        raw_payload={"site": "withb"},
+                    )
+                ]
+            )
+        ],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    fact = db_session.execute(select(MarketIntelligenceFact)).scalar_one()
+    assert summary["inserted"] == 1
+    assert fact.profile_payload == {
+        "report_profile": "japan_recruiting_market_v1",
+        "source_family": "bilingual / international",
+        "location_signal": "tokyo",
+        "remote_policy": "hybrid",
+        "employment_type": "permanent",
+        "experience_level": "entry / inexperienced",
+        "language_requirement": "japanese + english",
+        "salary_disclosure": "disclosed",
+        "salary_type": "annual",
+        "industry_hint": "other",
+    }
+
+
+def test_backfill_market_intelligence_facts_keeps_global_profile_empty(db_session):
+    backfill_market_intelligence_facts(
+        db_session,
+        days=180,
+        dry_run=False,
+        adapters=[StaticAdapter([_normalized_job(canonical_url="https://jobs.example.com/global")])],
+        collected_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=GLOBAL_REGION,
+    )
+
+    fact = db_session.execute(select(MarketIntelligenceFact)).scalar_one()
+    assert fact.profile_payload == {}
 
 
 def test_backfill_market_intelligence_facts_keeps_japan_dedupe_separate_from_global(db_session):

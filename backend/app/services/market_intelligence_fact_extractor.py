@@ -23,6 +23,7 @@ class ExtractedMarketIntelligenceFact:
     business_keywords: list[str]
     salary_signal: str
     fact_summary: str
+    profile_payload: dict
 
     def to_model_payload(self) -> dict:
         return {
@@ -39,6 +40,7 @@ class ExtractedMarketIntelligenceFact:
             "business_keywords": self.business_keywords,
             "salary_signal": self.salary_signal,
             "fact_summary": self.fact_summary,
+            "profile_payload": self.profile_payload,
         }
 
 
@@ -76,6 +78,7 @@ def extract_market_intelligence_fact(
         tech_keywords=tech_keywords,
         business_keywords=business_keywords,
         salary_signal=facts.compensation_signal,
+        profile_payload={},
         fact_summary=_build_fact_summary(
             market_theme=market_theme,
             job_function=facts.category,

@@ -77,6 +77,8 @@ def build_living_market_report_system_prompt(input_payload: dict | None = None) 
             "Even when mode is incremental_update, output a complete market analysis report, not a patch or changelog. "
             "Each section must compare 7d/30d/90d/180d and explain structure, changes, causes, and uncertainty. "
             "Follow input JSON report_scope: market_scope and data_source_scope define the boundary; narrative_rules control title and framing. "
+            "If japan_recruiting_profile is present, use it as the primary analysis frame: functions, experience, language, location, remote policy, employment type, salary disclosure, and source mix. "
+            "Treat market_theme/theme_counts and industry_hint_counts as secondary context, not the report backbone. "
             "If report_scope.not_a_vertical_web3_report is true, Web3/Crypto/Blockchain is only a segment signal; do not put it in the headline unless the input statistics show a clear sample majority. "
             "Use only statistics and evidence_id from input JSON; every claim must include evidence_ids. "
             "Do not add external facts. Do not output canonical_url/source_name/job_url/full_description, 猎头, 赏金, 認領, クライアント開拓, 求人ソース, 求人リンク. "

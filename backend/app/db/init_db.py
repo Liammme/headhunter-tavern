@@ -27,6 +27,7 @@ def init_db() -> None:
     _ensure_region_index("market_intelligence_snapshots", "ix_market_intelligence_snapshots_region")
     _ensure_region_column("market_intelligence_facts")
     _ensure_region_index("market_intelligence_facts", "ix_market_intelligence_facts_region")
+    _ensure_json_object_column("market_intelligence_facts", "profile_payload")
 
 
 def _ensure_job_region_column() -> None:
@@ -87,3 +88,24 @@ def _ensure_region_index(table_name: str, index_name: str) -> None:
 
     with engine.begin() as connection:
         connection.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name} (region)"))
+
+
+def _ensure_json_object_column(table_name: str, column_name: str) -> None:
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+    if any(column["name"] == column_name for column in inspector.get_columns(table_name)):
+        return
+
+    dialect = engine.dialect.name
+    if dialect == "sqlite":
+        statement = f"ALTER TABLE {table_name} ADD COLUMN {column_name} JSON DEFAULT '{{}}' NOT NULL"
+    elif dialect == "postgresql":
+        statement = (
+            f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {column_name} "
+            "JSONB DEFAULT '{}'::jsonb NOT NULL"
+        )
+    else:
+        statement = f"ALTER TABLE {table_name} ADD COLUMN {column_name} JSON DEFAULT '{{}}' NOT NULL"
+    with engine.begin() as connection:
+        connection.execute(text(statement))

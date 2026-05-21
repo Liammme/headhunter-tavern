@@ -14,6 +14,7 @@ from app.services.market_intelligence_living_report_service import (
     generate_living_market_report,
     load_latest_success_living_snapshot,
 )
+from app.services.japan_market_profile import JAPAN_RECRUITING_MARKET_PROFILE
 from app.services.region import GLOBAL_REGION, JAPAN_REGION
 
 
@@ -45,7 +46,7 @@ def _normalized_job(
     )
 
 
-def _add_fact(db_session, *, title: str, created_at: datetime, region: str = GLOBAL_REGION) -> None:
+def _add_fact(db_session, *, title: str, created_at: datetime, region: str = GLOBAL_REGION, profile_payload: dict | None = None) -> None:
     db_session.add(
         MarketIntelligenceFact(
             region=region,
@@ -62,6 +63,7 @@ def _add_fact(db_session, *, title: str, created_at: datetime, region: str = GLO
             business_keywords=[],
             salary_signal="unknown",
             fact_summary="AI infra | 技术 | Senior | llm",
+            profile_payload=profile_payload or {},
             created_at=created_at,
             updated_at=created_at,
         )
@@ -112,6 +114,7 @@ def _add_success_snapshot(
     region: str = GLOBAL_REGION,
     living: bool = False,
     version: int = 1,
+    report_profile: str | None = None,
 ) -> MarketIntelligenceSnapshot:
     report_payload = {
         "region": region,
@@ -137,12 +140,15 @@ def _add_success_snapshot(
             "watchlist": [],
             "data_quality": {},
         }
+    market_signal_payload = {"region": region}
+    if report_profile is not None:
+        market_signal_payload["report_profile"] = report_profile
     snapshot = MarketIntelligenceSnapshot(
         region=region,
         snapshot_date=generated_at.date(),
         generated_at=generated_at,
         window_days=180,
-        market_signal_payload={"region": region},
+        market_signal_payload=market_signal_payload,
         report_payload=report_payload,
         model_name=None,
         status="success",
@@ -312,6 +318,78 @@ def test_generate_living_market_report_for_japan_uses_180_day_japan_window(db_se
     assert snapshot.report_payload["region"] == JAPAN_REGION
 
 
+def test_generate_living_market_report_for_japan_uses_recruiting_profile_and_ignores_legacy_previous_report(
+    db_session, monkeypatch
+):
+    legacy_previous = _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 20, 10, 0, 0),
+        region=JAPAN_REGION,
+        living=True,
+        version=4,
+    )
+    _add_fact(
+        db_session,
+        title="未経験OK カスタマーサクセス",
+        created_at=datetime(2026, 4, 27, 10, 0, 0),
+        region=JAPAN_REGION,
+        profile_payload={
+            "report_profile": "japan_recruiting_market_v1",
+            "source_family": "bilingual / international",
+            "location_signal": "tokyo",
+            "remote_policy": "hybrid",
+            "employment_type": "permanent",
+            "experience_level": "entry / inexperienced",
+            "language_requirement": "japanese_required",
+            "salary_disclosure": "disclosed",
+            "salary_type": "annual",
+            "industry_hint": "other",
+        },
+    )
+
+    def assert_japan_profile_input(input_payload, *, version, mode, previous_snapshot_id, generated_at):
+        assert version == 1
+        assert mode == "baseline_seed"
+        assert previous_snapshot_id is None
+        assert input_payload["region"] == JAPAN_REGION
+        assert input_payload["report_profile"] == "japan_recruiting_market_v1"
+        assert input_payload["previous_report"] is None
+        assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["function_counts"] == {"技术": 1}
+        assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["experience_counts"] == {
+            "entry / inexperienced": 1
+        }
+        assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["location_counts"] == {"tokyo": 1}
+        assert legacy_previous.id != previous_snapshot_id
+        return _fake_report(
+            input_payload,
+            version=version,
+            mode=mode,
+            previous_snapshot_id=previous_snapshot_id,
+            generated_at=generated_at,
+        )
+
+    monkeypatch.setattr(
+        market_intelligence_living_report_service,
+        "generate_living_market_report_payload",
+        assert_japan_profile_input,
+    )
+
+    result = generate_living_market_report(
+        db_session,
+        mode="auto",
+        days=180,
+        snapshot_date=date(2026, 4, 27),
+        clock=lambda: datetime(2026, 4, 27, 11, 0, 0),
+        region=JAPAN_REGION,
+    )
+
+    snapshot = db_session.get(MarketIntelligenceSnapshot, result["snapshot_id"])
+    assert result["status"] == "success"
+    assert snapshot.region == JAPAN_REGION
+    assert snapshot.market_signal_payload["report_profile"] == "japan_recruiting_market_v1"
+    assert snapshot.report_payload["living_report"]["version"] == 1
+
+
 def test_japan_living_report_input_declares_non_web3_vertical_scope(db_session):
     _add_fact(
         db_session,
@@ -390,10 +468,19 @@ def test_japan_living_report_rejects_web3_headline_when_web3_is_not_majority(db_
 
 def test_refresh_japan_living_report_backfills_japan_facts_before_baseline(db_session, monkeypatch):
     captured_payloads = []
+    _add_success_snapshot(
+        db_session,
+        generated_at=datetime(2026, 4, 26, 12, 0, 0),
+        region=JAPAN_REGION,
+        living=True,
+        version=3,
+    )
 
     def assert_japan_baseline(input_payload, *, version, mode, previous_snapshot_id, generated_at):
         captured_payloads.append(input_payload)
+        assert version == 1
         assert input_payload["region"] == JAPAN_REGION
+        assert input_payload["report_profile"] == JAPAN_RECRUITING_MARKET_PROFILE
         assert input_payload["previous_report"] is None
         assert input_payload["market_windows"]["7d"]["job_count"] == 1
         assert input_payload["market_windows"]["30d"]["job_count"] == 1
@@ -471,6 +558,7 @@ def test_generate_living_market_report_update_for_japan_uses_previous_japan_repo
         region=JAPAN_REGION,
         living=True,
         version=1,
+        report_profile=JAPAN_RECRUITING_MARKET_PROFILE,
     )
     _add_fact(
         db_session,

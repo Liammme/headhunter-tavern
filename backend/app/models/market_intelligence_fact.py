@@ -25,5 +25,6 @@ class MarketIntelligenceFact(Base):
     business_keywords: Mapped[list[str]] = mapped_column(JSON, default=list)
     salary_signal: Mapped[str] = mapped_column(String(32), default="unknown", index=True)
     fact_summary: Mapped[str] = mapped_column(Text, default="")
+    profile_payload: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)

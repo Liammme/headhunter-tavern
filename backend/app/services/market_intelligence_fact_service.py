@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from app.crawlers.base import NormalizedJob, SourceAdapter
 from app.crawlers.registry import ADAPTERS
 from app.models import MarketIntelligenceFact
+from app.services.japan_market_profile import build_japan_fact_profile
 from app.services.market_intelligence_fact_extractor import extract_market_intelligence_fact
-from app.services.region import GLOBAL_REGION, RegionCode
+from app.services.region import GLOBAL_REGION, JAPAN_REGION, RegionCode
 
 SUPPORTED_BACKFILL_DAYS = {30, 90, 180}
 
@@ -53,6 +54,8 @@ def backfill_market_intelligence_facts(
         summary["eligible"] += 1
         payload = extracted.to_model_payload()
         payload["region"] = region
+        if region == JAPAN_REGION:
+            payload["profile_payload"] = build_japan_fact_profile(job, extracted)
         if region != GLOBAL_REGION:
             payload["dedupe_key"] = sha256(f"{region}:{payload['dedupe_key']}".encode("utf-8")).hexdigest()
         extracted_facts.append(payload)

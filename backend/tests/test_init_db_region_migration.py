@@ -78,5 +78,6 @@ def test_init_db_adds_region_columns_and_indexes_idempotently(tmp_path, monkeypa
 
     assert "region" in snapshot_columns
     assert "region" in fact_columns
+    assert "profile_payload" in fact_columns
     assert "ix_market_intelligence_snapshots_region" in snapshot_indexes
     assert "ix_market_intelligence_facts_region" in fact_indexes

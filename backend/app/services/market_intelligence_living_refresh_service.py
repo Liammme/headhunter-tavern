@@ -3,12 +3,13 @@ from typing import Callable
 
 from sqlalchemy.orm import Session
 
+from app.services.japan_market_profile import JAPAN_RECRUITING_MARKET_PROFILE
 from app.services.market_intelligence_fact_service import backfill_market_intelligence_facts
 from app.services.market_intelligence_living_report_service import (
     generate_living_market_report,
     load_latest_success_living_snapshot,
 )
-from app.services.region import GLOBAL_REGION, RegionCode
+from app.services.region import GLOBAL_REGION, JAPAN_REGION, RegionCode
 
 
 def refresh_living_market_report_if_due(
@@ -30,7 +31,8 @@ def refresh_living_market_report_if_due(
         adapters=adapters,
     )
 
-    latest = load_latest_success_living_snapshot(db, region=region)
+    report_profile = JAPAN_RECRUITING_MARKET_PROFILE if region == JAPAN_REGION else None
+    latest = load_latest_success_living_snapshot(db, region=region, report_profile=report_profile)
     if latest is not None:
         next_due_date = latest.generated_at.date() + timedelta(days=min_age_days)
         next_due_at = datetime.combine(next_due_date, generated_at.time())
