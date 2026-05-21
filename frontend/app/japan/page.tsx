@@ -1,3 +1,4 @@
+import JapanFeedContent from "../../components/JapanFeedContent";
 import JapanHomeContent from "../../components/JapanHomeContent";
 import { GridPattern } from "../../components/ui/grid-pattern";
 import TrueFocus from "../../components/ui/true-focus";
@@ -54,13 +55,13 @@ export default async function JapanPage() {
         </header>
         <JapanHomeContent
           intelligence={payload.intelligence}
-          days={payload.days}
           reportDateLabel={reportDateLabel}
           captureTitle={dailyCaptureInfo.title}
           captureDescription={dailyCaptureInfo.description}
           collectionStats={buildCollectionStats(payload.days)}
         />
       </section>
+      <JapanFeedContent days={payload.days} />
       <footer className="page-brand-footer" aria-label="Powered by Talentverse X">
         <a href="https://www.talent-verse.xyz/zh-hans/talentverse-x" target="_blank" rel="noopener noreferrer">
           <img src="/assets/talentverse-powered-by.svg" alt="Powered by Talentverse X" width={245} height={25} />
