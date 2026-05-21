@@ -14,14 +14,16 @@ def main(argv: list[str] | None = None) -> None:
         epilog=(
             'Production sequence: python -c "from app.db.init_db import init_db; init_db()"; '
             "python -m app.cli.crawl_japan_jobs; "
-            "python -m app.cli.generate_japan_market_report --days 180; "
+            "python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3; "
             "sudo systemctl restart bounty-pool; "
             "sudo systemctl status bounty-pool --no-pager"
         ),
     )
     parser.add_argument("--days", type=int, choices=(180,), default=180)
-    parser.add_argument("--min-age-days", type=int, default=0)
+    parser.add_argument("--min-age-days", type=int, default=3)
     args = parser.parse_args(argv)
+    if args.min_age_days < 1:
+        parser.error("--min-age-days must be at least 1")
 
     init_db()
     with SessionLocal() as db:

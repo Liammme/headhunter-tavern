@@ -17,7 +17,7 @@
 5. 进程托管：`systemd`
 6. 反向代理：`nginx`
 7. 数据库：PostgreSQL
-8. 定时任务：`cron` 每天 08:00、14:00 跑 `daily_bounty` 和 Japan 岗位抓取，每天 15:30 跑 global Living Report 刷新检查和 Japan 180 天市场报告
+8. 定时任务：`cron` 每天 08:00、14:00 跑 `daily_bounty` 和 Japan 岗位抓取，每天 15:30 跑 global Living Report 刷新检查和 Japan 180 天市场报告刷新检查；报告都按 3 天门槛生成
 
 ## 1. 线上关键路径
 
@@ -30,7 +30,7 @@
 5. `cron` 触发 `python -m app.cli.daily_bounty`
 6. `cron` 触发 `python -m app.cli.refresh_living_market_report`
 7. `cron` 触发 `python -m app.cli.crawl_japan_jobs`
-8. `cron` 触发 `python -m app.cli.generate_japan_market_report --days 180`
+8. `cron` 触发 `python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3`
 
 排查问题时，不要一上来猜代码。先判断断在哪一层。
 
@@ -113,7 +113,7 @@ Japan 岗位和报告是独立任务，不调用 `daily_bounty`，不会触发 J
 cd /opt/bounty-pool/app/backend
 source /opt/bounty-pool/venv/bin/activate
 python -m app.cli.crawl_japan_jobs
-python -m app.cli.generate_japan_market_report --days 180
+python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3
 ```
 
 ### 2.7 本机探活
@@ -132,7 +132,7 @@ curl https://api.talentsignal.cloud/health
 3. `/var/log/bounty-pool/daily-bounty.log` 今天 08:00 或 14:00 后是否有新记录
 4. `/var/log/bounty-pool/living-market-report.log` 今天 15:30 后是否有新记录，且状态是 `success` 或合理的 `skipped`
 5. `/var/log/bounty-pool/japan-crawl.log` 今天 08:00 或 14:00 后是否有新记录
-6. `/var/log/bounty-pool/japan-market-report.log` 今天 15:30 后是否有新记录，且状态是 `success` 或合理的 `fallback`
+6. `/var/log/bounty-pool/japan-market-report.log` 今天 15:30 后是否有新记录，且状态是 `success`、合理的 `skipped` 或 `fallback`
 7. 产品首页和 Japan 页面数据是否正常更新，没有空白或明显过旧
 
 如果这四项都正常，说明主链基本健康。
@@ -377,10 +377,10 @@ cat /etc/cron.d/bounty-pool-japan-market
 cd /opt/bounty-pool/app/backend
 source /opt/bounty-pool/venv/bin/activate
 python -m app.cli.crawl_japan_jobs
-python -m app.cli.generate_japan_market_report --days 180
+python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3
 ```
 
-如果手动能跑，说明问题多半在 cron 安装、路径或权限。如果报告返回 `fallback`，先看输出里的 LLM 错误；Japan 页面仍会使用 fallback 报告，不应影响 API 在线。
+如果返回 `status=skipped`，说明最近成功 Japan 报告还没满 3 天，是正常行为。如果手动能跑但 cron 没日志，说明问题多半在 cron 安装、路径或权限。如果报告返回 `fallback`，先看输出里的 LLM 错误；Japan 页面仍会使用 fallback 报告，不应影响 API 在线。
 
 ## 8. 当前建议补充但不阻塞上线的事项
 

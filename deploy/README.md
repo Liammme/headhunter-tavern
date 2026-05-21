@@ -16,7 +16,8 @@ This directory contains the minimum production artifacts for the recommended bac
   - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `cron/japan-market.cron`
   - Runs `python -m app.cli.crawl_japan_jobs` every day at 08:00 and 14:00, matching the main site job update schedule
-  - Runs `python -m app.cli.generate_japan_market_report --days 180` every day at 15:30, matching the main site Living Report schedule
+  - Runs `python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3` every day at 15:30, matching the main site Living Report refresh gate
+  - Refreshes Japan market facts daily, then generates a Japan Living Report only when the latest successful Japan report is at least 3 calendar days old
   - Uses Japan-only crawlers and Japan-only market facts/snapshots; it does not call `daily_bounty`
   - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `backend-deploy.sh`

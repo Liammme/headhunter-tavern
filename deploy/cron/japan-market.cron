@@ -1,2 +1,2 @@
 0 8,14 * * * deploy cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.crawl_japan_jobs >> /var/log/bounty-pool/japan-crawl.log 2>&1
-30 15 * * * deploy cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.generate_japan_market_report --days 180 >> /var/log/bounty-pool/japan-market-report.log 2>&1
+30 15 * * * deploy cd /opt/bounty-pool/app/backend && /opt/bounty-pool/venv/bin/python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3 >> /var/log/bounty-pool/japan-market-report.log 2>&1
