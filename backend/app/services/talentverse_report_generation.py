@@ -159,6 +159,24 @@ def build_talentverse_system_prompt() -> str:
         "methodologyNote requires sampleCount, windowDays, body. "
         "faq requires question and answer. glossaryTerms require term and definition. "
         "evidenceRefs require id, note, confidence. seo requires title, description, keywords. "
+        "seo.keywords must be a non-empty JSON array of strings, never a comma-separated string and never empty. "
+        "Return exactly this JSON shape with no extra top-level fields: "
+        "{"
+        '"title":"...",'
+        '"subtitle":"...",'
+        '"executiveSummary":"...",'
+        '"keySignals":[{"signal":"...","data":"...","interpretation":"...","hiringImplication":"...","confidence":"high","evidenceRefs":["fact-..."]}],'
+        '"marketStructure":{"body":"...","metrics":[{"label":"...","value":"...","description":"..."}]},'
+        '"demandShift":{"body":"...","metrics":[{"label":"...","value":"...","description":"..."}]},'
+        '"talentStrategyImplications":[{"title":"...","body":"..."}],'
+        '"risksAndWatchlist":[{"topic":"...","reason":"...","evidenceRefs":["fact-..."]}],'
+        '"talentverseView":"...",'
+        '"methodologyNote":{"sampleCount":1189,"windowDays":180,"body":"..."},'
+        '"faq":[{"question":"...","answer":"..."}],'
+        '"glossaryTerms":[{"term":"...","definition":"..."}],'
+        '"evidenceRefs":[{"id":"fact-...","note":"...","confidence":"high"}],'
+        '"seo":{"title":"...","description":"...","keywords":["frontier tech hiring","AI-native talent intelligence","高确定性招聘","前沿科技招聘","AI 人才","数据岗位"]}'
+        "}. "
         "The report must be useful for SEO, GEO, and AI citation: include stable definitions, clear claims, and evidence IDs."
     )
 
@@ -261,6 +279,8 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
     _require_non_empty_text(seo, "description")
     if not isinstance(seo.get("keywords"), list) or not seo["keywords"]:
         raise TalentverseReportError("seo.keywords must be a non-empty list")
+    if any(not isinstance(keyword, str) or not keyword.strip() for keyword in seo["keywords"]):
+        raise TalentverseReportError("seo.keywords must contain non-empty strings")
 
 
 def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntelligenceSnapshot, slug: str) -> dict:

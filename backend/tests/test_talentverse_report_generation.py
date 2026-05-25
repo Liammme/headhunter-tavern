@@ -164,6 +164,14 @@ def test_build_talentverse_system_prompt_specifies_metric_item_schema():
     assert "Do not use metric, name, count, number" in prompt
 
 
+def test_build_talentverse_system_prompt_specifies_seo_keywords_schema():
+    prompt = service.build_talentverse_system_prompt()
+
+    assert "seo.keywords must be a non-empty JSON array of strings" in prompt
+    assert '"keywords":["frontier tech hiring"' in prompt
+    assert "Return exactly this JSON shape" in prompt
+
+
 def test_validate_talentverse_payload_rejects_forbidden_raw_fields():
     payload = _valid_talentverse_payload()
     payload["canonical_url"] = "https://example.com/raw-job"
@@ -222,6 +230,30 @@ def test_validate_talentverse_payload_requires_watchlist_evidence_refs():
         assert "evidenceRefs" in str(exc)
     else:
         raise AssertionError("expected watchlist evidenceRefs validation failure")
+
+
+def test_validate_talentverse_payload_rejects_empty_seo_keywords():
+    payload = _valid_talentverse_payload()
+    payload["seo"]["keywords"] = []
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "seo.keywords" in str(exc)
+    else:
+        raise AssertionError("expected seo keywords validation failure")
+
+
+def test_validate_talentverse_payload_rejects_blank_seo_keyword_item():
+    payload = _valid_talentverse_payload()
+    payload["seo"]["keywords"] = ["frontier tech hiring", ""]
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "non-empty strings" in str(exc)
+    else:
+        raise AssertionError("expected seo keyword item validation failure")
 
 
 def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeypatch):
