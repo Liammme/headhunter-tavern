@@ -29,6 +29,16 @@ def _payload() -> dict:
         "evidenceRefs": [{"id": "fact-1561", "note": "sample", "confidence": "high"}],
         "source": {"name": "Talent Signal", "url": "https://talentsignal.cloud"},
         "seo": {"title": "全球招聘活动短期收缩", "description": "Talentverse 报告。", "keywords": ["AI"]},
+        "article": {
+            "lead": "过去 180 天的公开招聘信号显示，全球招聘活动正在从广泛扩张转向更谨慎的关键岗位筛选。",
+            "sections": [
+                {"heading": "市场发生了什么", "body": "近 7 天岗位数较 30 天下降 67.1%，但关键技术岗位仍保持结构性需求。"},
+                {"heading": "Talentverse 如何判断", "body": "Talentverse 将这轮变化理解为高确定性关键岗位招聘。"},
+                {"heading": "这对关键岗位招聘意味着什么", "body": "AI、Web3、Fintech、Quant 与新经济团队需要重新排序关键岗位。"},
+                {"heading": "企业应该如何调整", "body": "企业应先明确真正影响业务结果的关键岗位，再判断候选人证据链。"},
+            ],
+            "closing": "这轮招聘收缩意味着判断标准正在变高。",
+        },
         "category": "market-intelligence",
         "tags": ["global"],
     }
@@ -114,6 +124,7 @@ def test_talentverse_reports_lists_only_published_reports(client, db_session, mo
     assert len(payload["items"]) == 1
     assert payload["items"][0]["slug"] == "global-talentverse-report-2026-05-24-v6"
     assert payload["items"][0]["keySignals"][0]["signal"] == "全球招聘活动短期收缩"
+    assert "article" not in payload["items"][0]
     assert payload["pageInfo"]["limit"] == 20
 
 
@@ -188,6 +199,7 @@ def test_talentverse_report_detail_returns_full_payload(client, db_session, monk
     assert payload["slug"] == "global-talentverse-report-2026-05-24-v6"
     assert "marketStructure" in payload
     assert "faq" in payload
+    assert payload["article"]["sections"][0]["heading"] == "市场发生了什么"
     assert payload["status"] == "published"
 
 

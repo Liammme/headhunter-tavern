@@ -147,6 +147,28 @@ def _valid_talentverse_payload() -> dict:
             "description": "Talentverse 前沿科技招聘报告：全球招聘活动短期收缩，但 AI、数据与资深技术岗位需求保持韧性。",
             "keywords": ["frontier tech hiring", "AI-native talent intelligence", "高确定性招聘"],
         },
+        "article": {
+            "lead": "过去 180 天的公开招聘信号显示，全球招聘活动正在从广泛扩张转向更谨慎的关键岗位筛选。近 7 天岗位数较 30 天明显下降，但 AI、数据和资深技术岗位仍保持结构性需求。",
+            "sections": [
+                {
+                    "heading": "市场发生了什么",
+                    "body": "本期报告显示，全球招聘活动在短周期内出现收缩。近 7 天岗位数较 30 天下降 67.1%，说明企业正在重新评估招聘节奏和岗位优先级。",
+                },
+                {
+                    "heading": "Talentverse 如何判断",
+                    "body": "Talentverse 将这轮变化理解为从广泛招聘扩张转向高确定性关键岗位招聘。企业更谨慎地判断哪些岗位能够直接影响产品交付、数据资产、AI 应用和组织执行。",
+                },
+                {
+                    "heading": "这对关键岗位招聘意味着什么",
+                    "body": "对 AI、Web3、Fintech、Quant 与新经济团队来说，招聘重点不应只是减少岗位或等待市场恢复，而是重新排序关键岗位。",
+                },
+                {
+                    "heading": "企业应该如何调整",
+                    "body": "企业应先明确哪些岗位是真正影响业务结果的关键岗位，再判断候选人是否有足够证据支持进入短名单。",
+                },
+            ],
+            "closing": "这轮招聘收缩并不意味着前沿科技人才市场失去机会，而是意味着判断标准正在变高。",
+        },
     }
 
 
@@ -170,6 +192,15 @@ def test_build_talentverse_system_prompt_specifies_seo_keywords_schema():
     assert "seo.keywords must be a non-empty JSON array of strings" in prompt
     assert '"keywords":["frontier tech hiring"' in prompt
     assert "Return exactly this JSON shape" in prompt
+
+
+def test_build_talentverse_system_prompt_specifies_article_schema():
+    prompt = service.build_talentverse_system_prompt()
+
+    assert "article is for human reading" in prompt
+    assert "article.sections must contain exactly four sections" in prompt
+    assert "市场发生了什么" in prompt
+    assert "企业应该如何调整" in prompt
 
 
 def test_validate_talentverse_payload_rejects_forbidden_raw_fields():
@@ -256,6 +287,30 @@ def test_validate_talentverse_payload_rejects_blank_seo_keyword_item():
         raise AssertionError("expected seo keyword item validation failure")
 
 
+def test_validate_talentverse_payload_requires_article_sections():
+    payload = _valid_talentverse_payload()
+    payload["article"]["sections"] = payload["article"]["sections"][:1]
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "article.sections" in str(exc)
+    else:
+        raise AssertionError("expected article sections validation failure")
+
+
+def test_validate_talentverse_payload_rejects_article_bullet_body():
+    payload = _valid_talentverse_payload()
+    payload["article"]["sections"][0]["body"] = "- 近 7 天岗位数较 30 天下降 67.1%。"
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "continuous prose" in str(exc)
+    else:
+        raise AssertionError("expected article prose validation failure")
+
+
 def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeypatch):
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
@@ -272,6 +327,7 @@ def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeyp
     assert report.slug == "global-talentverse-report-2026-05-24-v6"
     assert report.status == "published"
     assert report.payload["source"]["name"] == "Talent Signal"
+    assert report.payload["article"]["sections"][0]["heading"] == "市场发生了什么"
     assert report.payload["status"] == "published"
 
 
@@ -318,3 +374,23 @@ def test_generate_talentverse_report_is_idempotent_for_published_raw_report(db_s
     assert first["status"] == "published"
     assert second["status"] == "published"
     assert len(reports) == 1
+
+
+def test_generate_talentverse_report_force_regenerates_published_raw_report(db_session, monkeypatch):
+    snapshot = _raw_snapshot()
+    db_session.add(snapshot)
+    db_session.commit()
+    first_payload = _valid_talentverse_payload()
+    second_payload = _valid_talentverse_payload()
+    second_payload["title"] = "更新后的 Talentverse 官网报告"
+    responses = iter([service.json.dumps(first_payload), service.json.dumps(second_payload)])
+    monkeypatch.setattr(service, "request_structured_json", lambda messages, timeout_seconds=None: next(responses))
+
+    first = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)
+    second = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id, force=True)
+
+    reports = db_session.execute(select(TalentverseReport)).scalars().all()
+    assert first["status"] == "published"
+    assert second["status"] == "published"
+    assert len(reports) == 1
+    assert reports[0].payload["title"] == "更新后的 Talentverse 官网报告"

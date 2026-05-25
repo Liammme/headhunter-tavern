@@ -19,6 +19,12 @@ TALENTVERSE_SOURCE_URL = "https://talentsignal.cloud"
 TALENTVERSE_CATEGORY = "market-intelligence"
 TALENTVERSE_TAGS = ["global", "talent-strategy", "ai", "data"]
 TALENTVERSE_LLM_TIMEOUT_SECONDS = 120
+ARTICLE_SECTION_HEADINGS = (
+    "市场发生了什么",
+    "Talentverse 如何判断",
+    "这对关键岗位招聘意味着什么",
+    "企业应该如何调整",
+)
 DB_CREDENTIAL_URL_PATTERN = re.compile(
     r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
     re.IGNORECASE,
@@ -82,7 +88,7 @@ def build_talentverse_slug(snapshot: MarketIntelligenceSnapshot) -> str:
     return f"{snapshot.region}-talentverse-report-{snapshot.snapshot_date.isoformat()}-v{version}"
 
 
-def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: int) -> dict[str, Any]:
+def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: int, force: bool = False) -> dict[str, Any]:
     snapshot = db.get(MarketIntelligenceSnapshot, raw_snapshot_id)
     if snapshot is None:
         return {"status": "skipped", "reason": "raw_report_missing"}
@@ -93,7 +99,7 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
 
     try:
         existing = _load_existing_report(db, raw_report_id=snapshot.id)
-        if existing is not None and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED:
+        if existing is not None and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED and not force:
             return {"status": "published", "report_id": existing.id, "slug": existing.slug}
 
         slug = build_talentverse_slug(snapshot)
@@ -149,7 +155,7 @@ def build_talentverse_system_prompt() -> str:
         "Do not expose raw job links, full JD, source_name, canonical_url, full_description, job_url, or similar fields. "
         "Generate fields exactly matching this schema: title, subtitle, executiveSummary, keySignals, marketStructure, "
         "demandShift, talentStrategyImplications, risksAndWatchlist, talentverseView, methodologyNote, faq, "
-        "glossaryTerms, evidenceRefs, seo. "
+        "glossaryTerms, evidenceRefs, seo, article. "
         "keySignals items require signal, data, interpretation, hiringImplication, confidence, evidenceRefs. "
         "marketStructure and demandShift require body and metrics. "
         "Every metrics item must be an object with non-empty string fields: label, value, description. "
@@ -160,6 +166,11 @@ def build_talentverse_system_prompt() -> str:
         "faq requires question and answer. glossaryTerms require term and definition. "
         "evidenceRefs require id, note, confidence. seo requires title, description, keywords. "
         "seo.keywords must be a non-empty JSON array of strings, never a comma-separated string and never empty. "
+        "article is for human reading, not machines. article requires lead, sections, closing. "
+        "article.lead must be 1-2 natural paragraphs. article.sections must contain exactly four sections with headings: "
+        "市场发生了什么, Talentverse 如何判断, 这对关键岗位招聘意味着什么, 企业应该如何调整. "
+        "Each article section body must be continuous prose, not bullet lists, tables, markdown lists, or field dumps. "
+        "article.closing must be one natural paragraph. Preserve key numbers in article prose, but do not invent new numbers. "
         "Return exactly this JSON shape with no extra top-level fields: "
         "{"
         '"title":"...",'
@@ -175,7 +186,8 @@ def build_talentverse_system_prompt() -> str:
         '"faq":[{"question":"...","answer":"..."}],'
         '"glossaryTerms":[{"term":"...","definition":"..."}],'
         '"evidenceRefs":[{"id":"fact-...","note":"...","confidence":"high"}],'
-        '"seo":{"title":"...","description":"...","keywords":["frontier tech hiring","AI-native talent intelligence","高确定性招聘","前沿科技招聘","AI 人才","数据岗位"]}'
+        '"seo":{"title":"...","description":"...","keywords":["frontier tech hiring","AI-native talent intelligence","高确定性招聘","前沿科技招聘","AI 人才","数据岗位"]},'
+        '"article":{"lead":"...","sections":[{"heading":"市场发生了什么","body":"..."},{"heading":"Talentverse 如何判断","body":"..."},{"heading":"这对关键岗位招聘意味着什么","body":"..."},{"heading":"企业应该如何调整","body":"..."}],"closing":"..."}'
         "}. "
         "The report must be useful for SEO, GEO, and AI citation: include stable definitions, clear claims, and evidence IDs."
     )
@@ -228,6 +240,7 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
         "glossaryTerms",
         "evidenceRefs",
         "seo",
+        "article",
     }
     missing = sorted(required_fields - payload.keys())
     if missing:
@@ -281,6 +294,7 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
         raise TalentverseReportError("seo.keywords must be a non-empty list")
     if any(not isinstance(keyword, str) or not keyword.strip() for keyword in seo["keywords"]):
         raise TalentverseReportError("seo.keywords must contain non-empty strings")
+    _validate_article(payload.get("article"))
 
 
 def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntelligenceSnapshot, slug: str) -> dict:
@@ -313,6 +327,7 @@ def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellig
             "version": version,
         },
         "seo": payload["seo"],
+        "article": payload["article"],
         "status": TALENTVERSE_REPORT_STATUS_PUBLISHED,
         "publishedAt": generated_at,
         "updatedAt": generated_at,
@@ -471,6 +486,32 @@ def _validate_section_object(value: object, *, field: str) -> None:
             raise TalentverseReportError(f"{field}.metrics[{index}] must be an object")
         for metric_field in ("label", "value", "description"):
             _require_non_empty_text(metric, metric_field)
+
+
+def _validate_article(value: object) -> None:
+    if not isinstance(value, dict):
+        raise TalentverseReportError("article must be an object")
+    _require_non_empty_text(value, "lead")
+    _reject_bullet_lines(value["lead"], field="article.lead")
+    sections = value.get("sections")
+    if not isinstance(sections, list) or len(sections) != len(ARTICLE_SECTION_HEADINGS):
+        raise TalentverseReportError("article.sections must contain the required four sections")
+    for index, (section, expected_heading) in enumerate(zip(sections, ARTICLE_SECTION_HEADINGS)):
+        if not isinstance(section, dict):
+            raise TalentverseReportError(f"article.sections[{index}] must be an object")
+        if section.get("heading") != expected_heading:
+            raise TalentverseReportError(f"article.sections[{index}].heading must be {expected_heading}")
+        _require_non_empty_text(section, "body")
+        _reject_bullet_lines(section["body"], field=f"article.sections[{index}].body")
+    _require_non_empty_text(value, "closing")
+    _reject_bullet_lines(value["closing"], field="article.closing")
+
+
+def _reject_bullet_lines(text: str, *, field: str) -> None:
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("-", "*", "•")) or re.match(r"^\d+[.)]\s+", stripped):
+            raise TalentverseReportError(f"{field} must be continuous prose")
 
 
 def _validate_text_object_items(
