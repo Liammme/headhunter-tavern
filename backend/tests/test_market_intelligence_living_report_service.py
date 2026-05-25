@@ -284,9 +284,11 @@ def test_generate_living_market_report_for_japan_uses_180_day_japan_window(db_se
 
     def assert_japan_180d_report(input_payload, *, version, mode, previous_snapshot_id, generated_at):
         assert input_payload["region"] == JAPAN_REGION
-        assert input_payload["market_windows"]["180d"]["job_count"] == 1
-        assert input_payload["market_windows"]["90d"]["job_count"] == 1
+        assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["job_count"] == 1
+        assert input_payload["japan_recruiting_profile"]["windows"]["90d"]["job_count"] == 1
+        assert input_payload["legacy_window_counts"]["180d"]["job_count"] == 1
         assert [sample["title"] for sample in input_payload["representative_samples"]] == ["Japan AI Infra Engineer"]
+        assert "market_windows" not in input_payload
         return _fake_report(
             input_payload,
             version=version,
@@ -359,6 +361,11 @@ def test_generate_living_market_report_for_japan_uses_recruiting_profile_and_ign
             "entry / inexperienced": 1
         }
         assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["location_counts"] == {"tokyo": 1}
+        assert "market_windows" not in input_payload
+        assert "deltas" not in input_payload
+        assert "market_theme" not in input_payload["new_facts"][0]
+        assert "domain" not in input_payload["representative_samples"][0]
+        assert "AI infra" not in input_payload["allowed_evidence_terms"]
         assert legacy_previous.id != previous_snapshot_id
         return _fake_report(
             input_payload,
@@ -482,10 +489,12 @@ def test_refresh_japan_living_report_backfills_japan_facts_before_baseline(db_se
         assert input_payload["region"] == JAPAN_REGION
         assert input_payload["report_profile"] == JAPAN_RECRUITING_MARKET_PROFILE
         assert input_payload["previous_report"] is None
-        assert input_payload["market_windows"]["7d"]["job_count"] == 1
-        assert input_payload["market_windows"]["30d"]["job_count"] == 1
-        assert input_payload["market_windows"]["90d"]["job_count"] == 2
-        assert input_payload["market_windows"]["180d"]["job_count"] == 2
+        assert input_payload["japan_recruiting_profile"]["windows"]["7d"]["job_count"] == 1
+        assert input_payload["japan_recruiting_profile"]["windows"]["30d"]["job_count"] == 1
+        assert input_payload["japan_recruiting_profile"]["windows"]["90d"]["job_count"] == 2
+        assert input_payload["japan_recruiting_profile"]["windows"]["180d"]["job_count"] == 2
+        assert input_payload["legacy_window_counts"]["180d"]["job_count"] == 2
+        assert "market_windows" not in input_payload
         assert input_payload["data_quality"]["baseline_note"] == BASELINE_NOTE
         assert {sample["title"] for sample in input_payload["representative_samples"]} == {
             "Recent Japan AI Engineer",
@@ -679,7 +688,8 @@ def test_generate_living_market_report_without_japan_facts_falls_back_with_clear
     assert snapshot.region == JAPAN_REGION
     assert data_quality["baseline_note"] == BASELINE_NOTE
     assert data_quality["sample_count"] == 0
-    assert snapshot.market_signal_payload["market_windows"]["180d"]["job_count"] == 0
+    assert snapshot.market_signal_payload["japan_recruiting_profile"]["windows"]["180d"]["job_count"] == 0
+    assert snapshot.market_signal_payload["legacy_window_counts"]["180d"]["job_count"] == 0
 
 
 def test_load_latest_success_living_snapshot_finds_global_living_report_after_many_plain_snapshots(db_session):

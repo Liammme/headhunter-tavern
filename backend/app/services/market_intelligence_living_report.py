@@ -253,7 +253,7 @@ def validate_living_market_report(payload: dict, *, input_payload: dict, expecte
     _str(payload, "headline")
     if payload.get("version") != expected_version:
         raise LivingMarketReportError("version is invalid")
-    if expected_version == 1 and "180d" not in _dict(input_payload, "market_windows"):
+    if expected_version == 1 and not _has_180d_window(input_payload):
         raise LivingMarketReportError("v1 requires 180d window")
     if expected_version > 1 and not isinstance(input_payload.get("previous_report"), dict):
         raise LivingMarketReportError("v2 requires previous_report")
@@ -330,6 +330,17 @@ def _validate_report_scope(payload: dict, *, input_payload: dict) -> None:
         return
     if _web3_sample_share(input_payload) <= float(report_scope.get("web3_headline_requires_sample_share_gt") or 0.5):
         raise LivingMarketReportError("Web3/Crypto/Blockchain headline requires Web3 sample majority for this report scope")
+
+
+def _has_180d_window(input_payload: dict) -> bool:
+    market_windows = input_payload.get("market_windows")
+    if isinstance(market_windows, dict) and "180d" in market_windows:
+        return True
+    recruiting_profile = input_payload.get("japan_recruiting_profile")
+    if isinstance(recruiting_profile, dict):
+        windows = recruiting_profile.get("windows")
+        return isinstance(windows, dict) and "180d" in windows
+    return False
 
 
 def _mentions_web3_vertical(text: str) -> bool:
