@@ -1,8 +1,61 @@
+from app.crawlers.adapters.careercross import CareerCrossAdapter
 from app.crawlers.adapters.daijob import DaijobAdapter
 from app.crawlers.adapters.gaijinpot import GaijinPotAdapter
 from app.crawlers.adapters.mynavi_tenshoku import MynaviTenshokuAdapter
 from app.crawlers.adapters.type_jp import TypeJpAdapter
 from app.crawlers.adapters.wantedly import WantedlyAdapter
+from app.crawlers.japan_registry import JAPAN_ADAPTERS
+from app.crawlers.registry import ADAPTERS
+
+
+def test_careercross_adapter_parses_kaigai_job_links(monkeypatch):
+    kaigai_html = """
+    <a href="/job-search/specialty-10?utm_source=careercross">海外求人</a>
+    <a href="https://www.careercross.com/job/detail-1593181"
+       title="【英語を活かす】事業開発マネージャー/ Business Development Manager">
+      【英語を活かす】事業開発マネージャー/ Business ...
+    </a>
+    """
+    listing_html = """
+    <div class="result-job-box">
+      <a href="https://www.careercross.com/job/detail-1582269?sid=1&page=1"
+         title="【インドネシア勤務】拠点立ち上げ・営業マネジャー候補">
+        <span class="badge">リモートワーク</span>
+        <span>【インドネシア勤務】拠点立ち上げ・営業マネジャー候補</span>
+      </a>
+      <table>
+        <tr><td>採用企業</td><td>株式会社ウィル・シード</td></tr>
+        <tr><td>勤務地</td><td>インドネシア</td></tr>
+        <tr><td>雇用形態</td><td>正社員</td></tr>
+      </table>
+    </div>
+    """
+
+    def fake_fetch_html(url):
+        if url == "https://www.careercross.com/kaigai":
+            return kaigai_html
+        assert url == "https://www.careercross.com/job-search/specialty-10"
+        return listing_html
+
+    monkeypatch.setattr("app.crawlers.adapters.careercross.fetch_html", fake_fetch_html)
+
+    jobs = CareerCrossAdapter().fetch()
+
+    assert len(jobs) == 2
+    assert jobs[0].canonical_url == "https://www.careercross.com/job/detail-1593181"
+    assert jobs[0].title == "【英語を活かす】事業開発マネージャー/ Business Development Manager"
+    assert jobs[0].source_job_id == "1593181"
+    assert jobs[0].raw_payload["site"] == "careercross"
+    assert jobs[1].canonical_url == "https://www.careercross.com/job/detail-1582269"
+    assert jobs[1].company == "株式会社ウィル・シード"
+    assert jobs[1].location == "インドネシア"
+    assert jobs[1].employment_type == "正社員"
+    assert jobs[1].remote_type == "remote"
+
+
+def test_careercross_adapter_is_japan_only_source():
+    assert JAPAN_ADAPTERS["careercross"] is CareerCrossAdapter
+    assert "careercross" not in ADAPTERS
 
 
 def test_mynavi_tenshoku_adapter_parses_job_links(monkeypatch):
