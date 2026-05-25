@@ -8,6 +8,7 @@ from app.models import (
     job_claim,
     market_intelligence_fact,
     market_intelligence_snapshot,
+    talentverse_report,
 )
 
 
@@ -19,6 +20,7 @@ def init_db() -> None:
         intelligence_snapshot,
         market_intelligence_fact,
         market_intelligence_snapshot,
+        talentverse_report,
     )
     Base.metadata.create_all(bind=engine)
     _ensure_job_region_column()

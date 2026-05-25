@@ -4,6 +4,7 @@ from app.models.job import Job
 from app.models.job_claim import JobClaim
 from app.models.market_intelligence_fact import MarketIntelligenceFact
 from app.models.market_intelligence_snapshot import MarketIntelligenceSnapshot
+from app.models.talentverse_report import TalentverseReport
 
 __all__ = [
     "CompanyDailySummary",
@@ -12,4 +13,5 @@ __all__ = [
     "JobClaim",
     "MarketIntelligenceFact",
     "MarketIntelligenceSnapshot",
+    "TalentverseReport",
 ]

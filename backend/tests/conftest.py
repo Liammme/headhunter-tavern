@@ -16,12 +16,21 @@ from app.models import (
     job_claim,
     market_intelligence_fact,
     market_intelligence_snapshot,
+    talentverse_report,
 )
 
 
 @pytest.fixture()
 def test_session_factory() -> Generator[sessionmaker, None, None]:
-    _ = (job, company_daily_summary, intelligence_snapshot, job_claim, market_intelligence_fact, market_intelligence_snapshot)
+    _ = (
+        job,
+        company_daily_summary,
+        intelligence_snapshot,
+        job_claim,
+        market_intelligence_fact,
+        market_intelligence_snapshot,
+        talentverse_report,
+    )
     runtime_dir = Path(__file__).resolve().parents[1] / ".pytest-runtime"
     runtime_dir.mkdir(exist_ok=True)
     db_path = runtime_dir / f"test-{uuid4().hex}.db"
