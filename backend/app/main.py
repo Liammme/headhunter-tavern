@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import claims, company_clue, crawl, health, home
+from app.api import claims, company_clue, crawl, health, home, talentverse_reports
 from app.core.config import parse_cors_origins, settings
 from app.db.database import SessionLocal
 from app.db.init_db import init_db
@@ -37,6 +37,7 @@ app.include_router(home.router, prefix="/api/v1")
 app.include_router(claims.router, prefix="/api/v1")
 app.include_router(company_clue.router, prefix="/api/v1")
 app.include_router(crawl.router, prefix="/api/v1")
+app.include_router(talentverse_reports.router, prefix="/api/v1")
 
 
 def run_startup_audits() -> None:
