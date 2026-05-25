@@ -192,6 +192,30 @@ def test_validate_talentverse_payload_rejects_invalid_nested_key_signal():
         raise AssertionError("expected nested schema validation failure")
 
 
+def test_validate_talentverse_payload_rejects_extra_top_level_field():
+    payload = _valid_talentverse_payload()
+    payload["unexpected"] = "not allowed"
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "unexpected fields" in str(exc)
+    else:
+        raise AssertionError("expected strict schema validation failure")
+
+
+def test_validate_talentverse_payload_requires_watchlist_evidence_refs():
+    payload = _valid_talentverse_payload()
+    del payload["risksAndWatchlist"][0]["evidenceRefs"]
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "evidenceRefs" in str(exc)
+    else:
+        raise AssertionError("expected watchlist evidenceRefs validation failure")
+
+
 def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeypatch):
     snapshot = _raw_snapshot()
     db_session.add(snapshot)

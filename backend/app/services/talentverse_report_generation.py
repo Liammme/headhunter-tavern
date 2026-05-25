@@ -122,6 +122,7 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
     except Exception as exc:  # noqa: BLE001
         error_message = sanitize_talentverse_error(exc)
         try:
+            db.rollback()
             report = _record_failed_report(db, snapshot=snapshot, error_message=error_message)
         except Exception as record_exc:  # noqa: BLE001
             db.rollback()
@@ -213,6 +214,9 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
         raise TalentverseReportError(f"missing required fields: {', '.join(missing)}")
     _reject_forbidden_fields(payload)
     _reject_forbidden_text(payload)
+    unexpected = sorted(payload.keys() - required_fields)
+    if unexpected:
+        raise TalentverseReportError(f"unexpected fields: {', '.join(unexpected)}")
     _require_non_empty_text(payload, "title")
     _require_non_empty_text(payload, "subtitle")
     _require_non_empty_text(payload, "executiveSummary")
@@ -231,7 +235,7 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
         payload["risksAndWatchlist"],
         field="risksAndWatchlist",
         required_text_fields=("topic", "reason"),
-        optional_list_fields=("evidenceRefs",),
+        required_list_fields=("evidenceRefs",),
     )
     _require_non_empty_text(payload, "talentverseView")
     _require_non_empty_list(payload, "faq")
@@ -438,8 +442,8 @@ def _validate_section_object(value: object, *, field: str) -> None:
         raise TalentverseReportError(f"{field} must be an object")
     _require_non_empty_text(value, "body")
     metrics = value.get("metrics")
-    if not isinstance(metrics, list):
-        raise TalentverseReportError(f"{field}.metrics must be a list")
+    if not isinstance(metrics, list) or not metrics:
+        raise TalentverseReportError(f"{field}.metrics must be a non-empty list")
     for index, metric in enumerate(metrics):
         if not isinstance(metric, dict):
             raise TalentverseReportError(f"{field}.metrics[{index}] must be an object")
@@ -452,6 +456,7 @@ def _validate_text_object_items(
     *,
     field: str,
     required_text_fields: tuple[str, ...],
+    required_list_fields: tuple[str, ...] = (),
     optional_list_fields: tuple[str, ...] = (),
 ) -> None:
     for index, item in enumerate(items):
@@ -459,6 +464,9 @@ def _validate_text_object_items(
             raise TalentverseReportError(f"{field}[{index}] must be an object")
         for required_field in required_text_fields:
             _require_non_empty_text(item, required_field)
+        for list_field in required_list_fields:
+            if not isinstance(item.get(list_field), list) or not item[list_field]:
+                raise TalentverseReportError(f"{field}[{index}].{list_field} must be a non-empty list")
         for list_field in optional_list_fields:
             if list_field in item and not isinstance(item[list_field], list):
                 raise TalentverseReportError(f"{field}[{index}].{list_field} must be a list")
