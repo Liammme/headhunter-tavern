@@ -156,6 +156,14 @@ def test_build_slug_uses_region_date_and_version():
     assert service.build_talentverse_slug(snapshot) == "global-talentverse-report-2026-05-24-v6"
 
 
+def test_build_talentverse_system_prompt_specifies_metric_item_schema():
+    prompt = service.build_talentverse_system_prompt()
+
+    assert "Every metrics item must be an object" in prompt
+    assert "label, value, description" in prompt
+    assert "Do not use metric, name, count, number" in prompt
+
+
 def test_validate_talentverse_payload_rejects_forbidden_raw_fields():
     payload = _valid_talentverse_payload()
     payload["canonical_url"] = "https://example.com/raw-job"

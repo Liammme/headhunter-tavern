@@ -152,6 +152,8 @@ def build_talentverse_system_prompt() -> str:
         "glossaryTerms, evidenceRefs, seo. "
         "keySignals items require signal, data, interpretation, hiringImplication, confidence, evidenceRefs. "
         "marketStructure and demandShift require body and metrics. "
+        "Every metrics item must be an object with non-empty string fields: label, value, description. "
+        "Do not use metric, name, count, number, or other alternate metric field names. "
         "talentStrategyImplications require title and body. "
         "risksAndWatchlist require topic, reason, evidenceRefs. "
         "methodologyNote requires sampleCount, windowDays, body. "
