@@ -93,7 +93,7 @@ def build_day_payloads(
                     estimated_bounty_amount=company_bounty_estimate.amount if company_bounty_estimate else None,
                     estimated_bounty_label=company_bounty_estimate.label
                     if company_bounty_estimate
-                    else (PENDING_ESTIMATED_BOUNTY_LABEL if should_expose_bounty else None),
+                    else (PENDING_ESTIMATED_BOUNTY_LABEL if expose_estimated_bounty else None),
                     jd_trust=_select_company_jdtrust(sorted_jobs, jdtrust_assessments),
                 )
             )
