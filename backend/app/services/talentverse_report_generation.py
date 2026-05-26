@@ -58,6 +58,7 @@ TALENTVERSE_SOURCE_URL = "https://talentsignal.cloud"
 TALENTVERSE_CATEGORY = "market-intelligence"
 TALENTVERSE_TAGS = ["global", "talent-strategy", "ai", "data"]
 TALENTVERSE_LLM_TIMEOUT_SECONDS = 120
+TALENTVERSE_LOCALE_MAX_ATTEMPTS = 2
 DB_CREDENTIAL_URL_PATTERN = re.compile(
     r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
     re.IGNORECASE,
@@ -169,15 +170,7 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
         for locale in TALENTVERSE_LOCALES:
             try:
                 slug = build_talentverse_slug(snapshot, locale=locale)
-                content = request_structured_json(
-                    [
-                        {"role": "system", "content": build_talentverse_system_prompt(locale=locale)},
-                        {"role": "user", "content": build_talentverse_user_prompt(snapshot, locale=locale)},
-                    ],
-                    timeout_seconds=TALENTVERSE_LLM_TIMEOUT_SECONDS,
-                )
-                payload = parse_talentverse_payload(content)
-                validate_talentverse_payload(payload, raw_snapshot=snapshot)
+                payload = request_valid_talentverse_payload(snapshot, locale=locale)
                 translations[locale] = normalize_talentverse_payload(
                     payload,
                     raw_snapshot=snapshot,
@@ -234,6 +227,30 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
                 "record_error": sanitize_talentverse_error(record_exc),
             }
         return {"status": "failed", "report_id": report.id, "error": error_message}
+
+
+def request_valid_talentverse_payload(snapshot: MarketIntelligenceSnapshot, *, locale: str) -> dict:
+    messages = [
+        {"role": "system", "content": build_talentverse_system_prompt(locale=locale)},
+        {"role": "user", "content": build_talentverse_user_prompt(snapshot, locale=locale)},
+    ]
+    last_error = ""
+    for attempt in range(TALENTVERSE_LOCALE_MAX_ATTEMPTS):
+        if attempt > 0:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": build_talentverse_retry_prompt(locale=locale, validation_error=last_error),
+                }
+            )
+        try:
+            content = request_structured_json(messages, timeout_seconds=TALENTVERSE_LLM_TIMEOUT_SECONDS)
+            payload = parse_talentverse_payload(content)
+            validate_talentverse_payload(payload, raw_snapshot=snapshot)
+            return payload
+        except Exception as exc:  # noqa: BLE001
+            last_error = sanitize_talentverse_error(exc)
+    raise TalentverseReportError(last_error or "talentverse locale generation failed")
 
 
 def build_talentverse_system_prompt(*, locale: str = TALENTVERSE_LOCALE) -> str:
@@ -293,6 +310,16 @@ def build_talentverse_system_prompt(*, locale: str = TALENTVERSE_LOCALE) -> str:
         '"article":{"format":"markdown","body":"## 招聘活动收缩，但不是关键岗位需求消失\\n\\n...\\n\\n## AI 与数据岗位为什么仍然保持韧性\\n\\n...\\n\\n## Talentverse 判断\\n\\n..."}'
         "}. "
         "The report must be useful for SEO, GEO, and AI citation: include stable definitions, clear claims, and evidence IDs."
+    )
+
+
+def build_talentverse_retry_prompt(*, locale: str, validation_error: str) -> str:
+    return (
+        f"The previous Talentverse report generation for locale {locale} failed validation: {validation_error}. "
+        "Regenerate this locale from scratch using the original Talent Signal facts. "
+        "Return only one valid JSON object matching the exact schema. Do not return prose outside JSON, Markdown fences, or comments. "
+        "If the error mentions forbidden text, do not include that exact token anywhere, including contrast, negation, explanations, or examples. "
+        "Keep article.format as markdown and article.body as long-form Markdown with 4-6 level-2 headings."
     )
 
 

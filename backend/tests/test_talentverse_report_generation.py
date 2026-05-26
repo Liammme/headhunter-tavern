@@ -345,6 +345,45 @@ def test_validate_talentverse_payload_rejects_article_forbidden_modules():
         raise AssertionError("expected article module validation failure")
 
 
+def test_request_valid_talentverse_payload_retries_after_forbidden_text(monkeypatch):
+    invalid_payload = _valid_talentverse_payload()
+    invalid_payload["title"] = "這不是傳統獵頭報告"
+    valid_payload = _valid_talentverse_payload()
+    calls = []
+    responses = iter([service.json.dumps(invalid_payload), service.json.dumps(valid_payload)])
+
+    def fake_request(messages, timeout_seconds=None):
+        calls.append(messages)
+        return next(responses)
+
+    monkeypatch.setattr(service, "request_structured_json", fake_request)
+
+    payload = service.request_valid_talentverse_payload(_raw_snapshot(), locale="zh-TW")
+
+    assert payload == valid_payload
+    assert len(calls) == 2
+    assert "forbidden text" in calls[1][-1]["content"]
+    assert "do not include that exact token anywhere" in calls[1][-1]["content"]
+
+
+def test_request_valid_talentverse_payload_retries_after_invalid_json(monkeypatch):
+    valid_payload = _valid_talentverse_payload()
+    calls = []
+    responses = iter(["not json", service.json.dumps(valid_payload)])
+
+    def fake_request(messages, timeout_seconds=None):
+        calls.append(messages)
+        return next(responses)
+
+    monkeypatch.setattr(service, "request_structured_json", fake_request)
+
+    payload = service.request_valid_talentverse_payload(_raw_snapshot(), locale="ja-JP")
+
+    assert payload == valid_payload
+    assert len(calls) == 2
+    assert "valid JSON object" in calls[1][-1]["content"]
+
+
 def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeypatch):
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
@@ -383,6 +422,7 @@ def test_generate_talentverse_report_publishes_available_locales_when_one_locale
     responses = iter(
         [
             service.json.dumps(_valid_talentverse_payload()),
+            RuntimeError("provider unavailable for en"),
             RuntimeError("provider unavailable for en"),
             service.json.dumps(_valid_talentverse_payload()),
             service.json.dumps(_valid_talentverse_payload()),
