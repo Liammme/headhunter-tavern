@@ -4,6 +4,18 @@ from app.models import TalentverseReport
 
 
 def _payload() -> dict:
+    article_body = (
+        "## 招聘活动收缩，但不是关键岗位需求消失\n\n"
+        "近 7 天岗位数较 30 天下降 67.1%，但关键技术岗位仍保持结构性需求。\n\n"
+        "## AI 与数据岗位为什么仍然保持韧性\n\n"
+        "AI 与数据岗位仍然指向企业对基础设施、模型应用和数据资产的持续投入。\n\n"
+        "## 关键人才招聘正在从数量转向判断质量\n\n"
+        "企业需要判断哪些任务关键型人才能直接影响交付质量和组织速度。\n\n"
+        "## 企业应该如何重新排序招聘优先级\n\n"
+        "招聘资源应该优先投入关键岗位、候选人证据链和高确定性人才判断。\n\n"
+        "## Talentverse 判断\n\n"
+        "这轮变化说明前沿科技招聘市场正在从数量扩张进入高确定性招聘阶段。"
+    )
     return {
         "title": "全球招聘活动短期收缩，AI 与数据关键岗位需求保持韧性",
         "subtitle": "基于 Talent Signal 公开招聘信号样本生成的 Talentverse 前沿科技招聘市场观察",
@@ -29,16 +41,7 @@ def _payload() -> dict:
         "evidenceRefs": [{"id": "fact-1561", "note": "sample", "confidence": "high"}],
         "source": {"name": "Talent Signal", "url": "https://talentsignal.cloud"},
         "seo": {"title": "全球招聘活动短期收缩", "description": "Talentverse 报告。", "keywords": ["AI"]},
-        "article": {
-            "lead": "过去 180 天的公开招聘信号显示，全球招聘活动正在从广泛扩张转向更谨慎的关键岗位筛选。",
-            "sections": [
-                {"heading": "市场发生了什么", "body": "近 7 天岗位数较 30 天下降 67.1%，但关键技术岗位仍保持结构性需求。"},
-                {"heading": "Talentverse 如何判断", "body": "Talentverse 将这轮变化理解为高确定性关键岗位招聘。"},
-                {"heading": "这对关键岗位招聘意味着什么", "body": "AI、Web3、Fintech、Quant 与新经济团队需要重新排序关键岗位。"},
-                {"heading": "企业应该如何调整", "body": "企业应先明确真正影响业务结果的关键岗位，再判断候选人证据链。"},
-            ],
-            "closing": "这轮招聘收缩意味着判断标准正在变高。",
-        },
+        "article": {"format": "markdown", "body": article_body},
         "category": "market-intelligence",
         "tags": ["global"],
     }
@@ -199,7 +202,8 @@ def test_talentverse_report_detail_returns_full_payload(client, db_session, monk
     assert payload["slug"] == "global-talentverse-report-2026-05-24-v6"
     assert "marketStructure" in payload
     assert "faq" in payload
-    assert payload["article"]["sections"][0]["heading"] == "市场发生了什么"
+    assert payload["article"]["format"] == "markdown"
+    assert "## Talentverse 判断" in payload["article"]["body"]
     assert payload["status"] == "published"
 
 

@@ -70,6 +70,23 @@ def _raw_snapshot(*, region: str = "global", version: int = 6) -> MarketIntellig
 
 
 def _valid_talentverse_payload() -> dict:
+    article_body = (
+        "## 招聘活动收缩，但不是关键岗位需求消失\n\n"
+        "过去 180 天的公开招聘信号显示，全球招聘活动正在从广泛扩张转向更谨慎的关键岗位筛选。近 7 天岗位数较 30 天下降 67.1%，这个变化说明企业正在重新评估招聘节奏和岗位优先级。\n\n"
+        "这种收缩并不等于关键岗位需求消失。AI、数据和资深技术岗位仍然保持结构性需求，说明前沿科技公司正在把有限招聘资源集中到更能影响产品交付、数据资产和 AI 应用落地的位置。\n\n"
+        "## AI 与数据岗位为什么仍然保持韧性\n\n"
+        "AI / 算法与数据岗位合计占比达到 68.5%，它们仍然构成前沿科技招聘的主要需求。这个比例意味着企业没有放弃技术投入，而是在收缩周期里优先保留与模型应用、数据工程和基础设施能力直接相关的岗位。\n\n"
+        "数据岗位的变化尤其值得关注。数据岗位占比上升，说明企业对数据治理、数据平台和分析能力的依赖正在加深，招聘判断不能只看模型能力，也要看候选人能否把数据资产转化为可执行的产品和业务结果。\n\n"
+        "## 关键人才招聘正在从数量转向判断质量\n\n"
+        "Agent/RAG 相关岗位的变化显示，企业仍在寻找能推动 AI 应用进入真实业务流程的人才。相比泛泛扩张团队，这类岗位更强调工程落地、产品理解和跨职能协作。\n\n"
+        "Senior 及以上岗位占比提升，也说明企业在不确定周期中更愿意投入能独立承担复杂任务的人。对新经济团队来说，关键不只是招更多人，而是判断哪些任务关键型人才能直接改变交付质量和组织速度。\n\n"
+        "## 企业应该如何重新排序招聘优先级\n\n"
+        "企业需要先确认哪些岗位真正影响业务结果，再决定是否进入招聘流程。数据基础设施、AI 应用落地、Agent/RAG、资深技术负责人和跨产品工程边界的人才，应该优先进入人才研究和候选人证据链判断。\n\n"
+        "在这样的市场里，等待岗位数量恢复不是最好的策略。更稳妥的做法是缩小岗位范围，提高判断密度，把招聘资源投向具备明确业务影响和高证据质量的候选人。\n\n"
+        "## Talentverse 判断\n\n"
+        "Talentverse 判断，这轮变化说明前沿科技招聘市场正在从数量扩张进入高确定性招聘阶段。仍然值得优先投入的是 AI、数据、Agent/RAG、资深技术与产品人才，以及能够承担任务关键型工作的复合型候选人。\n\n"
+        "企业最容易误判的是把招聘活动收缩理解为人才需求消失。真正发生的变化是判断标准变高，岗位优先级更集中，高确定性招聘因此会变得更重要。"
+    )
     return {
         "title": "全球招聘活动短期收缩，AI 与数据关键岗位需求保持韧性",
         "subtitle": "基于 Talent Signal 公开招聘信号样本生成的 Talentverse 前沿科技招聘市场观察",
@@ -147,28 +164,7 @@ def _valid_talentverse_payload() -> dict:
             "description": "Talentverse 前沿科技招聘报告：全球招聘活动短期收缩，但 AI、数据与资深技术岗位需求保持韧性。",
             "keywords": ["frontier tech hiring", "AI-native talent intelligence", "高确定性招聘"],
         },
-        "article": {
-            "lead": "过去 180 天的公开招聘信号显示，全球招聘活动正在从广泛扩张转向更谨慎的关键岗位筛选。近 7 天岗位数较 30 天明显下降，但 AI、数据和资深技术岗位仍保持结构性需求。",
-            "sections": [
-                {
-                    "heading": "市场发生了什么",
-                    "body": "本期报告显示，全球招聘活动在短周期内出现收缩。近 7 天岗位数较 30 天下降 67.1%，说明企业正在重新评估招聘节奏和岗位优先级。",
-                },
-                {
-                    "heading": "Talentverse 如何判断",
-                    "body": "Talentverse 将这轮变化理解为从广泛招聘扩张转向高确定性关键岗位招聘。企业更谨慎地判断哪些岗位能够直接影响产品交付、数据资产、AI 应用和组织执行。",
-                },
-                {
-                    "heading": "这对关键岗位招聘意味着什么",
-                    "body": "对 AI、Web3、Fintech、Quant 与新经济团队来说，招聘重点不应只是减少岗位或等待市场恢复，而是重新排序关键岗位。",
-                },
-                {
-                    "heading": "企业应该如何调整",
-                    "body": "企业应先明确哪些岗位是真正影响业务结果的关键岗位，再判断候选人是否有足够证据支持进入短名单。",
-                },
-            ],
-            "closing": "这轮招聘收缩并不意味着前沿科技人才市场失去机会，而是意味着判断标准正在变高。",
-        },
+        "article": {"format": "markdown", "body": article_body},
     }
 
 
@@ -197,10 +193,10 @@ def test_build_talentverse_system_prompt_specifies_seo_keywords_schema():
 def test_build_talentverse_system_prompt_specifies_article_schema():
     prompt = service.build_talentverse_system_prompt()
 
-    assert "article is for human reading" in prompt
-    assert "article.sections must contain exactly four sections" in prompt
-    assert "市场发生了什么" in prompt
-    assert "企业应该如何调整" in prompt
+    assert "article.format must be exactly" in prompt
+    assert "one complete Talentverse Research Insight in Markdown" in prompt
+    assert "1200-1800 Chinese characters" in prompt
+    assert "Talentverse 判断" in prompt
 
 
 def test_validate_talentverse_payload_rejects_forbidden_raw_fields():
@@ -287,21 +283,21 @@ def test_validate_talentverse_payload_rejects_blank_seo_keyword_item():
         raise AssertionError("expected seo keyword item validation failure")
 
 
-def test_validate_talentverse_payload_requires_article_sections():
+def test_validate_talentverse_payload_requires_markdown_article_format():
     payload = _valid_talentverse_payload()
-    payload["article"]["sections"] = payload["article"]["sections"][:1]
+    payload["article"]["format"] = "html"
 
     try:
         service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
     except service.TalentverseReportError as exc:
-        assert "article.sections" in str(exc)
+        assert "article.format" in str(exc)
     else:
-        raise AssertionError("expected article sections validation failure")
+        raise AssertionError("expected article format validation failure")
 
 
 def test_validate_talentverse_payload_rejects_article_bullet_body():
     payload = _valid_talentverse_payload()
-    payload["article"]["sections"][0]["body"] = "- 近 7 天岗位数较 30 天下降 67.1%。"
+    payload["article"]["body"] = payload["article"]["body"] + "\n\n- 近 7 天岗位数较 30 天下降 67.1%。"
 
     try:
         service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
@@ -309,6 +305,18 @@ def test_validate_talentverse_payload_rejects_article_bullet_body():
         assert "continuous prose" in str(exc)
     else:
         raise AssertionError("expected article prose validation failure")
+
+
+def test_validate_talentverse_payload_rejects_article_forbidden_modules():
+    payload = _valid_talentverse_payload()
+    payload["article"]["body"] = payload["article"]["body"].replace("## Talentverse 判断", "## FAQ")
+
+    try:
+        service.validate_talentverse_payload(payload, raw_snapshot=_raw_snapshot())
+    except service.TalentverseReportError as exc:
+        assert "article.body must not contain module" in str(exc)
+    else:
+        raise AssertionError("expected article module validation failure")
 
 
 def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeypatch):
@@ -327,7 +335,8 @@ def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeyp
     assert report.slug == "global-talentverse-report-2026-05-24-v6"
     assert report.status == "published"
     assert report.payload["source"]["name"] == "Talent Signal"
-    assert report.payload["article"]["sections"][0]["heading"] == "市场发生了什么"
+    assert report.payload["article"]["format"] == "markdown"
+    assert "## Talentverse 判断" in report.payload["article"]["body"]
     assert report.payload["status"] == "published"
 
 

@@ -19,12 +19,6 @@ TALENTVERSE_SOURCE_URL = "https://talentsignal.cloud"
 TALENTVERSE_CATEGORY = "market-intelligence"
 TALENTVERSE_TAGS = ["global", "talent-strategy", "ai", "data"]
 TALENTVERSE_LLM_TIMEOUT_SECONDS = 120
-ARTICLE_SECTION_HEADINGS = (
-    "市场发生了什么",
-    "Talentverse 如何判断",
-    "这对关键岗位招聘意味着什么",
-    "企业应该如何调整",
-)
 DB_CREDENTIAL_URL_PATTERN = re.compile(
     r"\b[a-z][a-z0-9+.-]*://[^/\s:@]+:[^@\s]+@[^\s]+",
     re.IGNORECASE,
@@ -65,6 +59,16 @@ FORBIDDEN_TEXT = (
     "source_name",
     "full_description",
     "job_url",
+)
+FORBIDDEN_ARTICLE_MODULES = (
+    "FAQ",
+    "Glossary",
+    "Key Signals",
+    "Evidence References",
+    "术语表",
+    "常见问题",
+    "核心信号",
+    "证据引用",
 )
 
 
@@ -166,11 +170,15 @@ def build_talentverse_system_prompt() -> str:
         "faq requires question and answer. glossaryTerms require term and definition. "
         "evidenceRefs require id, note, confidence. seo requires title, description, keywords. "
         "seo.keywords must be a non-empty JSON array of strings, never a comma-separated string and never empty. "
-        "article is for human reading, not machines. article requires lead, sections, closing. "
-        "article.lead must be 1-2 natural paragraphs. article.sections must contain exactly four sections with headings: "
-        "市场发生了什么, Talentverse 如何判断, 这对关键岗位招聘意味着什么, 企业应该如何调整. "
-        "Each article section body must be continuous prose, not bullet lists, tables, markdown lists, or field dumps. "
-        "article.closing must be one natural paragraph. Preserve key numbers in article prose, but do not invent new numbers. "
+        "article is the human-readable website body. article requires format and body. "
+        'article.format must be exactly "markdown". article.body must be one complete Talentverse Research Insight in Markdown, '
+        "not a rewrite of structured fields, not a dashboard explanation, and not a data panel. "
+        "article.body should be 1200-1800 Chinese characters, use 4-6 level-2 Markdown headings, and write 2-4 natural paragraphs under each heading. "
+        "Do not use bullet lists, tables, FAQ, Glossary, Key Signals, Evidence References, consulting-outline sections, or news-release tone in article.body. "
+        "Use continuous reasoning. Do not use mechanical phrases such as 首先, 其次, 最后, or 综上所述. "
+        "Preserve sample size, time windows, key job-count changes, AI/algorithm and data share, data job changes, Agent/RAG changes, Senior+ changes, and other explicit trends from the raw report. "
+        "Every important number in article.body must explain what it means for frontier tech hiring and mission-critical talent judgment. "
+        "The final article section must give the Talentverse judgment: what this shift means, which roles deserve priority, what companies may misread, and why high-conviction hiring matters more. "
         "Return exactly this JSON shape with no extra top-level fields: "
         "{"
         '"title":"...",'
@@ -187,7 +195,7 @@ def build_talentverse_system_prompt() -> str:
         '"glossaryTerms":[{"term":"...","definition":"..."}],'
         '"evidenceRefs":[{"id":"fact-...","note":"...","confidence":"high"}],'
         '"seo":{"title":"...","description":"...","keywords":["frontier tech hiring","AI-native talent intelligence","高确定性招聘","前沿科技招聘","AI 人才","数据岗位"]},'
-        '"article":{"lead":"...","sections":[{"heading":"市场发生了什么","body":"..."},{"heading":"Talentverse 如何判断","body":"..."},{"heading":"这对关键岗位招聘意味着什么","body":"..."},{"heading":"企业应该如何调整","body":"..."}],"closing":"..."}'
+        '"article":{"format":"markdown","body":"## 招聘活动收缩，但不是关键岗位需求消失\\n\\n...\\n\\n## AI 与数据岗位为什么仍然保持韧性\\n\\n...\\n\\n## Talentverse 判断\\n\\n..."}'
         "}. "
         "The report must be useful for SEO, GEO, and AI citation: include stable definitions, clear claims, and evidence IDs."
     )
@@ -491,20 +499,17 @@ def _validate_section_object(value: object, *, field: str) -> None:
 def _validate_article(value: object) -> None:
     if not isinstance(value, dict):
         raise TalentverseReportError("article must be an object")
-    _require_non_empty_text(value, "lead")
-    _reject_bullet_lines(value["lead"], field="article.lead")
-    sections = value.get("sections")
-    if not isinstance(sections, list) or len(sections) != len(ARTICLE_SECTION_HEADINGS):
-        raise TalentverseReportError("article.sections must contain the required four sections")
-    for index, (section, expected_heading) in enumerate(zip(sections, ARTICLE_SECTION_HEADINGS)):
-        if not isinstance(section, dict):
-            raise TalentverseReportError(f"article.sections[{index}] must be an object")
-        if section.get("heading") != expected_heading:
-            raise TalentverseReportError(f"article.sections[{index}].heading must be {expected_heading}")
-        _require_non_empty_text(section, "body")
-        _reject_bullet_lines(section["body"], field=f"article.sections[{index}].body")
-    _require_non_empty_text(value, "closing")
-    _reject_bullet_lines(value["closing"], field="article.closing")
+    if value.get("format") != "markdown":
+        raise TalentverseReportError("article.format must be markdown")
+    _require_non_empty_text(value, "body")
+    body = value["body"]
+    _reject_bullet_lines(body, field="article.body")
+    heading_count = len(re.findall(r"(?m)^##\s+\S+", body))
+    if heading_count < 4 or heading_count > 6:
+        raise TalentverseReportError("article.body must contain 4-6 level-2 markdown headings")
+    for forbidden_module in FORBIDDEN_ARTICLE_MODULES:
+        if forbidden_module in body:
+            raise TalentverseReportError(f"article.body must not contain module: {forbidden_module}")
 
 
 def _reject_bullet_lines(text: str, *, field: str) -> None:
