@@ -235,6 +235,44 @@ def test_talentverse_reports_supports_updated_after_filter(client, db_session, m
     assert [item["slug"] for item in response.json()["items"]] == ["new-report"]
 
 
+def test_talentverse_reports_paginates_until_requested_locale_has_items(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.api.talentverse_auth.settings.reports_api_token", "secret-token")
+    older_time = datetime(2026, 5, 20, 10, 0, 0)
+    newer_time = older_time + timedelta(days=1)
+    older_with_ja = _add_report(
+        db_session,
+        slug="older-with-ja",
+        version=30,
+        updated_at=older_time,
+    )
+    newer_without_ja = _add_report(
+        db_session,
+        slug="newer-without-ja",
+        version=31,
+        updated_at=newer_time,
+    )
+    payload = dict(newer_without_ja.payload)
+    translations = dict(payload["translations"])
+    alternates = dict(payload["alternates"])
+    translations.pop("ja-JP")
+    alternates.pop("ja-JP")
+    newer_without_ja.payload = {**payload, "translations": translations, "alternates": alternates}
+    db_session.add(newer_without_ja)
+    db_session.commit()
+
+    response = client.get(
+        "/api/v1/talentverse/reports?locale=ja-JP&status=published&limit=1",
+        headers={"Authorization": "Bearer secret-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["slug"] for item in payload["items"]] == ["older-with-ja-ja"]
+    assert payload["items"][0]["locale"] == "ja-JP"
+    assert payload["pageInfo"]["nextCursor"] is None
+    assert older_with_ja.slug == "older-with-ja"
+
+
 def test_talentverse_report_detail_returns_full_payload(client, db_session, monkeypatch):
     monkeypatch.setattr("app.api.talentverse_auth.settings.reports_api_token", "secret-token")
     _add_report(db_session, slug="global-talentverse-report-2026-05-24-v6", version=6)

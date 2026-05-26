@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -150,7 +150,13 @@ def build_talentverse_slug(snapshot: MarketIntelligenceSnapshot, *, locale: str 
     return base_slug if not suffix else f"{base_slug}-{suffix}"
 
 
-def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: int, force: bool = False) -> dict[str, Any]:
+def generate_talentverse_report_for_snapshot(
+    db: Session,
+    *,
+    raw_snapshot_id: int,
+    force: bool = False,
+    clock: Callable[[], datetime] = datetime.now,
+) -> dict[str, Any]:
     snapshot = db.get(MarketIntelligenceSnapshot, raw_snapshot_id)
     if snapshot is None:
         return {"status": "skipped", "reason": "raw_report_missing"}
@@ -164,7 +170,6 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
         if existing is not None and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED and not force:
             return _published_result(existing)
 
-        now = snapshot.generated_at.replace(microsecond=0)
         translations: dict[str, dict] = {}
         translation_failures: dict[str, str] = {}
         for locale in TALENTVERSE_LOCALES:
@@ -184,10 +189,14 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
             failure_summary = "; ".join(f"{locale}={error}" for locale, error in translation_failures.items())
             raise TalentverseReportError(f"all talentverse locale generations failed: {failure_summary}")
 
+        write_time = clock().replace(microsecond=0)
+        published_at = _published_at_for(existing=existing, fallback=write_time)
         final_payload = normalize_talentverse_group_payload(
             translations=translations,
             translation_failures=translation_failures,
             raw_snapshot=snapshot,
+            published_at=published_at,
+            updated_at=write_time,
         )
         report = _upsert_report(
             db,
@@ -197,7 +206,8 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
             status=TALENTVERSE_REPORT_STATUS_PUBLISHED,
             payload=final_payload,
             error_message=None,
-            published_at=now,
+            published_at=published_at,
+            updated_at=write_time,
         )
         return _published_result(report)
     except Exception as exc:  # noqa: BLE001
@@ -481,6 +491,8 @@ def normalize_talentverse_group_payload(
     translations: dict[str, dict],
     translation_failures: dict[str, str],
     raw_snapshot: MarketIntelligenceSnapshot,
+    published_at: datetime,
+    updated_at: datetime,
 ) -> dict:
     translation_group_id = build_talentverse_slug(raw_snapshot)
     alternates = {
@@ -491,6 +503,8 @@ def normalize_talentverse_group_payload(
     for locale, translation in translations.items():
         normalized_translations[locale] = {
             **translation,
+            "publishedAt": published_at.isoformat(),
+            "updatedAt": updated_at.isoformat(),
             "translationGroupId": translation_group_id,
             "alternates": alternates,
         }
@@ -536,6 +550,12 @@ def _published_result(report: TalentverseReport) -> dict[str, Any]:
     return result
 
 
+def _published_at_for(*, existing: TalentverseReport | None, fallback: datetime) -> datetime:
+    if existing is not None and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED and existing.published_at:
+        return existing.published_at.replace(microsecond=0)
+    return fallback
+
+
 def _upsert_report(
     db: Session,
     *,
@@ -546,9 +566,10 @@ def _upsert_report(
     payload: dict,
     error_message: str | None,
     published_at: datetime | None,
+    updated_at: datetime | None = None,
 ) -> TalentverseReport:
     living_report = _safe_living_report(snapshot)
-    now = snapshot.generated_at.replace(microsecond=0)
+    now = (updated_at or datetime.now()).replace(microsecond=0)
     report = existing or TalentverseReport(raw_report_id=snapshot.id, created_at=now)
     report.slug = slug
     report.region = snapshot.region

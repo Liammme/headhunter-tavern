@@ -33,28 +33,44 @@ def list_published_talentverse_reports(
         query = query.where(TalentverseReport.region == region)
     if updated_after is not None:
         query = query.where(TalentverseReport.updated_at > updated_after)
-    if cursor:
-        cursor_time, cursor_id = _decode_cursor(cursor)
-        query = query.where(
-            (TalentverseReport.updated_at < cursor_time)
-            | ((TalentverseReport.updated_at == cursor_time) & (TalentverseReport.id < cursor_id))
-        )
-
-    rows = (
-        db.execute(
-            query.order_by(TalentverseReport.updated_at.desc(), TalentverseReport.id.desc()).limit(normalized_limit + 1)
-        )
-        .scalars()
-        .all()
-    )
-    page_rows = rows[:normalized_limit]
-    next_cursor = _encode_cursor(page_rows[-1]) if len(rows) > normalized_limit and page_rows else None
     requested_locale = locale or DEFAULT_LOCALE
+    matches: list[tuple[TalentverseReport, dict]] = []
+    next_query_cursor = cursor
+    batch_size = max(normalized_limit + 1, 20)
+
+    while len(matches) <= normalized_limit:
+        batch_query = query
+        if next_query_cursor:
+            cursor_time, cursor_id = _decode_cursor(next_query_cursor)
+            batch_query = batch_query.where(
+                (TalentverseReport.updated_at < cursor_time)
+                | ((TalentverseReport.updated_at == cursor_time) & (TalentverseReport.id < cursor_id))
+            )
+        rows = (
+            db.execute(
+                batch_query.order_by(TalentverseReport.updated_at.desc(), TalentverseReport.id.desc()).limit(batch_size)
+            )
+            .scalars()
+            .all()
+        )
+        if not rows:
+            break
+        for row in rows:
+            translation = _translation_for_locale(row, requested_locale)
+            if translation is not None:
+                matches.append((row, translation))
+                if len(matches) > normalized_limit:
+                    break
+        if len(matches) > normalized_limit or len(rows) < batch_size:
+            break
+        next_query_cursor = _encode_cursor(rows[-1])
+
+    page_matches = matches[:normalized_limit]
+    next_cursor = _encode_cursor(page_matches[-1][0]) if len(matches) > normalized_limit and page_matches else None
     return {
         "items": [
             _list_item(row, translation)
-            for row in page_rows
-            if (translation := _translation_for_locale(row, requested_locale)) is not None
+            for row, translation in page_matches
         ],
         "pageInfo": {"limit": normalized_limit, "nextCursor": next_cursor},
     }

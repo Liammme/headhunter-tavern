@@ -415,6 +415,30 @@ def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeyp
     assert report.payload["status"] == "published"
 
 
+def test_generate_talentverse_report_uses_write_time_for_public_timestamps(db_session, monkeypatch):
+    snapshot = _raw_snapshot()
+    write_time = datetime(2026, 5, 26, 12, 5, 6)
+    db_session.add(snapshot)
+    db_session.commit()
+    _mock_llm_payloads(monkeypatch, _valid_talentverse_payloads())
+
+    result = service.generate_talentverse_report_for_snapshot(
+        db_session,
+        raw_snapshot_id=snapshot.id,
+        clock=lambda: write_time,
+    )
+
+    assert result["status"] == "published"
+    report = db_session.execute(select(TalentverseReport)).scalar_one()
+    assert report.published_at == write_time
+    assert report.updated_at == write_time
+    assert report.payload["publishedAt"] == write_time.isoformat()
+    assert report.payload["updatedAt"] == write_time.isoformat()
+    assert report.payload["source"]["generatedAt"] == snapshot.generated_at.isoformat()
+    assert report.payload["translations"]["en"]["publishedAt"] == write_time.isoformat()
+    assert report.payload["translations"]["en"]["updatedAt"] == write_time.isoformat()
+
+
 def test_generate_talentverse_report_publishes_available_locales_when_one_locale_fails(db_session, monkeypatch):
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
