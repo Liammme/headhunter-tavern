@@ -528,16 +528,6 @@ h5,
   font-weight: 500;
 }
 
-.intel-paper-copy .living-report-section h3,
-.intel-paper-copy .living-report-claims h3,
-.intel-paper-copy .living-report-watchlist h3 {
-  color: var(--foreground);
-  font-family: var(--font-body-stack);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.82;
-}
-
 .intel-narrative {
   color: var(--muted-strong);
   font-size: 14px;
@@ -1898,12 +1888,6 @@ h5,
   .living-report-quality,
   .living-report-empty {
     font-size: 13px;
-    line-height: 1.76;
-  }
-
-  .intel-paper-copy .living-report-section h3,
-  .intel-paper-copy .living-report-claims h3,
-  .intel-paper-copy .living-report-watchlist h3 {
     line-height: 1.76;
   }
 
