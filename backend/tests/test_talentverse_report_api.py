@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from app.models import TalentverseReport
 
 
-def _payload() -> dict:
+def _payload(*, base_slug: str = "global-talentverse-report-2026-05-24-v6") -> dict:
     article_body = (
         "## 招聘活动收缩，但不是关键岗位需求消失\n\n"
         "近 7 天岗位数较 30 天下降 67.1%，但关键技术岗位仍保持结构性需求。\n\n"
@@ -16,7 +16,7 @@ def _payload() -> dict:
         "## Talentverse 判断\n\n"
         "这轮变化说明前沿科技招聘市场正在从数量扩张进入高确定性招聘阶段。"
     )
-    return {
+    base_payload = {
         "title": "全球招聘活动短期收缩，AI 与数据关键岗位需求保持韧性",
         "subtitle": "基于 Talent Signal 公开招聘信号样本生成的 Talentverse 前沿科技招聘市场观察",
         "executiveSummary": "过去 180 天的公开招聘信号显示，全球招聘活动出现短期收缩。",
@@ -42,9 +42,36 @@ def _payload() -> dict:
         "source": {"name": "Talent Signal", "url": "https://talentsignal.cloud"},
         "seo": {"title": "全球招聘活动短期收缩", "description": "Talentverse 报告。", "keywords": ["AI"]},
         "article": {"format": "markdown", "body": article_body},
+        "status": "published",
+        "publishedAt": "2026-05-24T15:30:04",
+        "updatedAt": "2026-05-24T15:30:04",
+        "version": 6,
+        "translationGroupId": base_slug,
+        "alternates": {
+            "zh-CN": {"slug": base_slug, "locale": "zh-CN"},
+            "en": {"slug": f"{base_slug}-en", "locale": "en"},
+            "zh-TW": {"slug": f"{base_slug}-zh-tw", "locale": "zh-TW"},
+            "ja-JP": {"slug": f"{base_slug}-ja", "locale": "ja-JP"},
+        },
         "category": "market-intelligence",
         "tags": ["global"],
     }
+    translations = {}
+    for locale, alternate in base_payload["alternates"].items():
+        translations[locale] = {
+            **base_payload,
+            "slug": alternate["slug"],
+            "locale": locale,
+            "title": f"{locale} report title",
+            "subtitle": f"{locale} report subtitle",
+            "executiveSummary": f"{locale} report summary",
+            "seo": {
+                **base_payload["seo"],
+                "title": f"{locale} SEO title",
+                "description": f"{locale} SEO description",
+            },
+        }
+    return {**translations["zh-CN"], "translations": translations, "translationFailures": {}}
 
 
 def _add_report(
@@ -66,7 +93,7 @@ def _add_report(
         published_at=now if status == "published" else None,
         updated_at=now,
         version=version,
-        payload=_payload(),
+        payload=_payload(base_slug=slug),
         created_at=now,
     )
     db_session.add(report)
@@ -126,9 +153,29 @@ def test_talentverse_reports_lists_only_published_reports(client, db_session, mo
     payload = response.json()
     assert len(payload["items"]) == 1
     assert payload["items"][0]["slug"] == "global-talentverse-report-2026-05-24-v6"
+    assert payload["items"][0]["locale"] == "zh-CN"
     assert payload["items"][0]["keySignals"][0]["signal"] == "全球招聘活动短期收缩"
     assert "article" not in payload["items"][0]
+    assert payload["items"][0]["alternates"]["en"]["slug"] == "global-talentverse-report-2026-05-24-v6-en"
     assert payload["pageInfo"]["limit"] == 20
+
+
+def test_talentverse_reports_filters_locale_from_translations(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.api.talentverse_auth.settings.reports_api_token", "secret-token")
+    _add_report(db_session, slug="global-talentverse-report-2026-05-24-v6", version=6)
+
+    response = client.get(
+        "/api/v1/talentverse/reports?locale=en&status=published",
+        headers={"Authorization": "Bearer secret-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["slug"] == "global-talentverse-report-2026-05-24-v6-en"
+    assert payload["items"][0]["locale"] == "en"
+    assert payload["items"][0]["title"] == "en report title"
+    assert payload["items"][0]["translationGroupId"] == "global-talentverse-report-2026-05-24-v6"
 
 
 def test_talentverse_reports_rejects_invalid_cursor(client, db_session, monkeypatch):
@@ -200,11 +247,31 @@ def test_talentverse_report_detail_returns_full_payload(client, db_session, monk
     assert response.status_code == 200
     payload = response.json()
     assert payload["slug"] == "global-talentverse-report-2026-05-24-v6"
+    assert payload["locale"] == "zh-CN"
     assert "marketStructure" in payload
     assert "faq" in payload
     assert payload["article"]["format"] == "markdown"
     assert "## Talentverse 判断" in payload["article"]["body"]
+    assert payload["alternates"]["ja-JP"]["slug"] == "global-talentverse-report-2026-05-24-v6-ja"
+    assert payload["translationGroupId"] == "global-talentverse-report-2026-05-24-v6"
     assert payload["status"] == "published"
+
+
+def test_talentverse_report_detail_returns_translation_by_slug(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.api.talentverse_auth.settings.reports_api_token", "secret-token")
+    _add_report(db_session, slug="global-talentverse-report-2026-05-24-v6", version=6)
+
+    response = client.get(
+        "/api/v1/talentverse/reports/global-talentverse-report-2026-05-24-v6-en",
+        headers={"Authorization": "Bearer secret-token"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slug"] == "global-talentverse-report-2026-05-24-v6-en"
+    assert payload["locale"] == "en"
+    assert payload["title"] == "en report title"
+    assert payload["alternates"]["zh-TW"]["slug"] == "global-talentverse-report-2026-05-24-v6-zh-tw"
 
 
 def test_talentverse_report_detail_hides_failed_report(client, db_session, monkeypatch):

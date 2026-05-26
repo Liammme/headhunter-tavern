@@ -23,7 +23,7 @@ router = APIRouter(
 @router.get("", response_model=TalentverseReportListResponse)
 def list_reports(
     region: Literal["global", "japan"] | None = Query(default=None),
-    locale: Literal["zh-CN", "ja-JP"] | None = Query(default=None),
+    locale: Literal["zh-CN", "en", "zh-TW", "ja-JP"] | None = Query(default=None),
     status: Literal["published"] = Query(default="published"),
     limit: int = Query(default=20),
     cursor: str | None = Query(default=None),

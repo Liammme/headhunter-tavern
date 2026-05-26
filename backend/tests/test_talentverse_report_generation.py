@@ -168,10 +168,33 @@ def _valid_talentverse_payload() -> dict:
     }
 
 
+def _valid_talentverse_payloads() -> list[dict]:
+    payloads = []
+    for locale in service.TALENTVERSE_LOCALES:
+        payload = _valid_talentverse_payload()
+        payload["title"] = f"{locale} Talentverse Report"
+        payload["subtitle"] = f"{locale} Talentverse Research Insight"
+        payload["seo"] = {
+            **payload["seo"],
+            "title": f"{locale} SEO title",
+            "description": f"{locale} SEO description",
+        }
+        payloads.append(payload)
+    return payloads
+
+
+def _mock_llm_payloads(monkeypatch, payloads: list[dict]) -> None:
+    responses = iter([service.json.dumps(payload) for payload in payloads])
+    monkeypatch.setattr(service, "request_structured_json", lambda messages, timeout_seconds=None: next(responses))
+
+
 def test_build_slug_uses_region_date_and_version():
     snapshot = _raw_snapshot()
 
     assert service.build_talentverse_slug(snapshot) == "global-talentverse-report-2026-05-24-v6"
+    assert service.build_talentverse_slug(snapshot, locale="en") == "global-talentverse-report-2026-05-24-v6-en"
+    assert service.build_talentverse_slug(snapshot, locale="zh-TW") == "global-talentverse-report-2026-05-24-v6-zh-tw"
+    assert service.build_talentverse_slug(snapshot, locale="ja-JP") == "global-talentverse-report-2026-05-24-v6-ja"
 
 
 def test_build_talentverse_system_prompt_specifies_metric_item_schema():
@@ -192,11 +215,14 @@ def test_build_talentverse_system_prompt_specifies_seo_keywords_schema():
 
 def test_build_talentverse_system_prompt_specifies_article_schema():
     prompt = service.build_talentverse_system_prompt()
+    en_prompt = service.build_talentverse_system_prompt(locale="en")
 
     assert "article.format must be exactly" in prompt
     assert "one complete Talentverse Research Insight in Markdown" in prompt
     assert "1200-1800 Chinese characters" in prompt
     assert "Talentverse 判断" in prompt
+    assert "Target locale: en" in en_prompt
+    assert "Do not simply translate another language version" in en_prompt
 
 
 def test_validate_talentverse_payload_rejects_forbidden_raw_fields():
@@ -323,21 +349,62 @@ def test_generate_talentverse_report_publishes_valid_payload(db_session, monkeyp
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
     db_session.commit()
-    payload = _valid_talentverse_payload()
-
-    monkeypatch.setattr(service, "request_structured_json", lambda messages, timeout_seconds=None: service.json.dumps(payload))
+    _mock_llm_payloads(monkeypatch, _valid_talentverse_payloads())
 
     result = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)
 
     assert result["status"] == "published"
+    assert result["locales"] == {
+        "zh-CN": "global-talentverse-report-2026-05-24-v6",
+        "en": "global-talentverse-report-2026-05-24-v6-en",
+        "zh-TW": "global-talentverse-report-2026-05-24-v6-zh-tw",
+        "ja-JP": "global-talentverse-report-2026-05-24-v6-ja",
+    }
     report = db_session.execute(select(TalentverseReport)).scalar_one()
     assert report.raw_report_id == snapshot.id
     assert report.slug == "global-talentverse-report-2026-05-24-v6"
+    assert report.locale == "zh-CN"
     assert report.status == "published"
     assert report.payload["source"]["name"] == "Talent Signal"
     assert report.payload["article"]["format"] == "markdown"
     assert "## Talentverse 判断" in report.payload["article"]["body"]
+    assert set(report.payload["translations"]) == {"zh-CN", "en", "zh-TW", "ja-JP"}
+    assert report.payload["translations"]["en"]["slug"] == "global-talentverse-report-2026-05-24-v6-en"
+    assert report.payload["translations"]["en"]["locale"] == "en"
+    assert report.payload["translationGroupId"] == "global-talentverse-report-2026-05-24-v6"
+    assert report.payload["alternates"]["ja-JP"]["slug"] == "global-talentverse-report-2026-05-24-v6-ja"
     assert report.payload["status"] == "published"
+
+
+def test_generate_talentverse_report_publishes_available_locales_when_one_locale_fails(db_session, monkeypatch):
+    snapshot = _raw_snapshot()
+    db_session.add(snapshot)
+    db_session.commit()
+    responses = iter(
+        [
+            service.json.dumps(_valid_talentverse_payload()),
+            RuntimeError("provider unavailable for en"),
+            service.json.dumps(_valid_talentverse_payload()),
+            service.json.dumps(_valid_talentverse_payload()),
+        ]
+    )
+
+    def fake_request(messages, timeout_seconds=None):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(service, "request_structured_json", fake_request)
+
+    result = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)
+
+    assert result["status"] == "published"
+    assert "en" in result["failed_locales"]
+    report = db_session.execute(select(TalentverseReport)).scalar_one()
+    assert "en" not in report.payload["alternates"]
+    assert "en" not in report.payload["translations"]
+    assert report.payload["translationFailures"]["en"] == "provider unavailable for en"
 
 
 def test_generate_talentverse_report_records_failed_without_raising(db_session, monkeypatch):
@@ -373,8 +440,7 @@ def test_generate_talentverse_report_is_idempotent_for_published_raw_report(db_s
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
     db_session.commit()
-    payload = _valid_talentverse_payload()
-    monkeypatch.setattr(service, "request_structured_json", lambda messages, timeout_seconds=None: service.json.dumps(payload))
+    _mock_llm_payloads(monkeypatch, _valid_talentverse_payloads())
 
     first = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)
     second = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)
@@ -389,10 +455,10 @@ def test_generate_talentverse_report_force_regenerates_published_raw_report(db_s
     snapshot = _raw_snapshot()
     db_session.add(snapshot)
     db_session.commit()
-    first_payload = _valid_talentverse_payload()
-    second_payload = _valid_talentverse_payload()
-    second_payload["title"] = "更新后的 Talentverse 官网报告"
-    responses = iter([service.json.dumps(first_payload), service.json.dumps(second_payload)])
+    first_payloads = _valid_talentverse_payloads()
+    second_payloads = _valid_talentverse_payloads()
+    second_payloads[0]["title"] = "更新后的 Talentverse 官网报告"
+    responses = iter([service.json.dumps(payload) for payload in first_payloads + second_payloads])
     monkeypatch.setattr(service, "request_structured_json", lambda messages, timeout_seconds=None: next(responses))
 
     first = service.generate_talentverse_report_for_snapshot(db_session, raw_snapshot_id=snapshot.id)

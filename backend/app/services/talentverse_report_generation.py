@@ -14,6 +14,45 @@ TALENTVERSE_REPORT_STATUS_DRAFT = "draft"
 TALENTVERSE_REPORT_STATUS_PUBLISHED = "published"
 TALENTVERSE_REPORT_STATUS_FAILED = "failed"
 TALENTVERSE_LOCALE = "zh-CN"
+TALENTVERSE_LOCALES = ("zh-CN", "en", "zh-TW", "ja-JP")
+TALENTVERSE_LOCALE_CONFIG = {
+    "zh-CN": {
+        "slug_suffix": "",
+        "language_name": "Simplified Chinese",
+        "instruction": (
+            "Write native Simplified Chinese for the Talentverse zh-hans website. "
+            "Use natural Chinese expressions such as AI 原生人才战略, 人才判断, 人才研究, 高确定性招聘, "
+            "关键岗位, 前沿科技招聘, 技术与产品人才, 新经济团队, 前沿科技公司, 任务关键型人才."
+        ),
+    },
+    "en": {
+        "slug_suffix": "en",
+        "language_name": "English",
+        "instruction": (
+            "Write native English for the Talentverse English website. Use frontier tech hiring, "
+            "AI-native talent intelligence, mission-critical talent, executive recruiting, high-conviction hiring, "
+            "talent market research, technical and product leaders, and new economy teams where appropriate."
+        ),
+    },
+    "zh-TW": {
+        "slug_suffix": "zh-tw",
+        "language_name": "Traditional Chinese",
+        "instruction": (
+            "Write native Traditional Chinese for the Talentverse zh-hant website. Use natural Traditional Chinese; "
+            "do not mix Simplified Chinese wording. Prefer AI 原生人才策略, 人才判斷, 人才研究, 高確定性招聘, "
+            "關鍵職位, 前沿科技招聘, 技術與產品人才, 新經濟團隊, 前沿科技公司, 任務關鍵型人才."
+        ),
+    },
+    "ja-JP": {
+        "slug_suffix": "ja",
+        "language_name": "Japanese",
+        "instruction": (
+            "Write native Japanese for the Talentverse Japanese website. Do not preserve Chinese sentence patterns. "
+            "Use concise research language suitable for frontier technology hiring, AI-native talent intelligence, "
+            "mission-critical talent, and high-conviction hiring."
+        ),
+    },
+}
 TALENTVERSE_SOURCE_NAME = "Talent Signal"
 TALENTVERSE_SOURCE_URL = "https://talentsignal.cloud"
 TALENTVERSE_CATEGORY = "market-intelligence"
@@ -55,6 +94,19 @@ FORBIDDEN_TEXT = (
     "赋能企业",
     "生态闭环",
     "一站式解决方案",
+    "全球領先",
+    "賦能企業",
+    "一站式解決方案",
+    "精準匹配",
+    "海量人才庫",
+    "傳統獵頭",
+    "招聘仲介",
+    "簡單匹配",
+    "生態閉環",
+    "劳务",
+    "勞務",
+    "外包",
+    "人材紹介会社",
     "canonical_url",
     "source_name",
     "full_description",
@@ -84,12 +136,17 @@ def sanitize_talentverse_error(error: Exception) -> str:
     return KEY_VALUE_SECRET_PATTERN.sub(_redact_key_value_secret, message)
 
 
-def build_talentverse_slug(snapshot: MarketIntelligenceSnapshot) -> str:
+def build_talentverse_slug(snapshot: MarketIntelligenceSnapshot, *, locale: str = TALENTVERSE_LOCALE) -> str:
     living_report = _living_report(snapshot)
     version = living_report.get("version")
     if not isinstance(version, int):
         raise TalentverseReportError("living_report.version must be an integer")
-    return f"{snapshot.region}-talentverse-report-{snapshot.snapshot_date.isoformat()}-v{version}"
+    locale_config = TALENTVERSE_LOCALE_CONFIG.get(locale)
+    if locale_config is None:
+        raise TalentverseReportError(f"unsupported locale: {locale}")
+    base_slug = f"{snapshot.region}-talentverse-report-{snapshot.snapshot_date.isoformat()}-v{version}"
+    suffix = locale_config["slug_suffix"]
+    return base_slug if not suffix else f"{base_slug}-{suffix}"
 
 
 def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: int, force: bool = False) -> dict[str, Any]:
@@ -104,35 +161,70 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
     try:
         existing = _load_existing_report(db, raw_report_id=snapshot.id)
         if existing is not None and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED and not force:
-            return {"status": "published", "report_id": existing.id, "slug": existing.slug}
+            return _published_result(existing)
 
-        slug = build_talentverse_slug(snapshot)
         now = snapshot.generated_at.replace(microsecond=0)
-        content = request_structured_json(
-            [
-                {"role": "system", "content": build_talentverse_system_prompt()},
-                {"role": "user", "content": build_talentverse_user_prompt(snapshot)},
-            ],
-            timeout_seconds=TALENTVERSE_LLM_TIMEOUT_SECONDS,
+        translations: dict[str, dict] = {}
+        translation_failures: dict[str, str] = {}
+        for locale in TALENTVERSE_LOCALES:
+            try:
+                slug = build_talentverse_slug(snapshot, locale=locale)
+                content = request_structured_json(
+                    [
+                        {"role": "system", "content": build_talentverse_system_prompt(locale=locale)},
+                        {"role": "user", "content": build_talentverse_user_prompt(snapshot, locale=locale)},
+                    ],
+                    timeout_seconds=TALENTVERSE_LLM_TIMEOUT_SECONDS,
+                )
+                payload = parse_talentverse_payload(content)
+                validate_talentverse_payload(payload, raw_snapshot=snapshot)
+                translations[locale] = normalize_talentverse_payload(
+                    payload,
+                    raw_snapshot=snapshot,
+                    slug=slug,
+                    locale=locale,
+                )
+            except Exception as locale_exc:  # noqa: BLE001
+                translation_failures[locale] = sanitize_talentverse_error(locale_exc)
+
+        if not translations:
+            failure_summary = "; ".join(f"{locale}={error}" for locale, error in translation_failures.items())
+            raise TalentverseReportError(f"all talentverse locale generations failed: {failure_summary}")
+
+        final_payload = normalize_talentverse_group_payload(
+            translations=translations,
+            translation_failures=translation_failures,
+            raw_snapshot=snapshot,
         )
-        payload = parse_talentverse_payload(content)
-        validate_talentverse_payload(payload, raw_snapshot=snapshot)
-        final_payload = normalize_talentverse_payload(payload, raw_snapshot=snapshot, slug=slug)
         report = _upsert_report(
             db,
             existing=existing,
             snapshot=snapshot,
-            slug=slug,
+            slug=final_payload["slug"],
             status=TALENTVERSE_REPORT_STATUS_PUBLISHED,
             payload=final_payload,
             error_message=None,
             published_at=now,
         )
-        return {"status": "published", "report_id": report.id, "slug": report.slug}
+        return _published_result(report)
     except Exception as exc:  # noqa: BLE001
         error_message = sanitize_talentverse_error(exc)
         try:
             db.rollback()
+            if (
+                "existing" in locals()
+                and existing is not None
+                and existing.status == TALENTVERSE_REPORT_STATUS_PUBLISHED
+            ):
+                existing.error_message = error_message
+                db.add(existing)
+                db.commit()
+                return {
+                    "status": "failed",
+                    "report_id": existing.id,
+                    "error": error_message,
+                    "preserved_published": True,
+                }
             report = _record_failed_report(db, snapshot=snapshot, error_message=error_message)
         except Exception as record_exc:  # noqa: BLE001
             db.rollback()
@@ -144,16 +236,19 @@ def generate_talentverse_report_for_snapshot(db: Session, *, raw_snapshot_id: in
         return {"status": "failed", "report_id": report.id, "error": error_message}
 
 
-def build_talentverse_system_prompt() -> str:
+def build_talentverse_system_prompt(*, locale: str = TALENTVERSE_LOCALE) -> str:
+    locale_config = _locale_config(locale)
     return (
         "You transform a sanitized Talent Signal living market report into a Talentverse website research report. "
         "Return only one JSON object. Do not return Markdown or HTML. "
         "Talentverse is an AI-native talent intelligence and executive recruiting firm helping frontier technology "
         "and new economy companies identify, evaluate, and hire mission-critical talent. "
-        "Write in natural Chinese. Use phrases such as AI 原生人才战略, 人才判断, 人才研究, 高确定性招聘, 关键岗位, "
-        "前沿科技招聘, 技术与产品人才, 新经济团队. "
+        f"Target locale: {locale}. Target language: {locale_config['language_name']}. {locale_config['instruction']} "
+        "Do not simply translate another language version. Write a native publish-ready Talentverse Research Insight "
+        "for this locale, based on the same Talent Signal facts and numbers. "
         "Do not use 招聘中介, 简历推荐, 海量人才库, 精准匹配, AI-powered headhunter, 传统猎头, 全球领先, "
-        "赋能企业, 生态闭环, 一站式解决方案. "
+        "赋能企业, 生态闭环, 一站式解决方案, 全球領先, 賦能企業, 一站式解決方案, 精準匹配, 海量人才庫, "
+        "傳統獵頭, 招聘仲介, 勞務, 外包, 人材紹介会社. "
         "Preserve key numbers, time windows, facts, confidence labels, and evidence references from the input. "
         "Do not invent data. Every important judgment must include hiringImplication. "
         "Do not expose raw job links, full JD, source_name, canonical_url, full_description, job_url, or similar fields. "
@@ -173,7 +268,7 @@ def build_talentverse_system_prompt() -> str:
         "article is the human-readable website body. article requires format and body. "
         'article.format must be exactly "markdown". article.body must be one complete Talentverse Research Insight in Markdown, '
         "not a rewrite of structured fields, not a dashboard explanation, and not a data panel. "
-        "article.body should be 1200-1800 Chinese characters, use 4-6 level-2 Markdown headings, and write 2-4 natural paragraphs under each heading. "
+        "article.body should be a substantial long-form article equivalent to 1200-1800 Chinese characters, use 4-6 level-2 Markdown headings, and write 2-4 natural paragraphs under each heading. "
         "Do not use bullet lists, tables, FAQ, Glossary, Key Signals, Evidence References, consulting-outline sections, or news-release tone in article.body. "
         "Use continuous reasoning. Do not use mechanical phrases such as 首先, 其次, 最后, or 综上所述. "
         "Preserve sample size, time windows, key job-count changes, AI/algorithm and data share, data job changes, Agent/RAG changes, Senior+ changes, and other explicit trends from the raw report. "
@@ -201,12 +296,15 @@ def build_talentverse_system_prompt() -> str:
     )
 
 
-def build_talentverse_user_prompt(snapshot: MarketIntelligenceSnapshot) -> str:
+def build_talentverse_user_prompt(snapshot: MarketIntelligenceSnapshot, *, locale: str = TALENTVERSE_LOCALE) -> str:
     living_report = _living_report(snapshot)
+    locale_config = _locale_config(locale)
     input_payload = {
         "rawReportId": f"market-intelligence-snapshot-{snapshot.id}",
         "region": snapshot.region,
-        "locale": TALENTVERSE_LOCALE,
+        "locale": locale,
+        "targetLanguage": locale_config["language_name"],
+        "targetLanguageInstruction": locale_config["instruction"],
         "snapshotDate": snapshot.snapshot_date.isoformat(),
         "generatedAt": snapshot.generated_at.replace(microsecond=0).isoformat(),
         "windowDays": snapshot.window_days,
@@ -305,7 +403,13 @@ def validate_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellige
     _validate_article(payload.get("article"))
 
 
-def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntelligenceSnapshot, slug: str) -> dict:
+def normalize_talentverse_payload(
+    payload: dict,
+    *,
+    raw_snapshot: MarketIntelligenceSnapshot,
+    slug: str,
+    locale: str = TALENTVERSE_LOCALE,
+) -> dict:
     living_report = _living_report(raw_snapshot)
     generated_at = raw_snapshot.generated_at.replace(microsecond=0).isoformat()
     version = living_report["version"]
@@ -314,7 +418,7 @@ def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellig
         "rawReportId": f"market-intelligence-snapshot-{raw_snapshot.id}",
         "slug": slug,
         "region": raw_snapshot.region,
-        "locale": TALENTVERSE_LOCALE,
+        "locale": locale,
         "title": payload["title"].strip(),
         "subtitle": payload["subtitle"].strip(),
         "executiveSummary": payload["executiveSummary"].strip(),
@@ -345,11 +449,64 @@ def normalize_talentverse_payload(payload: dict, *, raw_snapshot: MarketIntellig
     }
 
 
+def normalize_talentverse_group_payload(
+    *,
+    translations: dict[str, dict],
+    translation_failures: dict[str, str],
+    raw_snapshot: MarketIntelligenceSnapshot,
+) -> dict:
+    translation_group_id = build_talentverse_slug(raw_snapshot)
+    alternates = {
+        locale: {"slug": translation["slug"], "locale": locale}
+        for locale, translation in translations.items()
+    }
+    normalized_translations = {}
+    for locale, translation in translations.items():
+        normalized_translations[locale] = {
+            **translation,
+            "translationGroupId": translation_group_id,
+            "alternates": alternates,
+        }
+
+    canonical = normalized_translations.get(TALENTVERSE_LOCALE) or next(iter(normalized_translations.values()))
+    return {
+        **canonical,
+        "translationGroupId": translation_group_id,
+        "alternates": alternates,
+        "translations": normalized_translations,
+        "translationFailures": translation_failures,
+    }
+
+
 def _redact_key_value_secret(match: re.Match) -> str:
     separator = match.group(2)
     if separator == ":":
         return f"{match.group(1)}: [redacted]"
     return f"{match.group(1)}=[redacted]"
+
+
+def _locale_config(locale: str) -> dict[str, str]:
+    locale_config = TALENTVERSE_LOCALE_CONFIG.get(locale)
+    if locale_config is None:
+        raise TalentverseReportError(f"unsupported locale: {locale}")
+    return locale_config
+
+
+def _published_result(report: TalentverseReport) -> dict[str, Any]:
+    payload = report.payload if isinstance(report.payload, dict) else {}
+    translations = payload.get("translations") if isinstance(payload.get("translations"), dict) else {}
+    published_locales = {
+        locale: translation.get("slug")
+        for locale, translation in translations.items()
+        if isinstance(translation, dict) and translation.get("status") == TALENTVERSE_REPORT_STATUS_PUBLISHED
+    }
+    if not published_locales:
+        published_locales = {report.locale: report.slug}
+    result = {"status": "published", "report_id": report.id, "slug": report.slug, "locales": published_locales}
+    translation_failures = payload.get("translationFailures")
+    if isinstance(translation_failures, dict) and translation_failures:
+        result["failed_locales"] = sorted(translation_failures)
+    return result
 
 
 def _upsert_report(
@@ -368,7 +525,7 @@ def _upsert_report(
     report = existing or TalentverseReport(raw_report_id=snapshot.id, created_at=now)
     report.slug = slug
     report.region = snapshot.region
-    report.locale = TALENTVERSE_LOCALE
+    report.locale = payload.get("locale") or TALENTVERSE_LOCALE
     report.title = payload.get("title") or living_report.get("headline") or "Talentverse Report"
     report.status = status
     report.published_at = published_at
