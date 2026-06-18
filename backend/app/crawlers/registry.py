@@ -1,5 +1,6 @@
 from app.crawlers.adapters.abetterweb3 import ABetterWeb3Adapter
 from app.crawlers.adapters.aijobsnet import AIJobsNetAdapter
+from app.crawlers.adapters.bonjour_bio import BonjourBioAdapter
 from app.crawlers.adapters.cryptocurrencyjobs import CryptocurrencyJobsAdapter
 from app.crawlers.adapters.cryptojobslist import CryptoJobsListAdapter
 from app.crawlers.adapters.dejob import DeJobAdapter
@@ -10,6 +11,7 @@ from app.crawlers.adapters.workatstartup_ai import WorkAtStartupAIAdapter
 ADAPTERS = {
     "aijobsnet": AIJobsNetAdapter,
     "abetterweb3": ABetterWeb3Adapter,
+    "bonjour_bio": BonjourBioAdapter,
     "cryptocurrencyjobs": CryptocurrencyJobsAdapter,
     "cryptojobslist": CryptoJobsListAdapter,
     "dejob": DeJobAdapter,
