@@ -13,6 +13,29 @@ class CryptoJobsListAdapter(SourceAdapter):
     source_name = "cryptojobslist"
 
     @staticmethod
+    def _extract_detail(detail_url: str) -> str:
+        try:
+            html = fetch_html(detail_url, timeout=25)
+            soup, _ = soup_links(html)
+        except Exception:  # noqa: BLE001
+            return ""
+
+        for selector in (
+            "[itemprop='description']",
+            ".job-description",
+            ".job-description-text",
+            "article",
+            "main",
+        ):
+            node = soup.select_one(selector)
+            if not node:
+                continue
+            text = " ".join(node.get_text(" ", strip=True).split())
+            if text:
+                return text[:4000]
+        return ""
+
+    @staticmethod
     def _parse_posted_at(age_text: str) -> datetime | None:
         text = (age_text or "").strip().lower()
         if not text:
@@ -77,6 +100,8 @@ class CryptoJobsListAdapter(SourceAdapter):
             if not title:
                 continue
 
+            description = self._extract_detail(canonical_url)
+
             jobs.append(
                 NormalizedJob(
                     source_job_id=href,
@@ -86,7 +111,7 @@ class CryptoJobsListAdapter(SourceAdapter):
                     location=location,
                     remote_type="remote" if "remote" in location.lower() else "unknown",
                     employment_type="unknown",
-                    description="",
+                    description=description,
                     posted_at=posted_at,
                     raw_payload={"site": "cryptojobslist", "company_url": company_url},
                 )

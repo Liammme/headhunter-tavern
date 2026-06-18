@@ -133,6 +133,9 @@ def _parse_article(article) -> NormalizedJob | None:
     if not title:
         return None
 
+    detail_text = _extract_detail(canonical_url)
+    description = detail_text or text
+
     return NormalizedJob(
         source_job_id=urlparse(canonical_url).path.strip("/"),
         canonical_url=canonical_url,
@@ -141,10 +144,27 @@ def _parse_article(article) -> NormalizedJob | None:
         location="Japan",
         remote_type="remote" if "リモート" in text else "unknown",
         employment_type="unknown",
-        description=text[:4000],
+        description=description[:4000],
         posted_at=posted_at,
         raw_payload={"site": "withb", "salary": salary},
     )
+
+
+def _extract_detail(detail_url: str) -> str:
+    try:
+        html = fetch_html(detail_url, timeout=25)
+        soup, _ = soup_links(html)
+    except Exception:  # noqa: BLE001
+        return ""
+
+    for selector in ("article", ".entry-content", ".post-content", "main"):
+        node = soup.select_one(selector)
+        if not node:
+            continue
+        text = _clean_text(node.get_text(" ", strip=True))
+        if text:
+            return text[:4000]
+    return ""
 
 
 def _parse_listing_text(text: str) -> tuple[str, str, datetime | None, str]:

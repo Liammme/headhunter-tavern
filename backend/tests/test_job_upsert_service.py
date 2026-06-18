@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 
 from app.crawlers.base import NormalizedJob
-from app.models import Job, JobClaim
+from app.models import BdContact, Job, JobClaim
 from app.services.region import GLOBAL_REGION, JAPAN_REGION
 from app.services import job_upsert_service
 from app.services.job_upsert_service import delete_out_of_window_jobs, purge_demo_jobs, upsert_jobs
@@ -179,11 +179,34 @@ def test_purge_demo_jobs_removes_demo_jobs_and_claims(db_session):
     stale_claim.job_id = demo_job.id
     db_session.add(stale_claim)
     db_session.commit()
+    db_session.add(
+        BdContact(
+            dedupe_key="demo-contact",
+            job_id=demo_job.id,
+            region=GLOBAL_REGION,
+            company="Demo",
+            company_normalized="demo",
+            job_title="Demo Role",
+            contact_type="email",
+            contact_value="demo@example.com",
+            normalized_value="demo@example.com",
+            confidence="high",
+            source_name="demo",
+            job_url=demo_job.canonical_url,
+            status="active",
+            first_seen_at=datetime.now(),
+            last_seen_at=datetime.now(),
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+    )
+    db_session.commit()
 
     purge_demo_jobs(db_session)
 
     assert db_session.execute(select(Job)).scalars().all() == []
     assert db_session.execute(select(JobClaim)).scalars().all() == []
+    assert db_session.execute(select(BdContact.status)).scalar_one() == "stale"
 
 
 def test_delete_out_of_window_jobs_keeps_jobs_collected_within_30_days(db_session, monkeypatch):

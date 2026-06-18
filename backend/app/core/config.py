@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     bounty_pool_zhipu_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
     bounty_pool_zhipu_fallback_models: str = "glm-4-flash-250414,glm-4.7-flash"
     reports_api_token: str | None = None
+    bd_contacts_api_token: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

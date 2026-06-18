@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.database import Base, get_db
 from app.main import app
 from app.models import (
+    bd_contact,
     company_daily_summary,
     intelligence_snapshot,
     job,
@@ -24,6 +25,7 @@ from app.models import (
 def test_session_factory() -> Generator[sessionmaker, None, None]:
     _ = (
         job,
+        bd_contact,
         company_daily_summary,
         intelligence_snapshot,
         job_claim,
