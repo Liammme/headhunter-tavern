@@ -258,7 +258,9 @@ def test_home_endpoint_keeps_company_url_when_present(client, monkeypatch):
     }
 
 
-def test_trigger_crawl_endpoint_exists(client):
+def test_trigger_crawl_endpoint_exists(client, monkeypatch):
+    monkeypatch.setattr("app.api.crawl.trigger_crawl_service", lambda db: {"status": "triggered"})
+
     response = client.post("/api/v1/crawl/trigger")
 
     assert response.status_code == 200
