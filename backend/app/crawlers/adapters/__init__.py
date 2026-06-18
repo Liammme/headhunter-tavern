@@ -4,6 +4,8 @@ from app.crawlers.adapters.bonjour_bio import BonjourBioAdapter
 from app.crawlers.adapters.cryptocurrencyjobs import CryptocurrencyJobsAdapter
 from app.crawlers.adapters.cryptojobslist import CryptoJobsListAdapter
 from app.crawlers.adapters.dejob import DeJobAdapter
+from app.crawlers.adapters.jobicy_ai import JobicyAIAdapter
+from app.crawlers.adapters.remoteok_ai import RemoteOKAIAdapter
 from app.crawlers.adapters.web3career import Web3CareerAdapter
 from app.crawlers.adapters.web3jobsai import Web3JobsAiAdapter
 from app.crawlers.adapters.workatstartup_ai import WorkAtStartupAIAdapter
@@ -15,6 +17,8 @@ __all__ = [
     "CryptocurrencyJobsAdapter",
     "CryptoJobsListAdapter",
     "DeJobAdapter",
+    "JobicyAIAdapter",
+    "RemoteOKAIAdapter",
     "Web3CareerAdapter",
     "Web3JobsAiAdapter",
     "WorkAtStartupAIAdapter",
