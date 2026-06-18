@@ -78,8 +78,8 @@ class Web3JobsAiAdapter(SourceAdapter):
             company = ""
             company_url = ""
             description = ""
-            # Only request detail pages for potentially recent roles to control runtime.
-            if posted_at and posted_at >= now - timedelta(days=2):
+            # Detail pages carry the contact/application text needed for BD export.
+            if posted_at is None or posted_at >= now - timedelta(days=30):
                 company, company_url, description = self._extract_detail(canonical_url)
 
             category_el = article.select_one(".category-job a")

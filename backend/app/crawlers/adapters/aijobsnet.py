@@ -37,6 +37,29 @@ def _parse_relative_posted(text: str) -> datetime | None:
 class AIJobsNetAdapter(SourceAdapter):
     source_name = "aijobsnet"
 
+    @staticmethod
+    def _extract_detail(detail_url: str) -> str:
+        try:
+            html = fetch_html(detail_url, timeout=25)
+            soup, _ = soup_links(html)
+        except Exception:  # noqa: BLE001
+            return ""
+
+        for selector in (
+            "[itemprop='description']",
+            ".job-description",
+            ".description",
+            "article",
+            "main",
+        ):
+            node = soup.select_one(selector)
+            if not node:
+                continue
+            text = " ".join(node.get_text(" ", strip=True).split())
+            if text:
+                return text[:4000]
+        return ""
+
     def fetch(self) -> list[NormalizedJob]:
         listing_url = "https://aijobs.net/"
         html = fetch_html(listing_url)
@@ -76,6 +99,9 @@ class AIJobsNetAdapter(SourceAdapter):
 
             chips = [x.get_text(" ", strip=True) for x in row.select("div > div > span")]
             description = " | ".join([x for x in chips if x])[:4000]
+            detail_description = self._extract_detail(canonical_url)
+            if detail_description:
+                description = detail_description
 
             jobs.append(
                 NormalizedJob(
