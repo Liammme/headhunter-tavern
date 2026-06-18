@@ -36,6 +36,14 @@ def test_extract_bd_contacts_finds_common_contact_channels():
     assert ("discord", "hiring-team#1234") in values
 
 
+def test_extract_bd_contacts_strips_wrapping_punctuation_from_emails():
+    job = _job("Please send details to -lauren@example.com.")
+
+    contacts = extract_bd_contact_candidates(job)
+
+    assert [(item.contact_type, item.contact_value) for item in contacts] == [("email", "lauren@example.com")]
+
+
 def test_extract_bd_contacts_keeps_unlabeled_web3_handles_as_social_handles():
     job = _job("Business Development Manager, remote, @CryptoRecruiter")
 

@@ -205,7 +205,7 @@ def _confidence_rank(value: str) -> int:
 
 
 def _clean_email(value: str) -> str:
-    return value.strip().strip(".,;:，。；：)").lower()
+    return value.strip().strip(".,;:，。；：)-").lower()
 
 
 def _normalize_phone(value: str) -> str:
