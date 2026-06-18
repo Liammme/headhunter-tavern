@@ -55,6 +55,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob], *, region: R
 def purge_demo_jobs(db: Session) -> None:
     demo_job_ids = db.execute(select(Job.id).where(Job.source_name == "demo")).scalars().all()
     if demo_job_ids:
+        mark_bd_contacts_stale_for_job_ids(db, demo_job_ids)
         db.execute(delete(JobClaim).where(JobClaim.job_id.in_(demo_job_ids)))
         db.execute(delete(Job).where(Job.id.in_(demo_job_ids)))
         db.commit()
