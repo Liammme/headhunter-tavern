@@ -55,6 +55,39 @@ def test_refresh_bd_contacts_for_jobs_marks_missing_contacts_stale(db_session):
     assert contacts["company_url"].status == "active"
 
 
+def test_refresh_bd_contacts_for_jobs_reuses_contact_left_by_deleted_job(db_session):
+    old_job = _add_job(db_session, description="Contact hr@example.com")
+    refresh_bd_contacts_for_jobs(db_session, [old_job])
+    db_session.commit()
+
+    old_url = old_job.canonical_url
+    db_session.delete(old_job)
+    db_session.commit()
+
+    new_job = Job(
+        canonical_url=old_url,
+        source_name="abetterweb3",
+        region="global",
+        title="BD Manager",
+        company="Example",
+        company_normalized="example",
+        description="Contact hr@example.com",
+        collected_at=datetime(2026, 6, 19, 9, 0, 0),
+        signal_tags={"company_url": "https://example.com"},
+    )
+    db_session.add(new_job)
+    db_session.commit()
+
+    count = refresh_bd_contacts_for_jobs(db_session, [new_job])
+    db_session.commit()
+
+    contacts = db_session.query(BdContact).order_by(BdContact.contact_type).all()
+    assert count == 2
+    assert len(contacts) == 2
+    assert {item.job_id for item in contacts} == {new_job.id}
+    assert {item.status for item in contacts} == {"active"}
+
+
 def test_backfill_bd_contacts_filters_region(db_session):
     _add_job(db_session, description="Contact global@example.com", region="global")
     _add_job(db_session, description="Contact japan@example.com", region="japan")

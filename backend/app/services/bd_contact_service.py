@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import hashlib
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import BdContact, Job
@@ -29,14 +29,14 @@ def refresh_bd_contacts_for_jobs(db: Session, jobs: list[Job]) -> int:
 
 def refresh_bd_contacts_for_job(db: Session, job: Job) -> int:
     candidates = extract_bd_contact_candidates(job)
-    existing_contacts = db.execute(select(BdContact).where(BdContact.job_id == job.id)).scalars().all()
+    candidate_keys = [_dedupe_key(job, candidate) for candidate in candidates]
+    existing_contacts = _load_existing_contacts(db, job_id=job.id, dedupe_keys=candidate_keys)
     existing_by_key = {contact.dedupe_key: contact for contact in existing_contacts}
     active_keys: set[str] = set()
     now = datetime.now()
     changed = 0
 
-    for candidate in candidates:
-        dedupe_key = _dedupe_key(job, candidate)
+    for candidate, dedupe_key in zip(candidates, candidate_keys, strict=True):
         active_keys.add(dedupe_key)
         existing = existing_by_key.get(dedupe_key)
         if existing is None:
@@ -44,11 +44,7 @@ def refresh_bd_contacts_for_job(db: Session, job: Job) -> int:
             changed += 1
             continue
 
-        existing.confidence = candidate.confidence
-        existing.evidence_snippet = candidate.evidence_snippet
-        existing.status = "active"
-        existing.last_seen_at = now
-        existing.updated_at = now
+        _refresh_existing_contact(existing, job, candidate, now=now)
         changed += 1
 
     for contact in existing_contacts:
@@ -59,6 +55,14 @@ def refresh_bd_contacts_for_job(db: Session, job: Job) -> int:
         changed += 1
 
     return changed
+
+
+def _load_existing_contacts(db: Session, *, job_id: int, dedupe_keys: list[str]) -> list[BdContact]:
+    conditions = [BdContact.job_id == job_id]
+    if dedupe_keys:
+        conditions.append(BdContact.dedupe_key.in_(dedupe_keys))
+    contacts = db.execute(select(BdContact).where(or_(*conditions))).scalars().all()
+    return list({contact.id: contact for contact in contacts}.values())
 
 
 def mark_bd_contacts_stale_for_job_ids(db: Session, job_ids: list[int]) -> int:
@@ -97,6 +101,24 @@ def _build_contact(job: Job, candidate: BdContactCandidate, *, dedupe_key: str, 
         created_at=now,
         updated_at=now,
     )
+
+
+def _refresh_existing_contact(contact: BdContact, job: Job, candidate: BdContactCandidate, *, now: datetime) -> None:
+    contact.job_id = job.id
+    contact.region = job.region
+    contact.company = job.company
+    contact.company_normalized = job.company_normalized
+    contact.job_title = job.title
+    contact.contact_value = candidate.contact_value
+    contact.normalized_value = _normalized_value(candidate)
+    contact.confidence = candidate.confidence
+    contact.source_name = job.source_name
+    contact.job_url = job.canonical_url
+    contact.company_url = _company_url(job)
+    contact.evidence_snippet = candidate.evidence_snippet
+    contact.status = "active"
+    contact.last_seen_at = now
+    contact.updated_at = now
 
 
 def _dedupe_key(job: Job, candidate: BdContactCandidate) -> str:
