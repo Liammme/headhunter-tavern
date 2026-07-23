@@ -380,14 +380,40 @@ describe("CompanyCard", () => {
     expect(within(card as HTMLElement).queryByText("weak_job_page_evidence")).not.toBeInTheDocument();
   });
 
-  it("shows pending jd trust state when the backend has no assessment", () => {
+  it("does not show jd trust rail when the backend has no assessment", () => {
     render(<CompanyCard company={buildCompany({ jd_trust: null })} />);
 
     const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
-    const rightRail = within(card as HTMLElement).getByLabelText("公司认领状态位");
 
-    expect(within(rightRail as HTMLElement).getByText("JD可信度待评估")).toBeInTheDocument();
-    expect(within(rightRail as HTMLElement).queryByText("预计赏金")).not.toBeInTheDocument();
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).queryByText("JD可信度待评估")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByLabelText("JD可信度甄别结果")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByLabelText("公司认领状态位")).not.toBeInTheDocument();
+  });
+
+  it("does not show jd trust rail when the backend has no trust score", () => {
+    render(
+      <CompanyCard
+        company={buildCompany({
+          jd_trust: {
+            legacy_job_id: 1,
+            risk_level: "needs_review",
+            trust_score: null,
+            reason_codes: ["weak_job_page_evidence"],
+            recommended_checks: ["核对项目官网招聘页"],
+            evidence_refs: ["canonical_post"],
+            domain_warnings: [],
+          },
+        })}
+      />,
+    );
+
+    const card = screen.getByRole("heading", { level: 3, name: "OpenGradient" }).closest("article");
+
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).queryByText("JD可信度待评估")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("JD可信度：需核验")).not.toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByLabelText("JD可信度甄别结果")).not.toBeInTheDocument();
   });
 
   it("does not render the jd trust rail when showTrustRail is false", () => {

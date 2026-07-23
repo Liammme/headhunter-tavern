@@ -14,6 +14,11 @@ type CompanyClaimSealProps = {
 export default function CompanyClaimSeal({ company }: CompanyClaimSealProps) {
   const signerName = company.claimed_by ?? company.claimed_names[0] ?? null;
   const isClaimed = Boolean(company.claim_status || company.claimed_names.length || company.claimed_by);
+  const hasJdTrustScore = Boolean(company.jd_trust && typeof company.jd_trust.trust_score === "number");
+
+  if (!isClaimed && !hasJdTrustScore) {
+    return null;
+  }
 
   return (
     <aside className="company-claim-seal" aria-label={isClaimed ? "公司签署状态位" : "公司认领状态位"}>
@@ -48,13 +53,8 @@ function renderEnglishSignature(signerName: string | null) {
 }
 
 function JdTrustRail({ jdTrust }: { jdTrust: CompanyCardPayload["jd_trust"] | null }) {
-  if (!jdTrust) {
-    return (
-      <section className="jdtrust-rail jdtrust-rail-pending" aria-label="JD可信度甄别结果">
-        <span className="jdtrust-rail-label">JD可信度待评估</span>
-        <p>等待可信度层完成原帖证据和外部声誉核验。</p>
-      </section>
-    );
+  if (!jdTrust || typeof jdTrust.trust_score !== "number") {
+    return null;
   }
 
   const checks = jdTrust.recommended_checks.slice(0, 2);
@@ -64,7 +64,7 @@ function JdTrustRail({ jdTrust }: { jdTrust: CompanyCardPayload["jd_trust"] | nu
     <section className="jdtrust-rail" aria-label="JD可信度甄别结果">
       <div className="jdtrust-rail-head">
         <span className={`jdtrust-risk jdtrust-risk-${jdTrust.risk_level}`}>JD可信度：{renderJdTrustRisk(jdTrust.risk_level)}</span>
-        {typeof jdTrust.trust_score === "number" ? <strong>{jdTrust.trust_score}</strong> : null}
+        <strong>{jdTrust.trust_score}</strong>
       </div>
       {checks.length ? (
         <ul className="jdtrust-checks">
