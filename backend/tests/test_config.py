@@ -70,3 +70,12 @@ def test_estimated_bounty_read_and_write_are_enabled_by_default():
 
     assert rollout_settings.bounty_pool_estimated_bounty_live_write_enabled is True
     assert rollout_settings.bounty_pool_estimated_bounty_read_enabled is True
+
+
+def test_contact_enrichment_defaults_are_bounded():
+    rollout_settings = Settings(_env_file=None)
+
+    assert rollout_settings.bounty_pool_contact_enrichment_enabled is True
+    assert rollout_settings.bounty_pool_contact_enrichment_max_domains == 10
+    assert rollout_settings.bounty_pool_contact_enrichment_retry_days == 7
+    assert rollout_settings.bounty_pool_contact_enrichment_timeout_seconds == 10

@@ -4,14 +4,11 @@ from app.crawlers.adapters.discourse_ai_jobs import OpenRoboticsJobsAdapter, PyT
 
 
 class FakeResponse:
-    def __init__(self, payload):
-        self._payload = payload
+    def __init__(self, text: str):
+        self.text = text
 
     def raise_for_status(self) -> None:
         return None
-
-    def json(self):
-        return self._payload
 
 
 class FakeDiscourseClient:
@@ -25,141 +22,90 @@ class FakeDiscourseClient:
         return None
 
     def get(self, url: str):
-        if url == "https://discourse.openrobotics.org/c/jobs/15.json":
+        if url == "https://discourse.openrobotics.org/c/jobs/15.rss":
             return FakeResponse(
-                {
-                    "topic_list": {
-                        "topics": [
-                            {
-                                "id": 301,
-                                "slug": "about-the-jobs-category",
-                                "title": "About the Jobs category",
-                            },
-                            {
-                                "id": 101,
-                                "slug": "robotics-ai-engineer",
-                                "title": "Signal Robotics | Robotics AI Engineer | Remote",
-                                "created_at": "2026-06-17T12:00:00Z",
-                            },
-                            {
-                                "id": 102,
-                                "slug": "ros2-engineer",
-                                "title": "Robot Cloud | ROS2 Engineer | Munich",
-                            },
-                        ]
-                    }
-                }
+                _rss(
+                    [
+                        {
+                            "title": "About the Jobs category",
+                            "link": "https://discourse.openrobotics.org/t/about-the-jobs-category/301",
+                            "description": "Category rules.",
+                        },
+                        {
+                            "title": "Signal Robotics | Robotics AI Engineer | Remote",
+                            "link": "https://discourse.openrobotics.org/t/robotics-ai-engineer/101",
+                            "description": (
+                                "Build autonomy with ROS2 and computer vision. "
+                                '<a href="https://vendor.example">Our technology provider</a> '
+                                '<a href="https://signal-robotics.example/careers">Company website</a> '
+                                "Email jobs@signal-robotics.example"
+                            ),
+                        },
+                        {
+                            "title": "Robot Cloud | ROS2 Engineer | Munich",
+                            "link": "https://discourse.openrobotics.org/t/ros2-engineer/102",
+                            "description": "Work on ROS2 navigation. Apply through our website.",
+                        },
+                    ]
+                )
             )
-        if url == "https://discourse.openrobotics.org/t/robotics-ai-engineer/101.json":
+        if url == "https://discuss.pytorch.org/c/jobs/24.rss":
             return FakeResponse(
-                {
-                    "post_stream": {
-                        "posts": [
-                            {
-                                "cooked": "<p>Build autonomy with ROS2 and computer vision. Email jobs@signal-robotics.example</p>",
-                            }
-                        ]
-                    }
-                }
-            )
-        if url == "https://discourse.openrobotics.org/t/ros2-engineer/102.json":
-            return FakeResponse(
-                {
-                    "post_stream": {
-                        "posts": [
-                            {
-                                "cooked": "<p>Work on ROS2 navigation. Apply through our website.</p>",
-                            }
-                        ]
-                    }
-                }
-            )
-        if url == "https://discuss.pytorch.org/c/jobs/24.json":
-            return FakeResponse(
-                {
-                    "topic_list": {
-                        "topics": [
-                            {
-                                "id": 201,
-                                "slug": "ml-engineer-looking-for-work",
-                                "title": "ML Engineer looking for work",
-                            },
-                            {
-                                "id": 202,
-                                "slug": "deep-learning-engineer",
-                                "title": "Model Lab | Deep Learning Engineer | Remote",
-                                "created_at": "2026-06-15T08:30:00Z",
-                            },
-                            {
-                                "id": 203,
-                                "slug": "ai-community-manager",
-                                "title": "Community Lab | AI Community Manager | Remote",
-                            },
-                        ]
-                    }
-                }
-            )
-        if url == "https://discuss.pytorch.org/t/ml-engineer-looking-for-work/201.json":
-            return FakeResponse(
-                {
-                    "post_stream": {
-                        "posts": [
-                            {
-                                "cooked": "<p>I am a candidate looking for an ML engineer position. Email me@example.com</p>",
-                            }
-                        ]
-                    }
-                }
-            )
-        if url == "https://discuss.pytorch.org/t/deep-learning-engineer/202.json":
-            return FakeResponse(
-                {
-                    "post_stream": {
-                        "posts": [
-                            {
-                                "cooked": "<p>Train PyTorch models for production inference. Email hiring@modellab.example</p>",
-                            }
-                        ]
-                    }
-                }
-            )
-        if url == "https://discuss.pytorch.org/t/ai-community-manager/203.json":
-            return FakeResponse(
-                {
-                    "post_stream": {
-                        "posts": [
-                            {
-                                "cooked": "<p>Manage our AI Discord community. Apply through our website.</p>",
-                            }
-                        ]
-                    }
-                }
+                _rss(
+                    [
+                        {
+                            "title": "ML Engineer looking for work",
+                            "link": "https://discuss.pytorch.org/t/ml-engineer-looking-for-work/201",
+                            "description": "I am a candidate looking for an ML engineer position.",
+                        },
+                        {
+                            "title": "Model Lab | Deep Learning Engineer | Remote",
+                            "link": "https://discuss.pytorch.org/t/deep-learning-engineer/202",
+                            "description": "Train PyTorch models. Email hiring@modellab.example",
+                        },
+                    ]
+                )
             )
         raise AssertionError(f"unexpected URL: {url}")
 
 
-def test_open_robotics_jobs_fetches_robotics_posts_with_direct_contacts(monkeypatch):
+def _rss(items: list[dict[str, str]]) -> str:
+    rendered = "".join(
+        f"""
+        <item>
+          <title>{item['title']}</title>
+          <link>{item['link']}</link>
+          <pubDate>Wed, 23 Sep 2026 19:18:06 +0000</pubDate>
+          <description><![CDATA[{item['description']}]]></description>
+        </item>
+        """
+        for item in items
+    )
+    return f"<?xml version='1.0'?><rss><channel>{rendered}</channel></rss>"
+
+
+def test_open_robotics_jobs_uses_single_rss_request_and_keeps_hiring_posts(monkeypatch):
     monkeypatch.setattr("app.crawlers.adapters.discourse_ai_jobs.httpx.Client", FakeDiscourseClient)
 
     jobs = OpenRoboticsJobsAdapter().fetch()
 
-    assert len(jobs) == 1
-    job = jobs[0]
-    assert job.source_job_id == "101"
-    assert job.canonical_url == "https://discourse.openrobotics.org/t/robotics-ai-engineer/101"
-    assert job.title == "Signal Robotics | Robotics AI Engineer | Remote"
-    assert job.company == "Signal Robotics"
-    assert job.remote_type == "remote"
-    assert "jobs@signal-robotics.example" in job.description
-    assert job.raw_payload == {
+    assert len(jobs) == 2
+    first = jobs[0]
+    assert first.source_job_id == "101"
+    assert first.canonical_url == "https://discourse.openrobotics.org/t/robotics-ai-engineer/101"
+    assert first.title == "Signal Robotics | Robotics AI Engineer | Remote"
+    assert first.company == "Signal Robotics"
+    assert first.remote_type == "remote"
+    assert "jobs@signal-robotics.example" in first.description
+    assert first.raw_payload == {
         "site": "open_robotics_jobs",
         "topic_slug": "robotics-ai-engineer",
         "category_url": "https://discourse.openrobotics.org/c/jobs/15",
-        "company_url": "",
+        "company_url": "https://signal-robotics.example/careers",
     }
 
 
-def test_pytorch_jobs_skips_candidate_posts_and_keeps_hiring_contacts(monkeypatch):
+def test_pytorch_jobs_skips_candidate_posts_and_keeps_hiring_posts(monkeypatch):
     monkeypatch.setattr("app.crawlers.adapters.discourse_ai_jobs.httpx.Client", FakeDiscourseClient)
 
     jobs = PyTorchJobsAdapter().fetch()

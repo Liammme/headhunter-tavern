@@ -158,3 +158,18 @@ def test_trigger_crawl_skips_jdtrust_sidecar_when_no_new_jobs_are_inserted(clien
     assert response.json()["new_jobs"] == 0
     assert response.json()["jdtrust_trigger"] == {"status": "skipped", "reason": "no_new_jobs"}
     assert trigger_calls == [0]
+
+
+def test_contact_enrichment_failure_keeps_successful_job_crawl(client, monkeypatch):
+    install_fake_adapters(monkeypatch)
+
+    def fail_enrichment(db):
+        raise RuntimeError("enrichment unavailable")
+
+    monkeypatch.setattr("app.services.crawl_pipeline._run_contact_enrichment", fail_enrichment)
+    response = client.post("/api/v1/crawl/trigger")
+    assert response.status_code == 200
+    assert response.json()["new_jobs"] == 4
+    assert response.json()["contact_enrichment"]["status"] == "failed"
+    assert response.json()["errors"] == ["contact_enrichment: RuntimeError"]
+    assert client.get("/api/v1/home").json()["days"]

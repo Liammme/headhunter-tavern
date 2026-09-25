@@ -354,3 +354,44 @@ def test_upsert_jobs_flushes_existing_job_updates_before_retention_cleanup(db_se
     assert stored_job.description == "fresh description"
     assert stored_job.collected_at >= fixed_now - timedelta(days=30)
     assert stored_claim.job_id == stored_job.id
+
+
+def test_upsert_jobs_preserves_contact_enrichment_metadata(db_session):
+    existing = Job(
+        canonical_url="https://jobs.example.com/acme/ml-engineer",
+        source_name="old",
+        title="ML Engineer",
+        company="Acme",
+        company_normalized="acme",
+        description="old description",
+        collected_at=datetime.now().replace(microsecond=0),
+        signal_tags={
+            "company_url": "https://acme.example",
+            "contact_enrichment": {
+                "status": "found",
+                "checked_at": "2026-09-25T09:00:00",
+                "emails": [{"value": "hello@acme.example"}],
+            },
+        },
+    )
+    db_session.add(existing)
+    db_session.commit()
+
+    fetched = build_normalized_job(
+        canonical_url=existing.canonical_url,
+        title="Senior ML Engineer",
+        company="Acme",
+        description="fresh description",
+    )
+    fetched.raw_payload["company_url"] = "https://acme.example"
+    upsert_jobs(db_session, [fetched])
+
+    stored_job = db_session.execute(select(Job)).scalars().one()
+    assert stored_job.signal_tags["contact_enrichment"]["status"] == "found"
+    assert stored_job.signal_tags["contact_enrichment"]["emails"] == [
+        {"value": "hello@acme.example"}
+    ]
+
+    fetched.raw_payload["company_url"] = "https://different.example"
+    upsert_jobs(db_session, [fetched])
+    assert "contact_enrichment" not in stored_job.signal_tags

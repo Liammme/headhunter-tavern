@@ -1,5 +1,8 @@
 # Production Deployment Templates
 
+Source health and website contact enrichment: see [contact-enrichment.md](contact-enrichment.md)
+for behavior, configuration, validation and rollback.
+
 This directory contains the minimum production artifacts for the recommended backend setup:
 
 - `systemd/bounty-pool.service`
@@ -15,7 +18,7 @@ This directory contains the minimum production artifacts for the recommended bac
   - Refreshes sanitized market facts idempotently, then generates a Living Report only when the latest successful report is at least 3 calendar days old
   - Uses `/etc/cron.d` format and runs as the `deploy` user
 - `cron/japan-market.cron`
-  - Runs `python -m app.cli.crawl_japan_jobs` every day at 08:00 and 14:00, matching the main site job update schedule
+  - Runs `python -m app.cli.crawl_japan_jobs` every day at 08:20 and 14:20, after the global crawl
   - Runs `python -m app.cli.generate_japan_market_report --days 180 --min-age-days 3` every day at 15:30, matching the main site Living Report refresh gate
   - Refreshes Japan market facts daily, then generates a Japan Living Report only when the latest successful Japan report is at least 3 calendar days old
   - Uses Japan-only crawlers and Japan-only market facts/snapshots; it does not call `daily_bounty`

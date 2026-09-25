@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     bounty_pool_zhipu_fallback_models: str = "glm-4-flash-250414,glm-4.7-flash"
     reports_api_token: str | None = None
     bd_contacts_api_token: str | None = None
+    bounty_pool_contact_enrichment_enabled: bool = True
+    bounty_pool_contact_enrichment_max_domains: int = Field(default=10, ge=0, le=50)
+    bounty_pool_contact_enrichment_retry_days: int = Field(default=7, ge=1, le=30)
+    bounty_pool_contact_enrichment_timeout_seconds: int = Field(default=10, ge=1, le=30)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -32,14 +32,27 @@ class FailingAdapter(SourceAdapter):
         raise RuntimeError("boom")
 
 
+class EmptyAdapter(SourceAdapter):
+    source_name = "empty"
+
+    def fetch(self) -> list[NormalizedJob]:
+        return []
+
+
 def test_fetch_jobs_collects_stats_jobs_and_errors():
     result = fetch_jobs(
         {
             "success": SuccessAdapter,
+            "empty": EmptyAdapter,
             "failing": FailingAdapter,
         }
     )
 
     assert len(result.fetched_jobs) == 1
-    assert result.source_stats == {"success": 1}
+    assert result.source_stats == {"success": 1, "empty": 0, "failing": 0}
+    assert result.source_health == {
+        "success": "ok",
+        "empty": "empty",
+        "failing": "error",
+    }
     assert result.errors == ["failing: boom"]

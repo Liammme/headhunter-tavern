@@ -41,6 +41,7 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob], *, region: R
             new_jobs += 1
             continue
 
+        _preserve_contact_enrichment(existing, payload)
         for key, value in payload.items():
             setattr(existing, key, value)
         jobs_to_refresh_contacts.append(existing)
@@ -50,6 +51,21 @@ def upsert_jobs(db: Session, fetched_jobs: Iterable[NormalizedJob], *, region: R
     delete_out_of_window_jobs(db, region=region)
     db.commit()
     return new_jobs
+
+
+def _preserve_contact_enrichment(existing: Job, payload: dict) -> None:
+    existing_tags = existing.signal_tags if isinstance(existing.signal_tags, dict) else {}
+    enrichment = existing_tags.get("contact_enrichment")
+    if not isinstance(enrichment, dict):
+        return
+    payload_tags = dict(payload.get("signal_tags") or {})
+    if existing.company_normalized != payload.get("company_normalized"):
+        return
+    # A missing or changed source website must invalidate derived contacts.
+    if existing_tags.get("company_url") != payload_tags.get("company_url"):
+        return
+    payload_tags["contact_enrichment"] = enrichment
+    payload["signal_tags"] = payload_tags
 
 
 def purge_demo_jobs(db: Session) -> None:

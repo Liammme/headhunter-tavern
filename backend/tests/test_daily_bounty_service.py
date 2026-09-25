@@ -45,6 +45,7 @@ def test_run_daily_bounty_generation_returns_crawl_and_recent_3_day_summary(db_s
             "fetched_jobs": 5,
             "new_jobs": 3,
             "source_stats": {"greenhouse": 2, "lever": 3},
+            "source_health": {},
             "errors": [],
         }
 
@@ -79,9 +80,12 @@ def test_run_daily_bounty_generation_returns_crawl_and_recent_3_day_summary(db_s
         "status": "completed",
         "started_at": "2026-04-21T08:00:00",
         "finished_at": "2026-04-21T08:01:00",
+        "contact_enrichment": {},
+        "disabled_sources": {},
         "fetched_jobs": 5,
         "new_jobs": 3,
         "source_stats": {"greenhouse": 2, "lever": 3},
+        "source_health": {},
         "errors": [],
         "recent_3_day_company_count": 2,
         "recent_3_day_job_count": 3,

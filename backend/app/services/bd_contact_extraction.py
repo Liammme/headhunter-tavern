@@ -52,6 +52,7 @@ def extract_bd_contact_candidates(job: Job) -> list[BdContactCandidate]:
     candidates.extend(_extract_wechat(text))
     candidates.extend(_extract_phone_contacts(text))
     candidates.extend(_extract_discord(text))
+    candidates.extend(_extract_enriched_company_emails(job))
     company_url = _company_url(job)
     if company_url:
         candidates.append(
@@ -63,6 +64,43 @@ def extract_bd_contact_candidates(job: Job) -> list[BdContactCandidate]:
             )
         )
     return _dedupe_candidates(candidates)
+
+
+def extract_email_candidates(text: str) -> list[BdContactCandidate]:
+    return _dedupe_candidates([*_extract_emails(text), *_extract_obfuscated_emails(text)])
+
+
+def _extract_enriched_company_emails(job: Job) -> list[BdContactCandidate]:
+    signal_tags = job.signal_tags if isinstance(job.signal_tags, dict) else {}
+    enrichment = signal_tags.get("contact_enrichment")
+    if not isinstance(enrichment, dict) or enrichment.get("provider") != "official_company_website":
+        return []
+    emails = enrichment.get("emails")
+    if not isinstance(emails, list):
+        return []
+
+    candidates: list[BdContactCandidate] = []
+    for item in emails:
+        if not isinstance(item, dict):
+            continue
+        value = item.get("value")
+        if not isinstance(value, str) or not EMAIL_PATTERN.fullmatch(value.strip()):
+            continue
+        confidence = item.get("confidence")
+        if confidence not in {"low", "medium", "high"}:
+            confidence = "medium"
+        evidence_url = item.get("evidence_url")
+        if not isinstance(evidence_url, str):
+            evidence_url = ""
+        candidates.append(
+            BdContactCandidate(
+                contact_type="email",
+                contact_value=_clean_email(value),
+                confidence=confidence,
+                evidence_snippet=f"Official company website: {evidence_url}".strip(),
+            )
+        )
+    return candidates
 
 
 def _combined_text(job: Job) -> str:

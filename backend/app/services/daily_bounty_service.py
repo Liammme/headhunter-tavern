@@ -34,6 +34,9 @@ class DailyBountySummary:
     fetched_jobs: int
     new_jobs: int
     source_stats: dict[str, int]
+    source_health: dict[str, str]
+    contact_enrichment: dict
+    disabled_sources: dict[str, str]
     errors: list[str]
     recent_3_day_company_count: int
     recent_3_day_job_count: int
@@ -49,6 +52,7 @@ def run_daily_bounty_generation(
         "fetched_jobs": 0,
         "new_jobs": 0,
         "source_stats": {},
+        "source_health": {},
         "errors": [],
     }
 
@@ -84,6 +88,9 @@ def run_daily_bounty_generation(
         fetched_jobs=int(crawl_result.get("fetched_jobs") or 0),
         new_jobs=int(crawl_result.get("new_jobs") or 0),
         source_stats=dict(crawl_result.get("source_stats") or {}),
+        source_health=dict(crawl_result.get("source_health") or {}),
+        contact_enrichment=dict(crawl_result.get("contact_enrichment") or {}),
+        disabled_sources=dict(crawl_result.get("disabled_sources") or {}),
         errors=errors,
         recent_3_day_company_count=recent_3_day_company_count,
         recent_3_day_job_count=recent_3_day_job_count,

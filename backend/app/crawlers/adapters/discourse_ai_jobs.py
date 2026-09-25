@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import re
-from typing import Any
+from urllib.parse import urlsplit
+import xml.etree.ElementTree as ET
 
 import httpx
 from bs4 import BeautifulSoup
@@ -14,15 +16,6 @@ from app.crawlers.base import NormalizedJob, SourceAdapter
 MAX_TOPICS = 30
 AI_JOB_PATTERN = re.compile(
     r"\b(ai|artificial intelligence|machine learning|ml|deep learning|pytorch|llm|agentic|rag|data science|data scientist|computer vision|nlp|robotics|ros2?|autonom(?:y|ous)|reinforcement learning)\b",
-    re.IGNORECASE,
-)
-DIRECT_CONTACT_PATTERN = re.compile(
-    r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|"
-    r"\b[A-Z0-9._%+-]+\s*(?:\(|\[)?\s*at\s*(?:\)|\])?\s*"
-    r"[A-Z0-9.-]+\s*(?:\(|\[)?\s*dot\s*(?:\)|\])?\s*[A-Z]{2,}\b|"
-    r"https?://(?:t\.me|telegram\.me|discord\.gg)/[^\s<>()]+|"
-    r"\b(?:telegram|wechat|weixin|whatsapp|discord)\s*[:：]\s*[A-Z0-9@_.#-]{3,40}|"
-    r"\b(?:phone|tel|mobile)\s*[:：]?\s*[+＋]?\d[\d\s().-]{6,}\d",
     re.IGNORECASE,
 )
 CANDIDATE_POST_PATTERN = re.compile(
@@ -44,6 +37,10 @@ class DiscourseJobSource:
     @property
     def category_url(self) -> str:
         return f"{self.base_url}{self.category_path}"
+
+    @property
+    def feed_url(self) -> str:
+        return f"{self.category_url}.rss"
 
 
 OPEN_ROBOTICS_SOURCE = DiscourseJobSource(
@@ -73,35 +70,29 @@ class PyTorchJobsAdapter(SourceAdapter):
 
 
 def _fetch_discourse_jobs(source: DiscourseJobSource) -> list[NormalizedJob]:
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/rss+xml, application/xml"}
     with httpx.Client(timeout=30, follow_redirects=True, headers=headers) as client:
-        response = client.get(source.category_json_url)
+        response = client.get(source.feed_url)
         response.raise_for_status()
-        topics = ((response.json() or {}).get("topic_list") or {}).get("topics") or []
+        root = ET.fromstring(response.text)
 
         jobs: list[NormalizedJob] = []
         seen: set[str] = set()
-        for topic in topics[:MAX_TOPICS]:
-            if not isinstance(topic, dict):
+        for item in root.findall("./channel/item")[:MAX_TOPICS]:
+            title = _xml_text(item, "title")
+            canonical_url = _xml_text(item, "link")
+            description_html = _xml_text(item, "description")
+            if not title or not canonical_url or _is_non_job_topic(title):
                 continue
-
-            topic_id = _str(topic.get("id"))
-            slug = _str(topic.get("slug"))
-            title = _str(topic.get("title"))
-            if not topic_id or not slug or not title or _is_non_job_topic(title):
-                continue
-
-            detail_url = f"{source.base_url}/t/{slug}/{topic_id}.json"
-            detail_response = client.get(detail_url)
-            detail_response.raise_for_status()
-            payload = detail_response.json() or {}
-            description = _description_from_topic(title, payload)
+            description = "\n".join(value for value in (title, _html_to_text(description_html)) if value)
             if not _is_relevant_hiring_post(description):
                 continue
-            if topic_id in seen:
+            if canonical_url in seen:
                 continue
 
-            canonical_url = f"{source.base_url}/t/{slug}/{topic_id}"
+            path_parts = [part for part in urlsplit(canonical_url).path.split("/") if part]
+            topic_id = path_parts[-1] if path_parts else canonical_url
+            slug = path_parts[-2] if len(path_parts) >= 2 else topic_id
             company, location = _parse_company_and_location(title)
             jobs.append(
                 NormalizedJob(
@@ -113,32 +104,24 @@ def _fetch_discourse_jobs(source: DiscourseJobSource) -> list[NormalizedJob]:
                     remote_type="remote" if "remote" in description.lower() else "unknown",
                     employment_type="unknown",
                     description=description[:4000],
-                    posted_at=_parse_datetime(_str(topic.get("created_at"))),
+                    posted_at=_parse_datetime(_xml_text(item, "pubDate")),
                     raw_payload={
                         "site": source.source_name,
                         "topic_slug": slug,
                         "category_url": source.category_url,
-                        "company_url": "",
+                        "company_url": _extract_company_url(description_html, source=source),
                     },
                 )
             )
-            seen.add(topic_id)
+            seen.add(canonical_url)
 
     return jobs[:80]
-
-
-def _description_from_topic(title: str, payload: dict[str, Any]) -> str:
-    posts = (payload.get("post_stream") or {}).get("posts") or []
-    first_post = posts[0] if posts and isinstance(posts[0], dict) else {}
-    body = _str(first_post.get("cooked"))
-    text = _html_to_text(body)
-    return "\n".join(value for value in (title, text) if value)
 
 
 def _is_relevant_hiring_post(description: str) -> bool:
     if CANDIDATE_POST_PATTERN.search(description):
         return False
-    return bool(AI_JOB_PATTERN.search(description) and DIRECT_CONTACT_PATTERN.search(description))
+    return bool(AI_JOB_PATTERN.search(description))
 
 
 def _is_non_job_topic(title: str) -> bool:
@@ -173,17 +156,50 @@ def _html_to_text(value: str) -> str:
     return "\n".join(line.strip() for line in soup.get_text("\n", strip=True).splitlines() if line.strip())
 
 
+def _extract_company_url(value: str, *, source: DiscourseJobSource) -> str:
+    excluded_hosts = {
+        urlsplit(source.base_url).hostname,
+        "linkedin.com",
+        "lnkd.in",
+        "workday.com",
+        "myworkdayjobs.com",
+        "greenhouse.io",
+        "lever.co",
+        "ashbyhq.com",
+        "indeed.com",
+    }
+    soup = BeautifulSoup(value or "", "html.parser")
+    for anchor in soup.select("a[href]"):
+        # An arbitrary outbound link can be a vendor or an article, not the employer.
+        label = anchor.get_text(" ", strip=True).lower()
+        if label not in {"company website", "our website", "visit our website", "官网", "公司官网"}:
+            continue
+        href = anchor.get("href", "").strip()
+        parsed = urlsplit(href)
+        host = (parsed.hostname or "").lower().removeprefix("www.")
+        if parsed.scheme not in {"http", "https"} or not host:
+            continue
+        if any(host == excluded or host.endswith(f".{excluded}") for excluded in excluded_hosts if excluded):
+            continue
+        return href
+    return ""
+
+
 def _parse_datetime(value: str) -> datetime | None:
     if not value:
         return None
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
-        return None
+        try:
+            parsed = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return None
     if parsed.tzinfo:
         return parsed.astimezone(timezone.utc).replace(tzinfo=None)
     return parsed
 
 
-def _str(value: Any) -> str:
-    return str(value or "").strip()
+def _xml_text(item: ET.Element, tag: str) -> str:
+    node = item.find(tag)
+    return (node.text or "").strip() if node is not None else ""

@@ -113,3 +113,29 @@ def test_mark_bd_contacts_stale_for_job_ids_only_updates_active_contacts(db_sess
     contacts = db_session.query(BdContact).all()
     assert changed == 2
     assert {item.status for item in contacts} == {"stale"}
+
+
+def test_refresh_bd_contacts_reads_verified_company_website_emails(db_session):
+    job = _add_job(db_session, description="No direct contact in the job text.")
+    job.signal_tags = {
+        **job.signal_tags,
+        "contact_enrichment": {
+            "provider": "official_company_website",
+            "status": "found",
+            "checked_at": "2026-09-25T09:00:00",
+            "emails": [
+                {
+                    "value": "hello@example.com",
+                    "confidence": "high",
+                    "evidence_url": "https://example.com/contact",
+                }
+            ],
+        },
+    }
+
+    refresh_bd_contacts_for_jobs(db_session, [job])
+    db_session.commit()
+
+    email = db_session.query(BdContact).filter(BdContact.contact_type == "email").one()
+    assert email.contact_value == "hello@example.com"
+    assert email.evidence_snippet == "Official company website: https://example.com/contact"
